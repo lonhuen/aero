@@ -18,37 +18,49 @@ MerkleTree::MerkleTree(const std::vector<std::string> &blocks)
     level_nodes.push(n);
     leaf.push_back(n);
   }
-  while (level_nodes.size() > 1) {
-    MerkleNode *l = level_nodes.front();
-    level_nodes.pop();
-    MerkleNode *r = level_nodes.front();
-    level_nodes.pop();
-    MerkleNode *t =
-        new MerkleNode(picosha2::hash256_hex_string(l->hash + r->hash));
-    t->left = l;
-    t->right = r;
-    l->parent = t;
-    r->parent = t;
-    l->pair = r;
-    r->pair = l;
-    level_nodes.push(t);
-  }
-  this->root = level_nodes.front();
+  this->root = constructTree(0, leaf.size());
 }
 
-std::vector<std::pair<bool, std::string>> MerkleTree::proofOfInclusion(int id) {
-  if (id >= nr_blocks) {
+MerkleNode *MerkleTree::constructTree(int start, int end) {
+  if (start >= end)
+    return nullptr;
+  // leaf
+  if (start + 1 == end) {
+    return leaf[start];
+  }
+  // non-leaf node
+  MerkleNode *t = new MerkleNode();
+  t->left = constructTree(start, (start + end) / 2);
+  t->right = constructTree((start + end) / 2, end);
+  t->hash = picosha2::hash256_hex_string(t->left->hash + t->right->hash);
+  return t;
+}
+
+MerkleProof MerkleTree::proofOfInclusion(int id) {
+  if ((id >= nr_blocks) || (id < 0)) {
     LOG(FATAL) << "Index exceeds bound";
   }
-  std::vector<std::pair<bool, std::string>> ret;
-  MerkleNode *ptr = leaf[id];
-  while (ptr != root) {
-    bool pair_left = (ptr->pair == ptr->parent->left);
-    ret.push_back(std::make_pair(pair_left, ptr->pair->hash));
-    ptr = ptr->parent;
+  MerkleProof ret;
+  int start = 0;
+  int end = nr_blocks;
+  MerkleNode *t = root;
+  while (start + 1 < end) {
+    int mid = (start + end) / 2;
+    // left path
+    if (id < mid) {
+      ret.push_back(t->right->hash);
+      t = t->left;
+      end = mid;
+    }
+    // right path
+    else {
+      ret.push_back(t->left->hash);
+      t = t->right;
+      start = mid;
+    }
   }
   return ret;
-} // namespace quail
+}
 
 void MerkleTree::printMerkleTree() {
   // print the whole tree
@@ -77,20 +89,39 @@ void MerkleTree::printMerkleTree() {
   }
 }
 
-bool MerkleTree::proveInclusion(
-    const std::string &root_hash, const std::string &block,
-    const std::vector<std::pair<bool, std::string>> &proof) {
-
-  std::string t = picosha2::hash256_hex_string(block);
-  for (int i = 0; i < proof.size(); i++) {
-    // pair is left
-    if (proof[i].first) {
-      t = picosha2::hash256_hex_string(proof[i].second + t);
-    } else {
-      t = picosha2::hash256_hex_string(t + proof[i].second);
+bool MerkleTree::proveInclusion(const std::string &root_hash,
+                                const int block_id, const int total_blocks,
+                                const std::string &block,
+                                const MerkleProof &proof) {
+  // start from root
+  // if ((block_id >= nr_blocks) || (id < 0)) {
+  //   LOG(FATAL) << "Index exceeds bound";
+  // }
+  std::vector<bool> path;
+  int start = 0;
+  int end = total_blocks;
+  while (start + 1 < end) {
+    int mid = (start + end) / 2;
+    // left path
+    if (block_id < mid) {
+      path.push_back(true);
+      end = mid;
+    }
+    // right path
+    else {
+      path.push_back(false);
+      start = mid;
     }
   }
-  return t == root_hash;
+  std::string s = picosha2::hash256_hex_string(block);
+  for (int i = path.size() - 1; i >= 0; i--) {
+    // left path
+    if (path[i]) {
+      s = picosha2::hash256_hex_string(s + proof[i]);
+    } else {
+      s = picosha2::hash256_hex_string(proof[i] + s);
+    }
+  }
+  return !s.compare(root_hash);
 }
-
 } // namespace quail

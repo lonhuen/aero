@@ -46,14 +46,16 @@ int main(int argc, char **argv) {
   blocks.push_back("6");
   quail::MerkleTree mt(blocks);
   mt.printMerkleTree();
-  auto proof = mt.proofOfInclusion(0);
+  auto proof = mt.proofOfInclusion(1);
   std::cout << " -------- " << std::endl;
-  std::cout << mt.leaf[0]->hash << std::endl;
+  for (int i = 0; i < blocks.size(); i++)
+    std::cout << mt.leaf[i]->hash << std::endl;
   std::cout << " -------- " << std::endl;
   for (int i = 0; i < proof.size(); i++) {
-    std::cout << proof[i].second << std::endl;
+    std::cout << proof[i] << std::endl;
   }
-  if (mt.proveInclusion(mt.root->hash, std::string("1"), proof)) {
+  if (mt.proveInclusion(mt.root->hash, 1, blocks.size(), std::string("2"),
+                        proof)) {
     std::cout << "yeah" << std::endl;
   }
 }
