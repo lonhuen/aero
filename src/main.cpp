@@ -1,21 +1,25 @@
 #include "merkle.h"
+#include "client.h"
 #include "picosha2.h"
 #include "seal/seal.h"
 #include "utils/log_utils.h"
 #include <iostream>
 #include <string>
 #include <vector>
+#include <typeinfo>
+#include <chrono>
+
 
 using namespace seal;
 
 int main(int argc, char **argv) {
   quail::LogUtils::init(argv[0]);
-  // EncryptionParameters parms(scheme_type::bfv);
-  // size_t poly_modulus_degree = 4096;
-  // parms.set_poly_modulus_degree(poly_modulus_degree);
-  // parms.set_coeff_modulus(CoeffModulus::BFVDefault(poly_modulus_degree));
-  // parms.set_plain_modulus(1024);
-  // SEALContext context(parms);
+  EncryptionParameters params(scheme_type::bfv);
+  size_t poly_modulus_degree = 4096;
+  params.set_poly_modulus_degree(poly_modulus_degree);
+  params.set_coeff_modulus(CoeffModulus::BFVDefault(poly_modulus_degree));
+  params.set_plain_modulus(1024);
+  SEALContext context(params);
   // KeyGenerator keygen(context);
   // SecretKey secret_key = keygen.secret_key();
   // PublicKey public_key;
@@ -58,4 +62,18 @@ int main(int argc, char **argv) {
                         proof)) {
     std::cout << "yeah" << std::endl;
   }
+  
+  
+  quail::Client c(context);
+  // Measure time for local client update: 
+  using std::chrono::high_resolution_clock;
+  using std::chrono::duration_cast;
+  using std::chrono::duration;
+  using std::chrono::milliseconds;
+
+  auto t1 = high_resolution_clock::now();
+  c.localUpdate();
+  auto t2 = high_resolution_clock::now();
+  auto ms_int = duration_cast<milliseconds>(t2 - t1);
+  std::cout << "client finished local update in " << std::to_string(ms_int.count()) << " miliseconds." << std::endl;
 }
