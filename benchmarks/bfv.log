@@ -1,0 +1,89 @@
++--------------------------------------------------------------------------+
+|         BFV Performance Test with Degrees: 4096, 8192, and 16384         |
++--------------------------------------------------------------------------+
+/
+| Encryption parameters :
+|   scheme: BFV
+|   poly_modulus_degree: 4096
+|   coeff_modulus size: 109 (36 + 36 + 37) bits
+|   plain_modulus: 786433
+\
+
+Generating secret/public keys: Done
+Generating relinearization keys: Done [2186 microseconds]
+Generating Galois keys: Done [41751 microseconds]
+Running tests .......... Done
+
+Average batch: 129 microseconds
+Average unbatch: 92 microseconds
+Average encrypt: 1446 microseconds
+Average decrypt: 531 microseconds
+Average add: 22 microseconds
+Average multiply: 3799 microseconds
+Average multiply plain: 613 microseconds
+Average square: 2717 microseconds
+Average relinearize: 748 microseconds
+Average rotate rows one step: 750 microseconds
+Average rotate rows random: 2904 microseconds
+Average rotate columns: 743 microseconds
+Average serialize ciphertext: 13 microseconds
+Average compressed (ZLIB) serialize ciphertext: 11715 microseconds
+Average compressed (Zstandard) serialize ciphertext: 1625 microseconds
+
+/
+| Encryption parameters :
+|   scheme: BFV
+|   poly_modulus_degree: 8192
+|   coeff_modulus size: 218 (43 + 43 + 44 + 44 + 44) bits
+|   plain_modulus: 786433
+\
+
+Generating secret/public keys: Done
+Generating relinearization keys: Done [10725 microseconds]
+Generating Galois keys: Done [250270 microseconds]
+Running tests .......... Done
+
+Average batch: 139 microseconds
+Average unbatch: 144 microseconds
+Average encrypt: 3684 microseconds
+Average decrypt: 1294 microseconds
+Average add: 57 microseconds
+Average multiply: 13870 microseconds
+Average multiply plain: 2486 microseconds
+Average square: 10050 microseconds
+Average relinearize: 4002 microseconds
+Average rotate rows one step: 3930 microseconds
+Average rotate rows random: 14571 microseconds
+Average rotate columns: 3908 microseconds
+Average serialize ciphertext: 25 microseconds
+Average compressed (ZLIB) serialize ciphertext: 37378 microseconds
+Average compressed (Zstandard) serialize ciphertext: 1195 microseconds
+
+/
+| Encryption parameters :
+|   scheme: BFV
+|   poly_modulus_degree: 16384
+|   coeff_modulus size: 438 (48 + 48 + 48 + 49 + 49 + 49 + 49 + 49 + 49) bits
+|   plain_modulus: 786433
+\
+
+Generating secret/public keys: Done
+Generating relinearization keys: Done [74358 microseconds]
+Generating Galois keys: Done [1816136 microseconds]
+Running tests .......... Done
+
+Average batch: 272 microseconds
+Average unbatch: 306 microseconds
+Average encrypt: 12949 microseconds
+Average decrypt: 5242 microseconds
+Average add: 275 microseconds
+Average multiply: 60608 microseconds
+Average multiply plain: 9825 microseconds
+Average square: 43961 microseconds
+Average relinearize: 24442 microseconds
+Average rotate rows one step: 24923 microseconds
+Average rotate rows random: 96952 microseconds
+Average rotate columns: 24827 microseconds
+Average serialize ciphertext: 158 microseconds
+Average compressed (ZLIB) serialize ciphertext: 161864 microseconds
+Average compressed (Zstandard) serialize ciphertext: 4218 microseconds
