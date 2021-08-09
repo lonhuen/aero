@@ -1,0 +1,16 @@
+[package]
+name = "quail"
+version = "0.0.1"
+
+[dependencies]
+ark-groth16 = { path="./lib/groth16",version="0.2.0", default-features = false }
+ark-ff = { version = "^0.2.0", default-features = false }
+ark-std = { version = "^0.2.0", default-features = false }
+ark-relations = { version = "^0.2.0", default-features = false }
+csv = { version = "1" }
+ark-bls12-381 = { version = "^0.2.0", default-features = false, features = ["curve"] }
+ark-bls12-377 = { version = "^0.2.0", default-features = false, features = ["curve"] }
+
+[[bin]]
+name = "groth16"
+path = "src/groth16.rs"
