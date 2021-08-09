@@ -3,14 +3,21 @@ name = "quail"
 version = "0.0.1"
 
 [dependencies]
-ark-groth16 = { path="./lib/groth16",version="0.2.0", default-features = false }
+ark-groth16 = {version="0.2.0", default-features = false }
 ark-ff = { version = "^0.2.0", default-features = false }
-ark-std = { version = "^0.2.0", default-features = false }
-ark-relations = { version = "^0.2.0", default-features = false }
-csv = { version = "1" }
 ark-bls12-381 = { version = "^0.2.0", default-features = false, features = ["curve"] }
-ark-bls12-377 = { version = "^0.2.0", default-features = false, features = ["curve"] }
+merkle_light = "^0.3.1"
+rust-crypto = "^0.2"
+rsa = "0.5.0"
+rand = "0.8.0"
+
+#[[bin]]
+#name = "verify"
+#path = "src/verify.rs"
 
 [[bin]]
-name = "groth16"
-path = "src/groth16.rs"
+name = "server"
+path = "src/server.rs"
+[[bin]]
+name = "serverpit"
+path = "src/server_pit.rs"
