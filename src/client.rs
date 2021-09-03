@@ -142,7 +142,7 @@ async fn main() -> anyhow::Result<()> {
     let mut client = Client::new(inner_client);
 
     // begin uploading
-    let result = client.upload(vec![0u8; 2]).await;
+    let result = client.upload(vec![0u8; 1]).await;
     println!("{}", result);
 
     Ok(())
