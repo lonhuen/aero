@@ -5,7 +5,7 @@ edition = "2018"
 
 [dependencies]
 #ark-groth16 = {version="0.2.0", default-features = false }
-ark-groth16 = {path="./lib/groth16",version="0.2.0"}
+ark-groth16 = {path="./lib/groth16",version="0.2.0",features = ["parallel"]}
 ark-ff = { version = "^0.2.0", default-features = false }
 ark-std = { version = "^0.2.0", default-features = false }
 ark-ec = { version = "^0.2.0", default-features = false }
@@ -15,14 +15,27 @@ ark-serialize= { version = "^0.2.0", default-features = false }
 
 log = "0.4"
 
-merkle_light = "^0.3.1"
+merkle_light = {version="^0.3.1", path="lib/merkle_light-0.3.1/merkle"}
 rust-crypto = "^0.2"
-rsa = "0.5.0"
+rsa = {version="0.5.0",features=["serde"]}
 rand = "0.8.0"
+anyhow = "1.0"
+futures = "0.3"
+serde = { version = "1.0" }
+tarpc = { version = "0.26", features = ["full"] }
+tokio = { version = "1.0", features = ["macros", "net", "rt-multi-thread"] }
+tokio-serde = { version = "0.8", features = ["json"] }
 
+#clap = "3.0.0-beta.2"
+#opentelemetry = { version = "0.13", features = ["rt-tokio"] }
+#opentelemetry-jaeger = { version = "0.12", features = ["tokio"] }
+#
+#tracing = { version = "0.1" }
+#tracing-opentelemetry = "0.12"
+#tracing-subscriber = "0.2"
 [[bin]]
-name = "proof"
-path = "src/proof_generation/proof.rs"
+name = "client"
+path = "src/client.rs"
 
 [[bin]]
 name = "server"
@@ -30,3 +43,6 @@ path = "src/server.rs"
 [[bin]]
 name = "serverpit"
 path = "src/server_pit.rs"
+
+[features]
+print-trace = [ "ark-std/print-trace" ]
