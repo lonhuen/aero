@@ -1,222 +1,33 @@
-extern crate crypto;
-extern crate merkle_light;
-extern crate rand;
-extern crate rsa;
-mod server_service;
-use crypto::digest::Digest;
-use crypto::sha3::{Sha3, Sha3Mode};
 use futures::{
     future::{self, Ready},
     prelude::*,
 };
-use rsa::pkcs1::der::bigint::generic_array::typenum::private::IsEqualPrivate;
-use server_service::hash_commitment;
-use std::io;
-use std::ops::Add;
-use std::rc::Rc;
-use std::time::SystemTime;
-use tarpc::server::Serve;
-
-use merkle_light::hash::{Algorithm, Hashable};
-use merkle_light::merkle::MerkleTree;
-use merkle_light::proof::Proof;
-use rand::rngs::OsRng;
-use rsa::pkcs8::FromPublicKey;
-use rsa::{pkcs8::ToPublicKey, RsaPrivateKey, RsaPublicKey};
-use server_service::{MerkleProof, ServerService};
-use std::collections::BTreeMap;
-use std::convert::{From, Into, TryInto};
-use std::fmt;
-use std::hash::Hasher;
-use std::iter::FromIterator;
-use std::sync::mpsc::channel;
-use std::sync::{Arc, Condvar, Mutex};
-use std::thread;
 use std::{
+    collections::BTreeMap,
+    convert::{Into, TryInto},
+    io,
+    iter::FromIterator,
     net::{IpAddr, Ipv6Addr, SocketAddr},
-    time::Duration,
+    sync::{Arc, Condvar, Mutex},
 };
+
 use tarpc::{
     context,
     server::{self, Channel, Incoming},
     tokio_serde::formats::Json,
 };
+mod common;
+use crate::common::{
+    aggregation::{merkle::*, SummationEntry, SummationLeaf},
+    hash_commitment,
+    server_service::ServerService,
+};
 const NR_COMMIT: u32 = 8;
-pub struct ExampleAlgorithm(Sha3);
-
-impl ExampleAlgorithm {
-    pub fn new() -> ExampleAlgorithm {
-        ExampleAlgorithm(Sha3::new(Sha3Mode::Sha3_256))
-    }
-}
-
-impl Default for ExampleAlgorithm {
-    fn default() -> ExampleAlgorithm {
-        ExampleAlgorithm::new()
-    }
-}
-
-impl Hasher for ExampleAlgorithm {
-    #[inline]
-    fn write(&mut self, msg: &[u8]) {
-        self.0.input(msg)
-    }
-
-    #[inline]
-    fn finish(&self) -> u64 {
-        unimplemented!()
-    }
-}
-
-impl Algorithm<[u8; 32]> for ExampleAlgorithm {
-    #[inline]
-    fn hash(&mut self) -> [u8; 32] {
-        let mut h = [0u8; 32];
-        self.0.result(&mut h);
-        h
-    }
-
-    #[inline]
-    fn reset(&mut self) {
-        self.0.reset();
-    }
-}
-#[derive(Clone)]
-pub struct CommitEntry {
-    rsa_pk: Vec<u8>,
-    hash: [u8; 32],
-}
-
-#[derive(Clone)]
-pub struct SummationLeaf {
-    pub rsa_pk: Vec<u8>,
-    pub c0: Option<Vec<i128>>,
-    pub c1: Option<Vec<i128>>,
-    pub r: Option<[u8; 16]>,
-}
-
-impl SummationLeaf {
-    pub fn new() -> Self {
-        SummationLeaf {
-            rsa_pk: Vec::new(),
-            c0: None,
-            c1: None,
-            r: None,
-        }
-    }
-    pub fn from_ct(rsa_pk: Vec<u8>, cts: Vec<u8>, r: [u8; 16]) -> Self {
-        let c0: Vec<i128> = (0..65536)
-            .step_by(16)
-            .map(|i| i128::from_le_bytes(cts[i..i + 16].try_into().expect("uncorrected length")))
-            .collect();
-        let c1: Vec<i128> = (0..65536)
-            .step_by(16)
-            .map(|i| {
-                i128::from_le_bytes(
-                    cts[(i + 65536)..(i + 16 + 65536)]
-                        .try_into()
-                        .expect("uncorrected length"),
-                )
-            })
-            .collect();
-        SummationLeaf {
-            rsa_pk,
-            c0: Some(c0),
-            c1: Some(c1),
-            r: Some(r),
-        }
-    }
-    pub fn hash(&self) -> [u8; 32] {
-        let mut hasher = Sha3::sha3_256();
-
-        hasher.input(&self.rsa_pk);
-        if self.c0.is_some() {
-            let c0_bytes: Vec<u8> = (0..4096)
-                .into_iter()
-                .flat_map(|i| i128::to_le_bytes(self.c0.as_ref().unwrap()[i]))
-                .collect();
-            let c1_bytes: Vec<u8> = (0..4096)
-                .into_iter()
-                .flat_map(|i| i128::to_le_bytes(self.c1.as_ref().unwrap()[i]))
-                .collect();
-            hasher.input(&c0_bytes);
-            hasher.input(&c1_bytes);
-            hasher.input(&self.r.unwrap());
-        }
-
-        let mut h = [0u8; 32];
-        hasher.result(&mut h);
-        h
-    }
-}
-
-#[derive(Clone)]
-pub struct SummationNonLeaf {
-    pub c0: Vec<i128>,
-    pub c1: Vec<i128>,
-}
-impl SummationNonLeaf {
-    pub fn new() -> Self {
-        let c0 = vec![0i128; 4096];
-        let c1 = vec![0i128; 4096];
-        SummationNonLeaf { c0, c1 }
-    }
-    pub fn hash(&self) -> [u8; 32] {
-        let mut hasher = Sha3::sha3_256();
-
-        let c0_bytes: Vec<u8> = (0..4096)
-            .into_iter()
-            .flat_map(|i| i128::to_le_bytes(self.c0[i]))
-            .collect();
-        let c1_bytes: Vec<u8> = (0..4096)
-            .into_iter()
-            .flat_map(|i| i128::to_le_bytes(self.c1[i]))
-            .collect();
-
-        hasher.input(&c0_bytes);
-        hasher.input(&c1_bytes);
-        let mut h = [0u8; 32];
-        hasher.result(&mut h);
-        h
-    }
-}
-
-impl Add for SummationNonLeaf {
-    type Output = SummationNonLeaf;
-    fn add(self, other: Self) -> Self {
-        // TODO need modulus here maybe
-        let new_c0: Vec<i128> = (0..4096)
-            .into_iter()
-            .map(|i| self.c0[i] + other.c0[i])
-            .collect();
-        let new_c1: Vec<i128> = (0..4096)
-            .into_iter()
-            .map(|i| self.c1[i] + other.c1[i])
-            .collect();
-        SummationNonLeaf {
-            c0: new_c0,
-            c1: new_c1,
-        }
-    }
-}
-impl From<SummationLeaf> for SummationNonLeaf {
-    fn from(leaf: SummationLeaf) -> SummationNonLeaf {
-        SummationNonLeaf {
-            c0: leaf.c0.unwrap_or(vec![0i128; 4096]),
-            c1: leaf.c1.unwrap_or(vec![0i128; 4096]),
-        }
-    }
-}
-#[derive(Clone)]
-pub enum SummationEntry {
-    Leaf(SummationLeaf),
-    NonLeaf(SummationNonLeaf),
-}
 pub struct Server {
-    pub commit_array: BTreeMap<Vec<u8>, [u8; 32]>,
-    pub mc: Option<MerkleTree<[u8; 32], ExampleAlgorithm>>,
+    pub commit_array: BTreeMap<Vec<u8>, MerkleHash>,
+    pub mc: Option<MerkleTree>,
     pub summation_array: Vec<SummationEntry>,
-    pub ms: Option<MerkleTree<[u8; 32], ExampleAlgorithm>>,
+    pub ms: Option<MerkleTree>,
 }
 impl Server {
     pub fn new() -> Self {
@@ -251,9 +62,10 @@ impl InnerServer {
 impl ServerService for InnerServer {
     type AggregateCommitFut = Ready<MerkleProof>;
     type AggregateDataFut = Ready<MerkleProof>;
+    type VerifyFut = Ready<Vec<(SummationEntry, MerkleProof)>>;
     fn aggregate_commit(
         self,
-        ctx: context::Context,
+        _: context::Context,
         rsa_pk: Vec<u8>,
         commitment: [u8; 32],
     ) -> Self::AggregateCommitFut {
@@ -359,15 +171,15 @@ impl ServerService for InnerServer {
                     left += 2;
                     right += 1;
                 }
-
-                {
-                    let ii = s.summation_array.len() - 1;
-                    let result = match s.summation_array[ii].clone() {
-                        SummationEntry::NonLeaf(x) => Some(x),
-                        _ => None,
-                    };
-                    println!("{:?}", result.unwrap().c0[0]);
-                }
+                // just for test purpose
+                //{
+                //    let ii = s.summation_array.len() - 1;
+                //    let result = match s.summation_array[ii].clone() {
+                //        SummationEntry::NonLeaf(x) => Some(x),
+                //        _ => None,
+                //    };
+                //    println!("{:?}", result.unwrap().c0[0]);
+                //}
 
                 s.ms = Some(MerkleTree::from_iter(s.summation_array.iter().map(
                     |x| match x {
@@ -391,6 +203,21 @@ impl ServerService for InnerServer {
         };
 
         future::ready(proof_leaf.into())
+    }
+
+    fn verify(self, _: context::Context, vinit: u32, non_leaf_id: Vec<u32>) -> Self::VerifyFut {
+        // TODO maybe RwLock? not able to directly read the content
+        //first all the leafs
+        let mut ret: Vec<(Vec<SummationEntry>, MerkleProof)> = Vec::new();
+        let s = self.server.lock().unwrap();
+        for i in 0..5 {
+            let proof: MerkleProof =
+                s.ms.as_ref()
+                    .unwrap()
+                    .gen_proof((i + vinit).try_into().unwrap())
+                    .into();
+        }
+        future::ready(Vec::new())
     }
 }
 #[tokio::main]
@@ -426,148 +253,3 @@ async fn main() -> io::Result<()> {
 
     Ok(())
 }
-
-//fn main() {
-//    // input from aggregation
-//    // TODO suppose a complete binary tree for now
-//    let nr_clients = 8;
-//    assert!(nr_clients > 2);
-//    let mut leaf_entry = vec![SummationLeaf::new(); nr_clients];
-//    let commit_array: Vec<_> = leaf_entry
-//        .iter()
-//        .map(|x| CommitEntry::new(&x.pk, &x.c0, &x.c1, &x.r))
-//        .collect();
-//
-//    let commit_tree: MerkleTree<[u8; 32], ExampleAlgorithm> =
-//        MerkleTree::from_iter(commit_array.iter().map(|x| x.hash));
-//    let commit_root = commit_tree.root();
-//
-//    let mut summation_array = vec![SummationNonLeaf::new(); nr_clients - 1];
-//
-//    //       0
-//    //   1       2
-//    // 3   4   5   6
-//    //7 8 9 10 11 12 13 14
-//    //0 1 2 3 4 5 6 7
-//    // TODO 128-bit and mod addition here
-//    for i in (0..nr_clients - 1).rev() {
-//        // left-child
-//        if 2 * i + 1 >= nr_clients - 1 {
-//            // leaf
-//            for k in 0..summation_array[0].c0.len() {
-//                summation_array[i].c0[k] += leaf_entry[2 * i + 2 - nr_clients].c0[k];
-//                summation_array[i].c1[k] += leaf_entry[2 * i + 2 - nr_clients].c1[k];
-//            }
-//        } else {
-//            // non-leaf
-//            for k in 0..summation_array[0].c0.len() {
-//                summation_array[i].c0[k] += summation_array[2 * i + 1].c0[k];
-//                summation_array[i].c1[k] += summation_array[2 * i + 1].c1[k];
-//            }
-//        };
-//        if 2 * i + 2 >= nr_clients - 1 {
-//            for k in 0..summation_array[0].c0.len() {
-//                summation_array[i].c0[k] += leaf_entry[2 * i + 3 - nr_clients].c0[k];
-//                summation_array[i].c1[k] += leaf_entry[2 * i + 3 - nr_clients].c1[k];
-//            }
-//        } else {
-//            for k in 0..summation_array[0].c0.len() {
-//                summation_array[i].c0[k] += summation_array[2 * i + 2].c0[k];
-//                summation_array[i].c1[k] += summation_array[2 * i + 2].c1[k];
-//            }
-//        };
-//    }
-//
-//    let summation_tree: MerkleTree<[u8; 32], ExampleAlgorithm> = MerkleTree::from_iter(
-//        summation_array
-//            .iter()
-//            .map(|x| x.hash())
-//            .chain(leaf_entry.iter().map(|f| f.hash())),
-//    );
-//
-//    let summation_root = summation_tree.root();
-//    // check_aggregate
-//
-//    //let (client_sender, server_receiver) = channel::<i32>();
-//    let (server_sender, client_receiver) = channel::<Vec<u8>>();
-//
-//    // Spawn off an expensive computation
-//    let t = thread::spawn(move || {
-//        // published values
-//        let mut nr_bytes = 0;
-//        let c_root = commit_root.clone();
-//        let s_root = summation_root.clone();
-//
-//        // check whether Commit_0 in Mc
-//        if let Ok(s) = client_receiver.recv() {
-//            nr_bytes += s.len();
-//            println!("One proof length {}", nr_bytes);
-//            // 784 for now
-//            // we estimate it to be 30 * 32
-//            let proof = construct_from_string(&String::from_utf8(s).unwrap());
-//            //println!("{:?}", proof);
-//            //println!("{:?}", proof.root());
-//            //println!("{:?}", proof.item());
-//            //println!("{:?}", commit_array[0].hash);
-//            //TODO check hash(commit.hash) == proof.item()
-//            if (proof.root() != c_root) || !proof.validate::<ExampleAlgorithm>() {
-//                println!("Commit not in merkle tree");
-//                std::process::exit(1);
-//            }
-//        }
-//        if let Ok(s) = client_receiver.recv() {
-//            nr_bytes += s.len();
-//            // parse all nodes and verify summation
-//        }
-//        println!("Total number of bytes: {}", nr_bytes);
-//        //TODO clients needs to send v_init and non-leaf nodes lists to the server
-//    });
-//
-//    // commit_i in Mc
-//    let proof_commit_0 = commit_tree.gen_proof(0);
-//    server_sender
-//        .send(format!("{:?}", proof_commit_0).as_bytes().to_vec())
-//        .unwrap();
-//
-//    // randomly select 6 leaf nodes and 3 non-leaf nodes + 3 * 3 non-leaf nodes
-//    // TODO here we just send leaf nodes 0-5 and non-leaf 3 4 5 and 0(1 2) 1(3 4) 2(5 6)
-//    let mut ct_vec: Vec<u8> = Vec::new();
-//    // summation array 0 - 6
-//    // leaf array 7 - 14
-//    for i in 0..6 {
-//        ct_vec.extend(leaf_entry[i].c0.iter());
-//        ct_vec.extend(leaf_entry[i].c1.iter());
-//        let proof = summation_tree.gen_proof(i + 7);
-//        ct_vec.extend(format!("{:?}", proof).as_bytes().to_vec());
-//    }
-//    for i in 3..6 {
-//        ct_vec.extend(summation_array[i].c0.iter());
-//        ct_vec.extend(summation_array[i].c1.iter());
-//        let proof = summation_tree.gen_proof(i);
-//        ct_vec.extend(format!("{:?}", proof).as_bytes().to_vec());
-//    }
-//    for i in 0..3 {
-//        {
-//            ct_vec.extend(summation_array[i].c0.iter());
-//            ct_vec.extend(summation_array[i].c1.iter());
-//            let proof = summation_tree.gen_proof(i);
-//            ct_vec.extend(format!("{:?}", proof).as_bytes().to_vec());
-//        }
-//        {
-//            ct_vec.extend(summation_array[2 * i + 1].c0.iter());
-//            ct_vec.extend(summation_array[2 * i + 1].c1.iter());
-//            let proof = summation_tree.gen_proof(2 * i + 1);
-//            ct_vec.extend(format!("{:?}", proof).as_bytes().to_vec());
-//        }
-//        {
-//            ct_vec.extend(summation_array[2 * i + 2].c0.iter());
-//            ct_vec.extend(summation_array[2 * i + 2].c1.iter());
-//            let proof = summation_tree.gen_proof(2 * i + 2);
-//            ct_vec.extend(format!("{:?}", proof).as_bytes().to_vec());
-//        }
-//    }
-//    server_sender.send(ct_vec).unwrap();
-//
-//    t.join().unwrap();
-//}
-//

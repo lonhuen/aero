@@ -1,12 +1,12 @@
-pub mod cipher;
-pub mod proof;
-use crate::cipher::CipherText;
-use crate::proof::{Prover, Verifier};
-#[path = "server.rs"]
-mod server;
-use crate::server::ExampleAlgorithm;
-mod server_service;
-use crate::server_service::{MerkleProof, ServerServiceClient, ZKProof};
+mod common;
+mod zksnark;
+use crate::common::cipher::CipherText;
+use crate::zksnark::{Prover, Verifier};
+
+use crate::common::aggregation::merkle::HashAlgorithm;
+use crate::common::aggregation::merkle::MerkleProof;
+use crate::common::server_service::ServerServiceClient;
+use crate::common::ZKProof;
 use ark_std::{end_timer, start_timer};
 use crypto::digest::Digest;
 use crypto::sha3::{Sha3, Sha3Mode};
@@ -113,7 +113,7 @@ impl Client {
 
         let ms_proof = result_data.await.await.unwrap().to_proof();
         // verify the proofs
-        ms_proof.validate::<ExampleAlgorithm>() && mc_proof.validate::<ExampleAlgorithm>()
+        ms_proof.validate::<HashAlgorithm>() && mc_proof.validate::<HashAlgorithm>()
     }
     fn hash(&mut self) -> [u8; 32] {
         // t = Hash(r, c0, c1,..., pi)
@@ -128,6 +128,11 @@ impl Client {
         let mut h = [0u8; 32];
         hasher.result(&mut h);
         h
+    }
+    // this N should be known from the board
+    pub async fn verify(&self, N: usize) {
+        // random the v_init
+        // retrieve the leafs
     }
 }
 #[tokio::main]

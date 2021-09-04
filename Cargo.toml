@@ -40,9 +40,6 @@ path = "src/client.rs"
 [[bin]]
 name = "server"
 path = "src/server.rs"
-[[bin]]
-name = "serverpit"
-path = "src/server_pit.rs"
 
 [features]
 print-trace = [ "ark-std/print-trace" ]
