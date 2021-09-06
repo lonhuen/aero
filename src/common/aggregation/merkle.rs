@@ -7,7 +7,7 @@ use tarpc::serde::{Deserialize, Serialize};
 pub type MerkleHash = [u8; 32];
 pub type MerkleTree = merkle_light::merkle::MerkleTree<MerkleHash, HashAlgorithm>;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MerkleProof {
     pub lemma: Vec<[u8; 32]>,
     pub path: Vec<bool>,

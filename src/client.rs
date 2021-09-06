@@ -3,23 +3,25 @@ mod zksnark;
 use crate::common::cipher::CipherText;
 use crate::zksnark::{Prover, Verifier};
 
-use crate::common::aggregation::merkle::HashAlgorithm;
-use crate::common::aggregation::merkle::MerkleProof;
+use crate::common::aggregation::{
+    merkle::HashAlgorithm, merkle::MerkleProof, SummationEntry, SummationLeaf, SummationNonLeaf,
+};
 use crate::common::server_service::ServerServiceClient;
-use crate::common::ZKProof;
+use crate::common::{summation_array_size, ZKProof};
 use ark_std::{end_timer, start_timer};
 use crypto::digest::Digest;
 use crypto::sha3::{Sha3, Sha3Mode};
-use rand::{rngs::StdRng, SeedableRng};
+use rand::{rngs::StdRng, Rng, SeedableRng};
 use rsa::pkcs8::FromPublicKey;
 use rsa::{pkcs8::ToPublicKey, RsaPrivateKey, RsaPublicKey};
+use std::collections::HashSet;
 use std::convert::TryInto;
 use std::net::{IpAddr, Ipv6Addr};
+use std::thread::sleep;
 use std::time::{Instant, SystemTime};
 use std::{net::SocketAddr, time::Duration};
 use std::{thread, time};
 use tarpc::{client, context, tokio_serde::formats::Json};
-use tokio::time::sleep;
 
 const DEADLINE_TIME: u64 = 60;
 pub struct Client {
@@ -82,7 +84,7 @@ impl Client {
         // generate commitment to all the CTs
         let cm = self.hash();
         // send this commitment to the server
-        let result_commit = async {
+        let result_commit = {
             let mut ctx = context::current();
             ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
             self.inner.aggregate_commit(ctx, self.rsa_pk.clone(), cm)
@@ -91,7 +93,7 @@ impl Client {
         let proofs = self.generate_proof();
 
         // wait for the Mc tree
-        let mc_proof = result_commit.await.await.unwrap().to_proof();
+        let mc_proof = result_commit.await.unwrap().to_proof();
 
         // proceed to summation tree
         let mut cts_bytes: Vec<u8> = Vec::with_capacity(self.cts.len() * 65536 * 2);
@@ -100,18 +102,19 @@ impl Client {
 
         for i in 0..self.cts.len() {
             cts_bytes.extend(self.cts[i].c0.iter());
-            cts_bytes.extend(self.cts[i].c1.iter());
             proof_bytes.extend(proofs[i].iter());
         }
-
-        let result_data = async {
+        for i in 0..self.cts.len() {
+            cts_bytes.extend(self.cts[i].c1.iter());
+        }
+        let result_data = {
             let mut ctx = context::current();
             ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
             self.inner
                 .aggregate_data(ctx, self.rsa_pk.clone(), cts_bytes, self.nonce, proof_bytes)
         };
 
-        let ms_proof = result_data.await.await.unwrap().to_proof();
+        let ms_proof = result_data.await.unwrap().to_proof();
         // verify the proofs
         ms_proof.validate::<HashAlgorithm>() && mc_proof.validate::<HashAlgorithm>()
     }
@@ -129,10 +132,148 @@ impl Client {
         hasher.result(&mut h);
         h
     }
+
     // this N should be known from the board
-    pub async fn verify(&self, N: usize) {
+    // s has to be at least 1
+    pub async fn verify(&self, N: u32, s: u32) {
+        assert!(s >= 1, "s should be at least 1");
+        // used to trace all the "retrieved" nodes
+        // let mut set: HashSet<u32> = HashSet::new();
         // random the v_init
         // retrieve the leafs
+        let mut rng = rand::rngs::StdRng::from_entropy();
+        // TODO random here
+        //let vinit: u32 = rng.gen::<u32>() % N;
+        let vinit: u32 = 0;
+        // receive the leafs
+        // for i in vinit..vinit + s + 1 {
+        //     set.insert(i);
+        // }
+        // [0..N): leafs
+        // [N..N+N/2): non-leafs whose children are leafs
+        // N+N/2: possibly 1 leaf + 1 non-leaf
+        // [N+N/2..summation_array_size(N)): non-leafs with non-leaf children
+
+        let mut non_leafs: Vec<u32> = Vec::new();
+        let array_size = summation_array_size(N);
+        // first pick about s/2 non-leafs whose children are leafs
+        // if no such non-leafs nodes exist, just skip
+        let mut idx = vinit;
+        while idx <= vinit + s {
+            if (idx & 0x1 == 0) && (idx + 1 <= vinit + s) {
+                non_leafs.push(N + idx / 2);
+                //set.insert(N + idx / 2);
+                idx += 2;
+            } else {
+                idx += 1;
+            }
+        }
+
+        // now randomly pick non-leaf nodes whose children are non-leafs
+        // if s is even, just pick s/2; otherwise either (s+1)/2 or s/2
+        // or put in another way, if s is odd and vmax is even, pick (s+1) / 2
+        // otherwise, pick s/2
+        let nr_gp = {
+            if (s & 0x1 != 0) && ((vinit + s) & 0x1 == 0) {
+                (s + 1) / 2
+            } else {
+                s / 2
+            }
+        };
+        // [0..N)
+        // a[N] = 0 + 1, a[N+1] = 2 + 3,...
+        // a[id_gp - N] = 2 * (id_gp - N),
+        for _ in 0..nr_gp + 1 {
+            // id of grand parent
+            let id_gp = rng.gen_range(N + N / 2..array_size);
+            // the id of the children
+            let left = (id_gp - N) * 2;
+            let right = left + 1;
+            //set.insert(left);
+            //set.insert(right);
+            non_leafs.push(id_gp);
+            non_leafs.push(left);
+            non_leafs.push(right);
+        }
+
+        let result = {
+            let mut ctx = context::current();
+            ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
+            self.inner.verify(ctx, vinit, non_leafs)
+        }
+        .await
+        .unwrap();
+
+        for i in 0..s + 1 {
+            let mc_node = &result[2 * i as usize];
+            let ms_node = &result[(2 * i + 1) as usize];
+            // Commit_i appears in Mc
+            if !mc_node.1.clone().to_proof().validate::<HashAlgorithm>() {
+                assert!(false, "wrong merkle proofs");
+            }
+            if let SummationEntry::Leaf(s) = ms_node.0.clone() {
+                // check the hash
+                if s.c0.is_some() {
+                    if let SummationEntry::Commit(cm) = mc_node.0.clone() {
+                        let h = {
+                            let mut hasher = Sha3::sha3_256();
+                            hasher.input(&s.r.unwrap());
+                            let c0: Vec<u8> = (0..4096)
+                                .flat_map(|i| i128::to_le_bytes(s.c0.as_ref().unwrap()[i]))
+                                .collect();
+                            let c1: Vec<u8> = (0..4096)
+                                .flat_map(|i| i128::to_le_bytes(s.c1.as_ref().unwrap()[i]))
+                                .collect();
+                            hasher.input(&c0);
+                            hasher.input(&c1);
+                            hasher.input(&self.rsa_pk);
+                            let mut h = [0u8; 32];
+                            hasher.result(&mut h);
+                            h
+                        };
+                        //TODO maybe some bug in serialization of c0 and c1 somewhere
+                        //assert_eq!(h, cm.hash);
+                    }
+                }
+            } else {
+                assert!(false, "not leaf nodes!");
+            }
+        }
+
+        let mut i = (s + 1) as usize;
+        let mut idx = vinit;
+        while idx <= vinit + s {
+            if (idx & 0x1 == 0) && (idx + 1 <= vinit + s) {
+                // TODO check these nodes by ref to the leaf nodes
+                i = i + 1;
+                //non_leafs.push(N + idx / 2);
+                //set.insert(N + idx / 2);
+                idx += 2;
+            } else {
+                idx += 1;
+            }
+        }
+        while i < result.len() {
+            let parent = &result[i];
+            let left = &result[i + 1];
+            let right = &result[i + 2];
+            // check the proofs
+            assert!(parent.1.clone().to_proof().validate::<HashAlgorithm>());
+            assert!(left.1.clone().to_proof().validate::<HashAlgorithm>());
+            assert!(right.1.clone().to_proof().validate::<HashAlgorithm>());
+            if let SummationEntry::NonLeaf(a) = parent.0.clone() {
+                if let SummationEntry::NonLeaf(b) = left.0.clone() {
+                    if let SummationEntry::NonLeaf(c) = right.0.clone() {
+                        // check the sum
+                        for i in 0..4096 {
+                            assert_eq!(a.c0[i], b.c0[i] + c.c0[i]);
+                            assert_eq!(a.c1[i], b.c1[i] + c.c1[i]);
+                        }
+                    }
+                }
+            }
+            i += 3;
+        }
     }
 }
 #[tokio::main]
@@ -148,7 +289,10 @@ async fn main() -> anyhow::Result<()> {
 
     // begin uploading
     let result = client.upload(vec![0u8; 1]).await;
+
+    sleep(Duration::from_secs(1));
     println!("{}", result);
+    client.verify(8, 5).await;
 
     Ok(())
 }

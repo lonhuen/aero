@@ -8,6 +8,7 @@ use std::{
     io,
     iter::FromIterator,
     net::{IpAddr, Ipv6Addr, SocketAddr},
+    process::exit,
     sync::{Arc, Condvar, Mutex},
 };
 
@@ -18,7 +19,7 @@ use tarpc::{
 };
 mod common;
 use crate::common::{
-    aggregation::{merkle::*, SummationEntry, SummationLeaf},
+    aggregation::{merkle::*, CommitEntry, SummationEntry, SummationLeaf},
     hash_commitment,
     server_service::ServerService,
 };
@@ -161,10 +162,18 @@ impl ServerService for InnerServer {
                     let a = match s.summation_array[left].clone() {
                         SummationEntry::NonLeaf(y) => y,
                         SummationEntry::Leaf(x) => x.into(),
+                        _ => {
+                            assert!(false, "commitment in summation array");
+                            exit(1);
+                        }
                     };
                     let b = match s.summation_array[left + 1].clone() {
                         SummationEntry::NonLeaf(y) => y,
                         SummationEntry::Leaf(x) => x.into(),
+                        _ => {
+                            assert!(false, "commitment in summation array");
+                            exit(1);
+                        }
                     };
                     let c = a + b;
                     s.summation_array.push(SummationEntry::NonLeaf(c));
@@ -185,6 +194,12 @@ impl ServerService for InnerServer {
                     |x| match x {
                         SummationEntry::Leaf(y) => y.hash(),
                         SummationEntry::NonLeaf(y) => y.hash(),
+                        // just to make compiler happy
+                        // never reach here
+                        _ => {
+                            assert!(false, "commitment in summation array");
+                            exit(1);
+                        }
                     },
                 )));
             }
@@ -208,16 +223,42 @@ impl ServerService for InnerServer {
     fn verify(self, _: context::Context, vinit: u32, non_leaf_id: Vec<u32>) -> Self::VerifyFut {
         // TODO maybe RwLock? not able to directly read the content
         //first all the leafs
-        let mut ret: Vec<(Vec<SummationEntry>, MerkleProof)> = Vec::new();
+        let mut ret: Vec<(SummationEntry, MerkleProof)> = Vec::new();
         let s = self.server.lock().unwrap();
-        for i in 0..5 {
-            let proof: MerkleProof =
+        for i in 0..5 + 1 {
+            let node = s.summation_array[(i + vinit) as usize].clone();
+            //println!("{:?}", s.mc.as_ref().unwrap().gen_proof(0));
+            let mc_proof: MerkleProof =
+                s.mc.as_ref()
+                    .unwrap()
+                    .gen_proof(((i + vinit) % NR_COMMIT) as usize)
+                    .into();
+            let ms_proof: MerkleProof =
                 s.ms.as_ref()
                     .unwrap()
-                    .gen_proof((i + vinit).try_into().unwrap())
+                    .gen_proof(((i + vinit) % NR_COMMIT) as usize)
                     .into();
+            if let SummationEntry::Leaf(l) = node {
+                let pk = l.rsa_pk;
+                let hash = s.commit_array.get(&pk).unwrap().clone();
+                ret.push((
+                    SummationEntry::Commit(CommitEntry {
+                        rsa_pk: pk,
+                        hash: hash,
+                    }),
+                    mc_proof,
+                ));
+                ret.push((s.summation_array[(i + vinit) as usize].clone(), ms_proof));
+            }
         }
-        future::ready(Vec::new())
+        println!("len of result {}", ret.len());
+        for i in non_leaf_id {
+            let ms_proof: MerkleProof = s.ms.as_ref().unwrap().gen_proof(i as usize).into();
+            ret.push((s.summation_array[i as usize].clone(), ms_proof));
+        }
+        println!("len of result {}", ret.len());
+        drop(s);
+        future::ready(ret)
     }
 }
 #[tokio::main]

@@ -7,10 +7,10 @@ use tarpc::serde::{Deserialize, Serialize};
 pub mod merkle;
 use crate::common::aggregation::merkle::MerkleHash;
 
-#[derive(Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CommitEntry {
-    rsa_pk: Vec<u8>,
-    hash: [u8; 32],
+    pub rsa_pk: Vec<u8>,
+    pub hash: [u8; 32],
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -137,4 +137,5 @@ impl From<SummationLeaf> for SummationNonLeaf {
 pub enum SummationEntry {
     Leaf(SummationLeaf),
     NonLeaf(SummationNonLeaf),
+    Commit(CommitEntry),
 }
