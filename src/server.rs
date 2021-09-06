@@ -251,12 +251,10 @@ impl ServerService for InnerServer {
                 ret.push((s.summation_array[(i + vinit) as usize].clone(), ms_proof));
             }
         }
-        println!("len of result {}", ret.len());
         for i in non_leaf_id {
             let ms_proof: MerkleProof = s.ms.as_ref().unwrap().gen_proof(i as usize).into();
             ret.push((s.summation_array[i as usize].clone(), ms_proof));
         }
-        println!("len of result {}", ret.len());
         drop(s);
         future::ready(ret)
     }

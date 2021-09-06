@@ -8,10 +8,10 @@ impl CipherText {
     pub fn new() -> Self {
         Self {
             // just for test purpose
-            //c0: [1u8; 65536],
-            //c1: [1u8; 65536],
-            c0: [0u8; 65536],
-            c1: [0u8; 65536],
+            c0: [1u8; 65536],
+            c1: [1u8; 65536],
+            //c0: [0u8; 65536],
+            //c1: [0u8; 65536],
         }
     }
 }

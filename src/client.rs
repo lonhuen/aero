@@ -226,13 +226,12 @@ impl Client {
                                 .collect();
                             hasher.input(&c0);
                             hasher.input(&c1);
-                            hasher.input(&self.rsa_pk);
+                            hasher.input(&cm.rsa_pk);
                             let mut h = [0u8; 32];
                             hasher.result(&mut h);
                             h
                         };
-                        //TODO maybe some bug in serialization of c0 and c1 somewhere
-                        //assert_eq!(h, cm.hash);
+                        assert_eq!(h, cm.hash);
                     }
                 }
             } else {
@@ -240,11 +239,38 @@ impl Client {
             }
         }
 
-        let mut i = (s + 1) as usize;
+        // offset by the commit and leafs
+        let mut i = (s + 1 + s + 1) as usize;
         let mut idx = vinit;
+        //let mut ii = 0 as usize;
         while idx <= vinit + s {
             if (idx & 0x1 == 0) && (idx + 1 <= vinit + s) {
                 // TODO check these nodes by ref to the leaf nodes
+                let parent = &result[i];
+                let left = &result[2 * (idx - vinit) as usize + 1];
+                let right = &result[2 * (idx - vinit + 1) as usize + 1];
+                // check the proofs
+                assert!(parent.1.clone().to_proof().validate::<HashAlgorithm>());
+                if let SummationEntry::NonLeaf(a) = parent.0.clone() {
+                    if let SummationEntry::Leaf(b) = left.0.clone() {
+                        if let SummationEntry::Leaf(c) = right.0.clone() {
+                            //b.c0.unwrap_or_default(vec!)
+                            // check the sum
+                            for j in 0..4096 {
+                                assert_eq!(
+                                    a.c0[j],
+                                    b.c0.as_ref().unwrap_or(&vec![0i128; 4096])[j]
+                                        + c.c0.as_ref().unwrap_or(&vec![0i128; 4096])[j]
+                                );
+                                assert_eq!(
+                                    a.c1[j],
+                                    b.c1.as_ref().unwrap_or(&vec![0i128; 4096])[j]
+                                        + c.c1.as_ref().unwrap_or(&vec![0i128; 4096])[j]
+                                );
+                            }
+                        }
+                    }
+                }
                 i = i + 1;
                 //non_leafs.push(N + idx / 2);
                 //set.insert(N + idx / 2);
@@ -265,9 +291,9 @@ impl Client {
                 if let SummationEntry::NonLeaf(b) = left.0.clone() {
                     if let SummationEntry::NonLeaf(c) = right.0.clone() {
                         // check the sum
-                        for i in 0..4096 {
-                            assert_eq!(a.c0[i], b.c0[i] + c.c0[i]);
-                            assert_eq!(a.c1[i], b.c1[i] + c.c1[i]);
+                        for j in 0..4096 {
+                            assert_eq!(a.c0[j], b.c0[j] + c.c0[j]);
+                            assert_eq!(a.c1[j], b.c1[j] + c.c1[j]);
                         }
                     }
                 }
