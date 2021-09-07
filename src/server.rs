@@ -222,6 +222,9 @@ impl ServerService for InnerServer {
 
     fn verify(self, _: context::Context, vinit: u32, non_leaf_id: Vec<u32>) -> Self::VerifyFut {
         // TODO maybe RwLock? not able to directly read the content
+        // wait for all the threads to finish
+        let num_clients = self.cond.0.lock().unwrap();
+        drop(num_clients);
         //first all the leafs
         let mut ret: Vec<(SummationEntry, MerkleProof)> = Vec::new();
         let s = self.server.lock().unwrap();
