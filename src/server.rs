@@ -123,7 +123,7 @@ impl ServerService for InnerServer {
         self,
         _: context::Context,
         rsa_pk: Vec<u8>,
-        cts: Vec<u8>,
+        cts: Vec<i128>,
         nonce: [u8; 16],
         proofs: Vec<u8>,
     ) -> Self::AggregateCommitFut {

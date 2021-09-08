@@ -8,7 +8,7 @@ pub trait ServerService {
     async fn aggregate_commit(rsa_pk: Vec<u8>, commitment: [u8; 32]) -> MerkleProof;
     async fn aggregate_data(
         rsa_pk: Vec<u8>,
-        cts: Vec<u8>,
+        cts: Vec<i128>,
         nonce: [u8; 16],
         proofs: Vec<u8>,
     ) -> MerkleProof;

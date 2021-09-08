@@ -3,7 +3,6 @@ use ark_ec::bls12::Bls12;
 use crypto::digest::Digest;
 use crypto::sha3::Sha3;
 pub mod aggregation;
-pub mod cipher;
 pub mod server_service;
 
 pub fn hash_commitment(rsa_pk: &Vec<u8>, cm: &[u8; 32]) -> [u8; 32] {
@@ -25,6 +24,11 @@ pub fn summation_array_size(N: u32) -> u32 {
         n = (n + 1) / 2;
     }
     s + 1
+}
+
+pub fn i128vec_to_le_bytes(v: &Vec<i128>) -> Vec<u8> {
+    let ret: Vec<u8> = v.iter().flat_map(|x| i128::to_le_bytes(*x)).collect();
+    ret
 }
 
 pub type ZKProof = ark_groth16::Proof<Bls12<Parameters>>;

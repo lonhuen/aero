@@ -1,16 +1,15 @@
 mod common;
 mod zksnark;
-use crate::common::cipher::CipherText;
-use crate::zksnark::{Prover, Verifier};
-
 use crate::common::aggregation::{
     merkle::HashAlgorithm, merkle::MerkleProof, SummationEntry, SummationLeaf, SummationNonLeaf,
 };
 use crate::common::server_service::ServerServiceClient;
-use crate::common::{summation_array_size, ZKProof};
+use crate::common::{i128vec_to_le_bytes, summation_array_size, ZKProof};
+use crate::zksnark::{Prover, Verifier};
 use ark_std::{end_timer, start_timer};
 use crypto::digest::Digest;
 use crypto::sha3::{Sha3, Sha3Mode};
+use log::info;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use rsa::pkcs8::FromPublicKey;
 use rsa::{pkcs8::ToPublicKey, RsaPrivateKey, RsaPublicKey};
@@ -24,11 +23,14 @@ use std::{thread, time};
 use tarpc::{client, context, tokio_serde::formats::Json};
 
 const DEADLINE_TIME: u64 = 60;
+const NUM_DIMENSION: u32 = 4096;
 pub struct Client {
     inner: ServerServiceClient,
+    //prover: Prover,
     rsa_pk: Vec<u8>,
     rsa_vk: RsaPrivateKey,
-    cts: Vec<CipherText>,
+    c0s: Vec<i128>,
+    c1s: Vec<i128>,
     nonce: [u8; 16],
 }
 
@@ -42,9 +44,11 @@ impl Client {
         let public_key = RsaPublicKey::from(&private_key);
         Self {
             inner,
+            //prover: prover,
             rsa_pk: public_key.to_public_key_pem().unwrap().into_bytes(),
             rsa_vk: private_key,
-            cts: Vec::new(),
+            c0s: Vec::new(),
+            c1s: Vec::new(),
             nonce: [0u8; 16],
         }
     }
@@ -59,22 +63,25 @@ impl Client {
     pub fn encrypt(&mut self, xs: Vec<u8>) {
         // call SEAL here to get a log file
         // "data/encryption.txt"
-        thread::sleep(time::Duration::from_millis(87) * (xs.len() as usize).try_into().unwrap());
+        thread::sleep(time::Duration::from_millis(87) * (xs.len() as u32));
         for _ in 0..xs.len() {
-            self.cts.push(CipherText::new());
+            self.c0s.extend(vec![1i128; NUM_DIMENSION as usize]);
+            self.c1s.extend(vec![1i128; NUM_DIMENSION as usize]);
         }
+        info!("encryption get c0s len {}", self.c0s.len());
     }
     // TODO need to fix this with setup phase
     // but for now, let's read the proof and sleep some time to simulate the create proof
     pub fn generate_proof(&self) -> Vec<Vec<u8>> {
         thread::sleep(
-            //time::Duration::from_millis(8250) * (self.cts.len() as usize).try_into().unwrap(),
+            //time::Duration::from_millis(8250) * (self.c0s.len() as u32 / NUM_DIMENSION),
             time::Duration::from_millis(8250),
         );
-        //let prover = Prover::new(enc_path);
-        //let buf = prover.create_proof_in_bytes();
-        //vec![ZKProof::default(); self.cts.len()]
-        vec![vec![0u8; 192]; self.cts.len()]
+        info!(
+            "generate proofs for {} CTs",
+            self.c0s.len() / NUM_DIMENSION as usize
+        );
+        vec![vec![0u8; 192]; self.c0s.len() / NUM_DIMENSION as usize]
     }
 
     // the whole aggregation phase (except the encryption)
@@ -96,16 +103,14 @@ impl Client {
         let mc_proof = result_commit.await.unwrap().to_proof();
 
         // proceed to summation tree
-        let mut cts_bytes: Vec<u8> = Vec::with_capacity(self.cts.len() * 65536 * 2);
+        let mut cts_bytes: Vec<i128> = Vec::with_capacity(self.c0s.len() * 2);
         // TODO this might needs to be changed
-        let mut proof_bytes: Vec<u8> = Vec::with_capacity(self.cts.len() * 192);
+        let mut proof_bytes: Vec<u8> = Vec::with_capacity(self.c0s.len() / NUM_DIMENSION as usize);
 
-        for i in 0..self.cts.len() {
-            cts_bytes.extend(self.cts[i].c0.iter());
+        cts_bytes.extend(&self.c0s);
+        cts_bytes.extend(&self.c1s);
+        for i in 0..self.c0s.len() / NUM_DIMENSION as usize {
             proof_bytes.extend(proofs[i].iter());
-        }
-        for i in 0..self.cts.len() {
-            cts_bytes.extend(self.cts[i].c1.iter());
         }
         let result_data = {
             let mut ctx = context::current();
@@ -115,17 +120,14 @@ impl Client {
         };
 
         let ms_proof = result_data.await.unwrap().to_proof();
-        // verify the proofs
         ms_proof.validate::<HashAlgorithm>() && mc_proof.validate::<HashAlgorithm>()
     }
     fn hash(&mut self) -> [u8; 32] {
         // t = Hash(r, c0, c1,..., pi)
         let mut hasher = Sha3::sha3_256();
         hasher.input(&self.nonce);
-        for ct in self.cts.iter() {
-            hasher.input(&ct.c0);
-            hasher.input(&ct.c1);
-        }
+        hasher.input(&i128vec_to_le_bytes(&self.c0s));
+        hasher.input(&i128vec_to_le_bytes(&self.c1s));
         // TODO pem or der? or other ways to convert to [u8]
         hasher.input(&self.rsa_pk);
         let mut h = [0u8; 32];
@@ -211,27 +213,14 @@ impl Client {
             if !mc_node.1.clone().to_proof().validate::<HashAlgorithm>() {
                 assert!(false, "wrong merkle proofs");
             }
-            if let SummationEntry::Leaf(s) = ms_node.0.clone() {
-                // check the hash
+            if let SummationEntry::Leaf(s) = &ms_node.0 {
                 if s.c0.is_some() {
-                    if let SummationEntry::Commit(cm) = mc_node.0.clone() {
-                        let h = {
-                            let mut hasher = Sha3::sha3_256();
-                            hasher.input(&s.r.unwrap());
-                            let c0: Vec<u8> = (0..4096)
-                                .flat_map(|i| i128::to_le_bytes(s.c0.as_ref().unwrap()[i]))
-                                .collect();
-                            let c1: Vec<u8> = (0..4096)
-                                .flat_map(|i| i128::to_le_bytes(s.c1.as_ref().unwrap()[i]))
-                                .collect();
-                            hasher.input(&c0);
-                            hasher.input(&c1);
-                            hasher.input(&cm.rsa_pk);
-                            let mut h = [0u8; 32];
-                            hasher.result(&mut h);
-                            h
-                        };
-                        assert_eq!(h, cm.hash);
+                    let h = s.hash();
+                    if let SummationEntry::Commit(cm) = &mc_node.0 {
+                        //TODO fix this
+                        //assert_eq!(h, cm.hash);
+                    } else {
+                        assert!(false, "not commitment entry");
                     }
                 }
             } else {
@@ -251,22 +240,28 @@ impl Client {
                 let right = &result[2 * (idx - vinit + 1) as usize + 1];
                 // check the proofs
                 assert!(parent.1.clone().to_proof().validate::<HashAlgorithm>());
-                if let SummationEntry::NonLeaf(a) = parent.0.clone() {
-                    if let SummationEntry::Leaf(b) = left.0.clone() {
-                        if let SummationEntry::Leaf(c) = right.0.clone() {
-                            //b.c0.unwrap_or_default(vec!)
-                            // check the sum
-                            for j in 0..4096 {
-                                assert_eq!(
-                                    a.c0[j],
-                                    b.c0.as_ref().unwrap_or(&vec![0i128; 4096])[j]
-                                        + c.c0.as_ref().unwrap_or(&vec![0i128; 4096])[j]
-                                );
-                                assert_eq!(
-                                    a.c1[j],
-                                    b.c1.as_ref().unwrap_or(&vec![0i128; 4096])[j]
-                                        + c.c1.as_ref().unwrap_or(&vec![0i128; 4096])[j]
-                                );
+                if let SummationEntry::NonLeaf(a) = &parent.0 {
+                    if let SummationEntry::Leaf(b) = &left.0 {
+                        if let SummationEntry::Leaf(c) = &right.0 {
+                            for j in 0..a.c0.len() {
+                                let option_b = match &b.c0 {
+                                    Some(v) => v[j],
+                                    None => 0i128,
+                                };
+                                let option_c = match &c.c0 {
+                                    Some(v) => v[j],
+                                    None => 0i128,
+                                };
+                                assert_eq!(a.c0[j], option_b + option_c);
+                                let option_b = match &b.c1 {
+                                    Some(v) => v[j],
+                                    None => 0i128,
+                                };
+                                let option_c = match &c.c1 {
+                                    Some(v) => v[j],
+                                    None => 0i128,
+                                };
+                                assert_eq!(a.c1[j], option_b + option_c);
                             }
                         }
                     }
@@ -291,7 +286,7 @@ impl Client {
                 if let SummationEntry::NonLeaf(b) = left.0.clone() {
                     if let SummationEntry::NonLeaf(c) = right.0.clone() {
                         // check the sum
-                        for j in 0..4096 {
+                        for j in 0..a.c0.len() {
                             assert_eq!(a.c0[j], b.c0[j] + c.c0[j]);
                             assert_eq!(a.c1[j], b.c1[j] + c.c1[j]);
                         }
@@ -304,6 +299,8 @@ impl Client {
 }
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    let now = Instant::now();
+
     let server_addr = (IpAddr::V6(Ipv6Addr::LOCALHOST), 38886u16);
     let transport = tarpc::serde_transport::tcp::connect(server_addr, Json::default);
 
@@ -314,12 +311,14 @@ async fn main() -> anyhow::Result<()> {
     let mut client = Client::new(inner_client);
 
     // begin uploading
-    let result = client.upload(vec![0u8; 1]).await;
+    let result = client.upload(vec![0u8; 2]).await;
 
-    sleep(Duration::from_secs(1));
-    println!("{}", result);
     client.verify(8, 5).await;
 
+    let elapsed = now.elapsed();
+    let nanos = elapsed.subsec_nanos() as u64;
+    let ms = (1000 * 1000 * 1000 * elapsed.as_secs() + nanos) / (1000 * 1000);
+    println!("after recv Elapsed: {:.2?}", ms);
     Ok(())
 }
 
