@@ -314,7 +314,7 @@ impl Client {
         .unwrap();
         // training time
         // TODO set this time properly
-        thread::sleep(Duration::from_secs(45));
+        thread::sleep(Duration::from_secs(1));
         gradient
     }
     pub async fn download_proving_key(&mut self) -> Vec<u8> {
@@ -350,7 +350,19 @@ async fn main() -> anyhow::Result<()> {
     for _ in 0..opts.round {
         // begin uploading
         let data = client.train_model().await;
+        {
+            let elapsed = now.elapsed();
+            let nanos = elapsed.subsec_nanos() as u64;
+            let ms = (1000 * 1000 * 1000 * elapsed.as_secs() + nanos) / (1000 * 1000);
+            println!("data downloaded: {:.2?} ms", ms);
+        }
         let result = client.upload(data).await;
+        {
+            let elapsed = now.elapsed();
+            let nanos = elapsed.subsec_nanos() as u64;
+            let ms = (1000 * 1000 * 1000 * elapsed.as_secs() + nanos) / (1000 * 1000);
+            println!("data uploaded: {:.2?} ms", ms);
+        }
 
         client.verify(16, 5).await;
         let elapsed = now.elapsed();

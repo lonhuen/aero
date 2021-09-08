@@ -1,5 +1,5 @@
-for i in {0..7}; do
+for i in {0..3}; do
 #round cts
-/Users/lonhh/Github/quail/target/release/client 2 1 &
+./target/release/client 2 1 &
 done
 wait
