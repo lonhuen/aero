@@ -7,7 +7,7 @@ use std::{
     convert::{Into, TryInto},
     io,
     iter::FromIterator,
-    net::{IpAddr, Ipv6Addr, SocketAddr},
+    net::{IpAddr, Ipv6Addr,Ipv4Addr, SocketAddr},
     process::exit,
     sync::{Arc, Condvar, Mutex, RwLock},
 };
@@ -353,7 +353,7 @@ impl ServerService for InnerServer {
 }
 #[tokio::main]
 async fn main() -> io::Result<()> {
-    let server_addr = (IpAddr::V6(Ipv6Addr::LOCALHOST), 38886u16);
+    let server_addr = (IpAddr::V4(Ipv4Addr::new(172, 31, 46, 27)), 38886u16);
 
     let mut server = Server::new();
     let mut server_ref = Arc::new(RwLock::new(server));
