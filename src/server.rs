@@ -1,4 +1,3 @@
-use core::num;
 use futures::{
     future::{self, Ready},
     prelude::*,
@@ -29,14 +28,16 @@ pub enum STATE {
     Data,
     Verify,
 }
-const NR_COMMIT: u32 = 8;
-const NR_SYBIL: u32 = 8;
+const NR_COMMIT: u32 = 256;
+const NR_SYBIL: u32 = 1000;
+const NR_PARAMETER: u32 = 4096 * 10;
 pub struct Server {
     pub commit_array: BTreeMap<Vec<u8>, MerkleHash>,
     pub mc: Option<MerkleTree>,
     pub summation_array: Vec<SummationEntry>,
     pub ms: Option<MerkleTree>,
     pub state: STATE,
+    //pub model: Vec<u8>,
 }
 impl Server {
     pub fn new() -> Self {
@@ -46,6 +47,7 @@ impl Server {
             summation_array: Vec::new(),
             ms: None,
             state: STATE::Commit,
+            //model: vec![0u8; NR_PARAMETER as usize],
         }
     }
 }
@@ -73,6 +75,7 @@ impl ServerService for InnerServer {
     type AggregateCommitFut = Ready<MerkleProof>;
     type AggregateDataFut = Ready<MerkleProof>;
     type VerifyFut = Ready<Vec<(SummationEntry, MerkleProof)>>;
+    type RetrieveModelFut = Ready<Vec<u8>>;
     fn aggregate_commit(
         self,
         _: context::Context,
@@ -109,7 +112,7 @@ impl ServerService for InnerServer {
         }
 
         *num_clients = *num_clients + 1;
-        println!("commit round {}", *num_clients);
+        //println!("commit round {}", *num_clients);
         if *num_clients < NR_COMMIT {
             num_clients = self.cond.1.wait(num_clients).unwrap();
         } else if *num_clients == NR_COMMIT {
@@ -140,7 +143,7 @@ impl ServerService for InnerServer {
         // unlock
         drop(num_clients);
 
-        println!("finish commit round");
+        //println!("finish commit round");
 
         let proof_commit = {
             let s = &*self.server.write().unwrap();
@@ -204,10 +207,10 @@ impl ServerService for InnerServer {
                             c1: ll.c1.clone(),
                             r: ll.r.clone(),
                         });
-                        println!("push {} into sumarray", i + NR_COMMIT);
+                        //println!("push {} into sumarray", i + NR_COMMIT);
                     }
-                    println!("len of commit array {}", s.commit_array.len());
-                    println!("len of summation array {}", s.summation_array.len());
+                    //println!("len of commit array {}", s.commit_array.len());
+                    //println!("len of summation array {}", s.summation_array.len());
                 }
                 // add the whole tree
                 let mut left = 0;
@@ -235,19 +238,19 @@ impl ServerService for InnerServer {
                     right += 1;
                 }
                 // just for test purpose
-                for ii in 0..s.summation_array.len() {
-                    match s.summation_array[ii].clone() {
-                        SummationEntry::NonLeaf(x) => {
-                            println!("summation nonleaf [{}]={:?}", ii, x.c0[0]);
-                        }
-                        SummationEntry::Leaf(x) => {
-                            println!("summation leaf [{}]={:?}", ii, x.c0.unwrap()[0]);
-                        }
-                        _ => {
-                            println!("commit in sarray");
-                        }
-                    };
-                }
+                // for ii in 0..s.summation_array.len() {
+                //     match s.summation_array[ii].clone() {
+                //         SummationEntry::NonLeaf(x) => {
+                //             println!("summation nonleaf [{}]={:?}", ii, x.c0[0]);
+                //         }
+                //         SummationEntry::Leaf(x) => {
+                //             println!("summation leaf [{}]={:?}", ii, x.c0.unwrap()[0]);
+                //         }
+                //         _ => {
+                //             println!("commit in sarray");
+                //         }
+                //     };
+                // }
 
                 s.ms = Some(MerkleTree::from_iter(s.summation_array.iter().map(
                     |x| match x {
@@ -332,11 +335,19 @@ impl ServerService for InnerServer {
             num_clients = self.cond.1.wait(num_clients).unwrap();
         } else {
             *num_clients = 0;
+            // TODO decrypt here and update the model here
+            //self.server.write().unwrap().model = vec![0u8; NR_PARAMETER as usize];
+
             self.server.write().unwrap().state = STATE::Commit;
             self.cond.1.notify_all();
         }
         drop(num_clients);
         future::ready(ret)
+    }
+
+    fn retrieve_model(self, _: context::Context) -> Self::RetrieveModelFut {
+        //future::ready(self.server.read().unwrap().model.clone())
+        future::ready(vec![0u8; NR_PARAMETER as usize])
     }
 }
 #[tokio::main]
@@ -354,7 +365,7 @@ async fn main() -> io::Result<()> {
         .filter_map(|r| future::ready(r.ok()))
         .map(server::BaseChannel::with_defaults)
         // Limit channels to 1 per IP.
-        .max_channels_per_key(10, |t| t.transport().peer_addr().unwrap().ip())
+        .max_channels_per_key(20, |t| t.transport().peer_addr().unwrap().ip())
         // serve is generated by the service attribute. It takes as input any type implementing
         // the generated World trait.
         .map(|channel| {
@@ -366,7 +377,7 @@ async fn main() -> io::Result<()> {
             channel.execute(inner_server.serve())
         })
         // Max 10 channels.
-        .buffer_unordered(10)
+        .buffer_unordered(20)
         .for_each(|_| async {})
         .await;
 

@@ -10,6 +10,7 @@ use ark_std::{end_timer, start_timer};
 use clap::{AppSettings, Clap};
 use crypto::digest::Digest;
 use crypto::sha3::{Sha3, Sha3Mode};
+use futures::Future;
 use log::info;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use rsa::pkcs8::FromPublicKey;
@@ -24,7 +25,7 @@ use std::{net::SocketAddr, time::Duration};
 use std::{thread, time};
 use tarpc::{client, context, tokio_serde::formats::Json};
 
-const DEADLINE_TIME: u64 = 60;
+const DEADLINE_TIME: u64 = 600;
 const NUM_DIMENSION: u32 = 4096;
 pub struct Client {
     inner: ServerServiceClient,
@@ -67,8 +68,10 @@ impl Client {
     pub fn encrypt(&mut self, xs: Vec<u8>) {
         // call SEAL here to get a log file
         // "data/encryption.txt"
-        thread::sleep(time::Duration::from_millis(87) * (xs.len() as u32));
-        for _ in 0..xs.len() {
+        thread::sleep(
+            time::Duration::from_millis(87) * (xs.len() / (NUM_DIMENSION as usize)) as u32,
+        );
+        for _ in 0..xs.len() / NUM_DIMENSION as usize {
             self.c0s.extend(vec![1i128; NUM_DIMENSION as usize]);
             self.c1s.extend(vec![1i128; NUM_DIMENSION as usize]);
         }
@@ -77,10 +80,10 @@ impl Client {
     // TODO need to fix this with setup phase
     // but for now, let's read the proof and sleep some time to simulate the create proof
     pub fn generate_proof(&self) -> Vec<Vec<u8>> {
-        thread::sleep(
-            //time::Duration::from_millis(8250) * (self.c0s.len() as u32 / NUM_DIMENSION),
-            time::Duration::from_millis(8250),
-        );
+        // TODO here we assume we have 10 threads to do this proof generation
+        thread::sleep(time::Duration::from_millis(
+            (self.c0s.len() as f64 / NUM_DIMENSION as f64) as u64 * 825,
+        ));
         info!(
             "generate proofs for {} CTs",
             self.c0s.len() / NUM_DIMENSION as usize
@@ -300,6 +303,26 @@ impl Client {
             i += 3;
         }
     }
+
+    pub async fn train_model(&mut self) -> Vec<u8> {
+        let gradient = {
+            let mut ctx = context::current();
+            ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
+            self.inner.retrieve_model(ctx)
+        }
+        .await
+        .unwrap();
+        // training time
+        // TODO set this time properly
+        thread::sleep(Duration::from_secs(45));
+        gradient
+    }
+    pub async fn download_proving_key(&mut self) -> Vec<u8> {
+        let mut ctx = context::current();
+        ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
+        self.inner.retrieve_model(ctx).await.unwrap()
+        // also serialize here
+    }
 }
 
 #[derive(Clap)]
@@ -326,18 +349,19 @@ async fn main() -> anyhow::Result<()> {
 
     for _ in 0..opts.round {
         // begin uploading
-        let result = client.upload(vec![0u8; opts.cts as usize]).await;
+        let data = client.train_model().await;
+        let result = client.upload(data).await;
 
         client.verify(16, 5).await;
         let elapsed = now.elapsed();
         let nanos = elapsed.subsec_nanos() as u64;
         let ms = (1000 * 1000 * 1000 * elapsed.as_secs() + nanos) / (1000 * 1000);
-        println!("1 round: {:.2?}", ms);
+        println!("1 round: {:.2?} ms", ms);
     }
 
     let elapsed = now.elapsed();
     let nanos = elapsed.subsec_nanos() as u64;
     let ms = (1000 * 1000 * 1000 * elapsed.as_secs() + nanos) / (1000 * 1000);
-    println!("after recv Elapsed: {:.2?}", ms);
+    println!("after recv Elapsed: {:.2?} ms", ms);
     Ok(())
 }

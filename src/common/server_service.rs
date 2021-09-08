@@ -13,4 +13,6 @@ pub trait ServerService {
         proofs: Vec<u8>,
     ) -> MerkleProof;
     async fn verify(vinit: u32, non_leaf_id: Vec<u32>) -> Vec<(SummationEntry, MerkleProof)>;
+
+    async fn retrieve_model() -> Vec<u8>;
 }
