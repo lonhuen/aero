@@ -328,7 +328,11 @@ async fn main() -> anyhow::Result<()> {
         // begin uploading
         let result = client.upload(vec![0u8; opts.cts as usize]).await;
 
-        client.verify(8, 5).await;
+        client.verify(16, 5).await;
+        let elapsed = now.elapsed();
+        let nanos = elapsed.subsec_nanos() as u64;
+        let ms = (1000 * 1000 * 1000 * elapsed.as_secs() + nanos) / (1000 * 1000);
+        println!("1 round: {:.2?}", ms);
     }
 
     let elapsed = now.elapsed();

@@ -4,6 +4,8 @@ use crypto::digest::Digest;
 use crypto::sha3::Sha3;
 pub mod aggregation;
 pub mod server_service;
+use rand::{rngs::StdRng, Rng, SeedableRng};
+use rsa::{pkcs8::ToPublicKey, RsaPrivateKey, RsaPublicKey};
 
 pub fn hash_commitment(rsa_pk: &Vec<u8>, cm: &[u8; 32]) -> [u8; 32] {
     let mut hasher = Sha3::sha3_256();
@@ -29,6 +31,15 @@ pub fn summation_array_size(N: u32) -> u32 {
 pub fn i128vec_to_le_bytes(v: &Vec<i128>) -> Vec<u8> {
     let ret: Vec<u8> = v.iter().flat_map(|x| i128::to_le_bytes(*x)).collect();
     ret
+}
+#[inline]
+pub fn new_rsa_pub_key() -> Vec<u8> {
+    let bits = 2048;
+    //let mut rng = rand::rngs::StdRng::seed_from_u64(Instant::now().);
+    let mut rng = rand::rngs::StdRng::from_entropy();
+    let private_key = RsaPrivateKey::new(&mut rng, bits).expect("failed to generate a key");
+    let public_key = RsaPublicKey::from(&private_key);
+    public_key.to_public_key_pem().unwrap().into_bytes()
 }
 
 pub type ZKProof = ark_groth16::Proof<Bls12<Parameters>>;

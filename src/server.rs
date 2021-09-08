@@ -1,3 +1,4 @@
+use core::num;
 use futures::{
     future::{self, Ready},
     prelude::*,
@@ -9,7 +10,7 @@ use std::{
     iter::FromIterator,
     net::{IpAddr, Ipv6Addr, SocketAddr},
     process::exit,
-    sync::{Arc, Condvar, Mutex},
+    sync::{Arc, Condvar, Mutex, RwLock},
 };
 
 use tarpc::{
@@ -20,15 +21,22 @@ use tarpc::{
 mod common;
 use crate::common::{
     aggregation::{merkle::*, CommitEntry, SummationEntry, SummationLeaf},
-    hash_commitment,
+    hash_commitment, new_rsa_pub_key,
     server_service::ServerService,
 };
+pub enum STATE {
+    Commit,
+    Data,
+    Verify,
+}
 const NR_COMMIT: u32 = 8;
+const NR_SYBIL: u32 = 8;
 pub struct Server {
     pub commit_array: BTreeMap<Vec<u8>, MerkleHash>,
     pub mc: Option<MerkleTree>,
     pub summation_array: Vec<SummationEntry>,
     pub ms: Option<MerkleTree>,
+    pub state: STATE,
 }
 impl Server {
     pub fn new() -> Self {
@@ -37,19 +45,20 @@ impl Server {
             mc: None,
             summation_array: Vec::new(),
             ms: None,
+            state: STATE::Commit,
         }
     }
 }
 #[derive(Clone)]
 pub struct InnerServer {
     addr: SocketAddr,
-    server: Arc<Mutex<Server>>,
+    server: Arc<RwLock<Server>>,
     cond: Arc<(Mutex<u32>, Condvar)>,
 }
 impl InnerServer {
     pub fn new(
         addr: SocketAddr,
-        server: &Arc<Mutex<Server>>,
+        server: &Arc<RwLock<Server>>,
         cond: &Arc<(Mutex<u32>, Condvar)>,
     ) -> Self {
         Self {
@@ -73,25 +82,43 @@ impl ServerService for InnerServer {
         // wait for enough commitments
         // TODO maybe wait for some time rather than some # of commitments
         // TODO to fix: if another batch comes, the commit array will be modified
+
         let mut num_clients = self.cond.0.lock().unwrap();
+
+        while !matches!(self.server.read().as_ref().unwrap().state, STATE::Commit) {
+            num_clients = self.cond.1.wait(num_clients).unwrap();
+        }
+
+        if *num_clients == 0 {
+            let mut s = self.server.write().unwrap();
+            s.commit_array = BTreeMap::new();
+            s.mc = None;
+            s.summation_array = Vec::new();
+            s.ms = None;
+        }
 
         let idx = *num_clients;
 
         // push into the server
         {
             self.server
-                .lock()
+                .write()
                 .unwrap()
                 .commit_array
                 .insert(rsa_pk, commitment);
         }
 
         *num_clients = *num_clients + 1;
+        println!("commit round {}", *num_clients);
         if *num_clients < NR_COMMIT {
             num_clients = self.cond.1.wait(num_clients).unwrap();
         } else if *num_clients == NR_COMMIT {
             {
-                let s = &mut *self.server.lock().unwrap();
+                let s = &mut *self.server.write().unwrap();
+                // TODO add more sybil clients
+                for _ in 0..NR_SYBIL {
+                    s.commit_array.insert(new_rsa_pub_key(), [0u8; 32]);
+                }
                 // init the summation leaf array
                 for _ in 0..s.commit_array.len() {
                     s.summation_array
@@ -100,6 +127,7 @@ impl ServerService for InnerServer {
                 s.mc = Some(MerkleTree::from_iter(
                     s.commit_array.iter().map(|x| hash_commitment(&x.0, &x.1)),
                 ));
+                s.state = STATE::Data;
             }
             // notify all and generate the commit tree
             // also reset the num_clients for data
@@ -112,8 +140,10 @@ impl ServerService for InnerServer {
         // unlock
         drop(num_clients);
 
+        println!("finish commit round");
+
         let proof_commit = {
-            let s = &*self.server.lock().unwrap();
+            let s = &*self.server.write().unwrap();
             s.mc.as_ref().unwrap().gen_proof(idx.try_into().unwrap())
         };
 
@@ -129,7 +159,11 @@ impl ServerService for InnerServer {
     ) -> Self::AggregateCommitFut {
         let mut num_clients = self.cond.0.lock().unwrap();
 
-        let mut s = self.server.lock().unwrap();
+        while !matches!(self.server.read().as_ref().unwrap().state, STATE::Data) {
+            num_clients = self.cond.1.wait(num_clients).unwrap();
+        }
+
+        let mut s = self.server.write().unwrap();
 
         let sorted_keys: Vec<_> = s.commit_array.keys().cloned().collect();
         // TODO also verify the proof
@@ -154,7 +188,27 @@ impl ServerService for InnerServer {
             num_clients = self.cond.1.wait(num_clients).unwrap();
         } else if *num_clients == NR_COMMIT {
             {
-                let s = &mut *self.server.lock().unwrap();
+                let s = &mut *self.server.write().unwrap();
+                // TODO add more sybil clients
+                if let SummationEntry::Leaf(ll) = s.summation_array[idx].clone() {
+                    for i in 0..NR_SYBIL + NR_COMMIT {
+                        //s.summation_array.push(s.summation_array[idx].clone());
+                        if let SummationEntry::Leaf(node) = &s.summation_array[i as usize] {
+                            if node.c0.is_some() {
+                                continue;
+                            }
+                        }
+                        s.summation_array[i as usize] = SummationEntry::Leaf(SummationLeaf {
+                            rsa_pk: sorted_keys[i as usize].clone(),
+                            c0: ll.c0.clone(),
+                            c1: ll.c1.clone(),
+                            r: ll.r.clone(),
+                        });
+                        println!("push {} into sumarray", i + NR_COMMIT);
+                    }
+                    println!("len of commit array {}", s.commit_array.len());
+                    println!("len of summation array {}", s.summation_array.len());
+                }
                 // add the whole tree
                 let mut left = 0;
                 let mut right = s.summation_array.len();
@@ -181,14 +235,19 @@ impl ServerService for InnerServer {
                     right += 1;
                 }
                 // just for test purpose
-                //{
-                //    let ii = s.summation_array.len() - 1;
-                //    let result = match s.summation_array[ii].clone() {
-                //        SummationEntry::NonLeaf(x) => Some(x),
-                //        _ => None,
-                //    };
-                //    println!("{:?}", result.unwrap().c0[0]);
-                //}
+                for ii in 0..s.summation_array.len() {
+                    match s.summation_array[ii].clone() {
+                        SummationEntry::NonLeaf(x) => {
+                            println!("summation nonleaf [{}]={:?}", ii, x.c0[0]);
+                        }
+                        SummationEntry::Leaf(x) => {
+                            println!("summation leaf [{}]={:?}", ii, x.c0.unwrap()[0]);
+                        }
+                        _ => {
+                            println!("commit in sarray");
+                        }
+                    };
+                }
 
                 s.ms = Some(MerkleTree::from_iter(s.summation_array.iter().map(
                     |x| match x {
@@ -202,6 +261,7 @@ impl ServerService for InnerServer {
                         }
                     },
                 )));
+                s.state = STATE::Verify;
             }
             // notify all and generate the commit tree
             self.cond.1.notify_all();
@@ -210,24 +270,28 @@ impl ServerService for InnerServer {
             assert!(false);
         }
         // unlock
+        *num_clients = 0;
         drop(num_clients);
 
         let proof_leaf = {
-            let s = &*self.server.lock().unwrap();
+            let s = &*self.server.write().unwrap();
             s.ms.as_ref().unwrap().gen_proof(idx.try_into().unwrap())
         };
 
         future::ready(proof_leaf.into())
     }
 
+    // TODO needs sync here before starting next round
     fn verify(self, _: context::Context, vinit: u32, non_leaf_id: Vec<u32>) -> Self::VerifyFut {
         // TODO maybe RwLock? not able to directly read the content
-        // wait for all the threads to finish
-        let num_clients = self.cond.0.lock().unwrap();
-        drop(num_clients);
         //first all the leafs
+        let mut num_clients = self.cond.0.lock().unwrap();
+        while !matches!(self.server.read().as_ref().unwrap().state, STATE::Verify) {
+            num_clients = self.cond.1.wait(num_clients).unwrap();
+        }
+        drop(num_clients);
         let mut ret: Vec<(SummationEntry, MerkleProof)> = Vec::new();
-        let s = self.server.lock().unwrap();
+        let s = self.server.read().unwrap();
         for i in 0..5 + 1 {
             let node = s.summation_array[(i + vinit) as usize].clone();
             //println!("{:?}", s.mc.as_ref().unwrap().gen_proof(0));
@@ -244,6 +308,8 @@ impl ServerService for InnerServer {
             if let SummationEntry::Leaf(l) = node {
                 let pk = l.rsa_pk;
                 let hash = s.commit_array.get(&pk).unwrap().clone();
+                //println!("commit_array len {}", s.commit_array.len());
+                let hash = [0u8; 32];
                 ret.push((
                     SummationEntry::Commit(CommitEntry {
                         rsa_pk: pk,
@@ -259,6 +325,17 @@ impl ServerService for InnerServer {
             ret.push((s.summation_array[i as usize].clone(), ms_proof));
         }
         drop(s);
+        // wait for all the threads to finish
+        let mut num_clients = self.cond.0.lock().unwrap();
+        *num_clients = *num_clients + 1;
+        if *num_clients < NR_COMMIT {
+            num_clients = self.cond.1.wait(num_clients).unwrap();
+        } else {
+            *num_clients = 0;
+            self.server.write().unwrap().state = STATE::Commit;
+            self.cond.1.notify_all();
+        }
+        drop(num_clients);
         future::ready(ret)
     }
 }
@@ -267,7 +344,7 @@ async fn main() -> io::Result<()> {
     let server_addr = (IpAddr::V6(Ipv6Addr::LOCALHOST), 38886u16);
 
     let mut server = Server::new();
-    let mut server_ref = Arc::new(Mutex::new(server));
+    let mut server_ref = Arc::new(RwLock::new(server));
     let mut cond_ref = Arc::new((Mutex::new(0), Condvar::new()));
 
     let mut listener = tarpc::serde_transport::tcp::listen(&server_addr, Json::default).await?;
