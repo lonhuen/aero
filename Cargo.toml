@@ -14,6 +14,8 @@ ark-relations = { version = "^0.2.0", default-features = false }
 ark-serialize= { version = "^0.2.0", default-features = false }
 
 log = "0.4"
+clap = "3.0.0-beta.4"
+
 
 merkle_light = {version="^0.3.1", path="lib/merkle_light-0.3.1/merkle"}
 rust-crypto = "^0.2"

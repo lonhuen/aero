@@ -7,6 +7,7 @@ use crate::common::server_service::ServerServiceClient;
 use crate::common::{i128vec_to_le_bytes, summation_array_size, ZKProof};
 use crate::zksnark::{Prover, Verifier};
 use ark_std::{end_timer, start_timer};
+use clap::{AppSettings, Clap};
 use crypto::digest::Digest;
 use crypto::sha3::{Sha3, Sha3Mode};
 use log::info;
@@ -16,6 +17,7 @@ use rsa::{pkcs8::ToPublicKey, RsaPrivateKey, RsaPublicKey};
 use std::collections::HashSet;
 use std::convert::TryInto;
 use std::net::{IpAddr, Ipv6Addr};
+use std::sync::mpsc::channel;
 use std::thread::sleep;
 use std::time::{Instant, SystemTime};
 use std::{net::SocketAddr, time::Duration};
@@ -37,6 +39,8 @@ pub struct Client {
 impl Client {
     // TODO random this nounce
     pub fn new(inner: ServerServiceClient) -> Self {
+        // first download the proving key from the server
+
         let bits = 2048;
         //let mut rng = rand::rngs::StdRng::seed_from_u64(Instant::now().);
         let mut rng = rand::rngs::StdRng::from_entropy();
@@ -297,8 +301,18 @@ impl Client {
         }
     }
 }
+
+#[derive(Clap)]
+struct Opts {
+    /// the # of rounds
+    round: u32,
+    /// the # of CTs
+    cts: u32,
+}
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    let opts: Opts = Opts::parse();
+
     let now = Instant::now();
 
     let server_addr = (IpAddr::V6(Ipv6Addr::LOCALHOST), 38886u16);
@@ -310,10 +324,12 @@ async fn main() -> anyhow::Result<()> {
         ServerServiceClient::new(client::Config::default(), transport.await?).spawn();
     let mut client = Client::new(inner_client);
 
-    // begin uploading
-    let result = client.upload(vec![0u8; 2]).await;
+    for _ in 0..opts.round {
+        // begin uploading
+        let result = client.upload(vec![0u8; opts.cts as usize]).await;
 
-    client.verify(8, 5).await;
+        client.verify(8, 5).await;
+    }
 
     let elapsed = now.elapsed();
     let nanos = elapsed.subsec_nanos() as u64;
@@ -321,35 +337,3 @@ async fn main() -> anyhow::Result<()> {
     println!("after recv Elapsed: {:.2?}", ms);
     Ok(())
 }
-
-//
-//fn main() {
-//let client = Client::new();
-
-//let gc = start_timer!(|| "start setup");
-//Prover::setup("data/pk.txt", "data/vk.txt", "data/encryption.txt");
-//end_timer!(gc);
-//
-//let gc = start_timer!(|| "new prover"); let prover = Prover::new("data/encryption.txt", "data/pk.txt"); end_timer!(gc);
-//let gc = start_timer!(|| "create proof");
-////let proof = prover.create_proof_in_bytes();
-//let proof = prover.create_proof();
-//end_timer!(gc);
-
-//let inputs: Vec<_> = prover
-//    .circuit
-//    .c_0
-//    .to_vec()
-//    .iter()
-//    .chain(prover.circuit.c_1.to_vec().iter())
-//    .map(|&x| prover.circuit.i128toField(x))
-//    .collect::<Vec<_>>();
-//let verifier = Verifier::new("data/vk.txt");
-////let result = verifier.verify_proof_from_bytes(&proof, &inputs);
-//let gc = start_timer!(|| "verification");
-//let result = verifier.verify_proof(&proof, &inputs);
-//end_timer!(gc);
-
-//println!("result {}", result);
-//assert!(result);
-//}
