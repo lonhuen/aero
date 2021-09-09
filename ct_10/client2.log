@@ -1,27 +1,7 @@
-data downloaded: 45187 ms
-data uploaded: 34356 ms
-verified: 995 ms
-data downloaded: 45099 ms
-data uploaded: 50755 ms
-verified: 1531 ms
-data downloaded: 45098 ms
-data uploaded: 55353 ms
-verified: 2526 ms
-Total time: 281496 ms
-data downloaded: 45292 ms
-data uploaded: 39811 ms
-verified: 1114 ms
-data downloaded: 45100 ms
-data uploaded: 48834 ms
-verified: 1862 ms
-data downloaded: 45103 ms
-data uploaded: 63578 ms
-thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Kind(ConnectionReset)', src/client.rs:214:10
-note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
-data downloaded: 45299 ms
-data uploaded: 36722 ms
-verified: 926 ms
-data downloaded: 45108 ms
-data uploaded: 52466 ms
-verified: 1674 ms
-Total time: 182495 ms
+data downloaded: 45300 ms
+data uploaded: 39333 ms
+verified: 1036 ms
+data downloaded: 45094 ms
+data uploaded: 52981 ms
+verified: 1867 ms
+Total time: 185877 ms
