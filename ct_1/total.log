@@ -1,23 +1,2 @@
-real    6m8.129s
-user    0m0.518s
-sys     0m0.038s
-verified: 714 ms
-Total time: 368166 ms
-
-real    6m8.171s
-user    0m0.797s
-sys     0m0.027s
-verified: 743 ms
-Total time: 368195 ms
-
-real    6m8.200s
-user    0m0.592s
-sys     0m0.058s
-verified: 790 ms
-Total time: 368240 ms
-
-real    6m8.246s
-user    0m1.037s
-sys     0m0.033s
-recv bytes  20084491
-sent bytes  1218003
+recv bytes  8349758
+sent bytes  525588
