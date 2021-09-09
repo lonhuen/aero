@@ -314,7 +314,8 @@ impl Client {
         .unwrap();
         // training time
         // TODO set this time properly
-        thread::sleep(Duration::from_secs(1));
+        //thread::sleep(Duration::from_secs(1));
+        thread::sleep(Duration::from_secs(45));
         gradient
     }
     pub async fn download_proving_key(&mut self) -> Vec<u8> {
@@ -350,31 +351,36 @@ async fn main() -> anyhow::Result<()> {
 
     for _ in 0..opts.round {
         // begin uploading
+        let tmpnow = Instant::now();
         let data = client.train_model().await;
         {
-            let elapsed = now.elapsed();
+            let elapsed = tmpnow.elapsed();
             let nanos = elapsed.subsec_nanos() as u64;
             let ms = (1000 * 1000 * 1000 * elapsed.as_secs() + nanos) / (1000 * 1000);
             println!("data downloaded: {:.2?} ms", ms);
         }
+        let tmpnow = Instant::now();
         let result = client.upload(data).await;
         {
-            let elapsed = now.elapsed();
+            let elapsed = tmpnow.elapsed();
             let nanos = elapsed.subsec_nanos() as u64;
             let ms = (1000 * 1000 * 1000 * elapsed.as_secs() + nanos) / (1000 * 1000);
             println!("data uploaded: {:.2?} ms", ms);
         }
 
-        client.verify(16, 5).await;
-        let elapsed = now.elapsed();
-        let nanos = elapsed.subsec_nanos() as u64;
-        let ms = (1000 * 1000 * 1000 * elapsed.as_secs() + nanos) / (1000 * 1000);
-        println!("1 round: {:.2?} ms", ms);
+        let tmpnow = Instant::now();
+        client.verify(100, 5).await;
+        {
+            let elapsed = tmpnow.elapsed();
+            let nanos = elapsed.subsec_nanos() as u64;
+            let ms = (1000 * 1000 * 1000 * elapsed.as_secs() + nanos) / (1000 * 1000);
+            println!("verified: {:.2?} ms", ms);
+        }
     }
 
     let elapsed = now.elapsed();
     let nanos = elapsed.subsec_nanos() as u64;
     let ms = (1000 * 1000 * 1000 * elapsed.as_secs() + nanos) / (1000 * 1000);
-    println!("after recv Elapsed: {:.2?} ms", ms);
+    println!("Total time: {:.2?} ms", ms);
     Ok(())
 }

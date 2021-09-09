@@ -1,0 +1,10 @@
+data downloaded: 45304 ms
+data uploaded: 35050 ms
+verified: 1181 ms
+data downloaded: 45099 ms
+data uploaded: 50892 ms
+verified: 1570 ms
+data downloaded: 45094 ms
+data uploaded: 65226 ms
+thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Kind(ConnectionReset)', src/client.rs:214:10
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace

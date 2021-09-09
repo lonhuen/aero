@@ -1,5 +1,5 @@
 for i in {0..3}; do
 #round cts
-./target/release/client 2 1 &
+trickle -u 1024 -d 1024 ./target/release/client 2 1 &
 done
 wait
