@@ -2,10 +2,12 @@ use ark_bls12_381::Parameters;
 use ark_ec::bls12::Bls12;
 use crypto::digest::Digest;
 use crypto::sha3::Sha3;
-pub mod aggregation;
-pub mod server_service;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use rsa::{pkcs8::ToPublicKey, RsaPrivateKey, RsaPublicKey};
+
+pub mod aggregation;
+pub mod board_service;
+pub mod server_service;
 
 pub fn hash_commitment(rsa_pk: &Vec<u8>, cm: &[u8; 32]) -> [u8; 32] {
     let mut hasher = Sha3::sha3_256();

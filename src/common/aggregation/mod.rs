@@ -1,139 +1,162 @@
-use crypto::digest::Digest;
-use crypto::sha3::Sha3;
-use std::convert::{From, TryInto};
-use std::ops::Add;
-use tarpc::serde::{Deserialize, Serialize};
-
 pub mod merkle;
-use crate::common::aggregation::merkle::MerkleHash;
+use log::warn;
+use merkle::MerkleTree;
+pub mod node;
+use self::merkle::MerkleProof;
+use log::error;
+use node::{CommitEntry, SummationEntry, SummationLeaf, SummationNonLeaf};
+use std::iter::FromIterator;
+use std::process::exit;
 
-use super::i128vec_to_le_bytes;
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct CommitEntry {
-    pub rsa_pk: Vec<u8>,
-    pub hash: [u8; 32],
+pub struct McTree {
+    pub nr_real: u32,
+    pub nr_sybil: u32,
+    pub commit_array: Vec<CommitEntry>,
+    pub mc: Option<MerkleTree>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct SummationLeaf {
-    pub rsa_pk: Vec<u8>,
-    pub c0: Option<Vec<i128>>,
-    pub c1: Option<Vec<i128>>,
-    pub r: Option<[u8; 16]>,
-}
-
-impl SummationLeaf {
-    pub fn new() -> Self {
-        SummationLeaf {
-            rsa_pk: Vec::new(),
-            c0: None,
-            c1: None,
-            r: None,
+impl McTree {
+    pub fn new(nr_real: u32, nr_sybil: u32) -> Self {
+        McTree {
+            nr_real,
+            nr_sybil,
+            commit_array: Vec::with_capacity(nr_real as usize),
+            mc: None,
         }
     }
-    pub fn from_ct(rsa_pk: Vec<u8>, cts: Vec<i128>, r: [u8; 16]) -> Self {
-        let mut c0: Vec<i128> = Vec::with_capacity(cts.len() / 2);
-        c0.extend(&cts[0..cts.len() / 2]);
-        let mut c1: Vec<i128> = Vec::with_capacity(cts.len() / 2);
-        c1.extend(&cts[cts.len() / 2..]);
-        SummationLeaf {
-            rsa_pk,
-            c0: Some(c0),
-            c1: Some(c1),
-            r: Some(r),
-        }
-    }
-    pub fn hash(&self) -> MerkleHash {
-        let mut hasher = Sha3::sha3_256();
 
-        hasher.input(&self.rsa_pk);
-        if let Some(c0) = self.c0.as_ref() {
-            hasher.input(&i128vec_to_le_bytes(c0));
-        }
-        if let Some(c1) = self.c1.as_ref() {
-            hasher.input(&i128vec_to_le_bytes(c1));
-        }
-        if let Some(r) = self.r.as_ref() {
-            hasher.input(r);
-        }
-
-        let mut h = [0u8; 32];
-        hasher.result(&mut h);
-        h
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct SummationNonLeaf {
-    pub c0: Vec<i128>,
-    pub c1: Vec<i128>,
-}
-impl SummationNonLeaf {
-    //pub fn new() -> Self {
-    //    let c0 = vec![0i128; 4096];
-    //    let c1 = vec![0i128; 4096];
-    //    SummationNonLeaf { c0, c1 }
-    //}
-    pub fn hash(&self) -> [u8; 32] {
-        let mut hasher = Sha3::sha3_256();
-
-        let c0_bytes = i128vec_to_le_bytes(&self.c0);
-        let c1_bytes = i128vec_to_le_bytes(&self.c1);
-
-        hasher.input(&c0_bytes);
-        hasher.input(&c1_bytes);
-        let mut h = [0u8; 32];
-        hasher.result(&mut h);
-        h
-    }
-}
-
-impl Add for SummationNonLeaf {
-    type Output = SummationNonLeaf;
-    fn add(self, other: Self) -> Self {
-        // TODO need modulus here maybe
-        let len = std::cmp::max(self.c0.len(), other.c0.len());
-        let mut new_c0: Vec<i128> = Vec::with_capacity(len);
-        let mut new_c1: Vec<i128> = Vec::with_capacity(len);
-        if self.c0.len() == other.c0.len() {
-            for i in 0..len {
-                new_c0.push(self.c0[i] + other.c0[i]);
-                new_c1.push(self.c1[i] + other.c1[i]);
-            }
+    pub fn get_node(&self, id: u32) -> CommitEntry {
+        if id >= self.nr_real {
+            warn!("should not reach here");
+            CommitEntry::new()
         } else {
-            for i in 0..len {
-                let (a, b) = if i > self.c0.len() {
-                    (0i128, 0i128)
-                } else {
-                    (self.c0[i], self.c1[i])
+            self.commit_array[id as usize].clone()
+        }
+    }
+
+    pub fn gen_tree(&mut self) -> bool {
+        if self.commit_array.len() < self.nr_real as usize {
+            false
+        } else {
+            self.commit_array
+                .sort_by(|a, b| a.rsa_pk.partial_cmp(&b.rsa_pk).unwrap());
+            self.mc = Some(MerkleTree::from_iter(
+                self.commit_array
+                    .iter()
+                    .map(|x| x.hash())
+                    .chain((0..self.nr_sybil).into_iter().map(|_| [0u8; 32])),
+            ));
+            true
+        }
+    }
+
+    pub fn get_proof(&self, id: u32) -> MerkleProof {
+        if self.mc.is_none() {
+            warn!("get_proof@McTree called while None Mc tree");
+        }
+        self.mc.unwrap().gen_proof(id as usize).into()
+    }
+
+    pub fn insert_node(&mut self, node: CommitEntry) {
+        if self.commit_array.len() >= self.nr_real as usize {
+            error!("insert more then expected");
+        }
+        self.commit_array.push(node);
+    }
+}
+
+pub struct MsTree {
+    pub nr_real: u32,
+    pub nr_sybil: u32,
+    pub summation_array: Vec<SummationEntry>,
+    pub ms: Option<MerkleTree>,
+}
+impl MsTree {
+    pub fn new(nr_real: u32, nr_sybil: u32) -> Self {
+        MsTree {
+            nr_real,
+            nr_sybil,
+            summation_array: Vec::with_capacity(nr_real as usize),
+            ms: None,
+        }
+    }
+
+    pub fn get_node(&self, id: u32) -> SummationEntry {
+        if id >= self.nr_real {
+            warn!("should not reach here");
+            SummationEntry::new_leaf()
+        } else {
+            self.summation_array[id as usize].clone()
+        }
+    }
+
+    pub fn gen_tree(&mut self) -> bool {
+        if self.summation_array.len() < self.nr_real as usize {
+            false
+        } else {
+            // first from the leafs to the tree first
+            // TODO check the rsa_pk appears in Mc
+            self.summation_array.sort_by(|a, b| {
+                a.get_leaf_rsa_pk()
+                    .partial_cmp(b.get_leaf_rsa_pk())
+                    .unwrap()
+            });
+            // get the non-leaf nodes
+            let mut left = 0;
+            let mut right = self.summation_array.len();
+            while left + 1 < right {
+                let a = match self.summation_array[left].clone() {
+                    SummationEntry::NonLeaf(y) => &y,
+                    SummationEntry::Leaf(x) => &x.into(),
+                    _ => {
+                        error!("gen_tree: Not a leaf or nonleaf node");
+                        exit(1);
+                    }
                 };
-                let (c, d) = if i > other.c0.len() {
-                    (0i128, 0i128)
-                } else {
-                    (other.c0[i], other.c1[i])
+                let b = match self.summation_array[left + 1].clone() {
+                    SummationEntry::NonLeaf(y) => &y,
+                    SummationEntry::Leaf(x) => &x.into(),
+                    _ => {
+                        error!("gen_tree: Not a leaf or nonleaf node");
+                        // just to make the compiler happy
+                        exit(1);
+                    }
                 };
-                new_c0.push(a + c);
-                new_c1.push(b + d);
+                let c = a + b;
+                self.summation_array.push(SummationEntry::NonLeaf(c));
+                left += 2;
+                right += 1;
             }
-        }
-        SummationNonLeaf {
-            c0: new_c0,
-            c1: new_c1,
+            self.ms = Some(MerkleTree::from_iter(
+                self.summation_array
+                    .iter()
+                    .map(|x| match x {
+                        SummationEntry::Leaf(y) => y.hash(),
+                        SummationEntry::NonLeaf(y) => y.hash(),
+                        // just to make compiler happy
+                        // never reach here
+                        _ => {
+                            error!("commitment in summation array");
+                            [0u8; 32]
+                        }
+                    })
+                    .chain((0..self.nr_sybil).into_iter().map(|_| [0u8; 32])),
+            ));
+            true
         }
     }
-}
-impl From<SummationLeaf> for SummationNonLeaf {
-    fn from(leaf: SummationLeaf) -> SummationNonLeaf {
-        SummationNonLeaf {
-            c0: leaf.c0.unwrap_or(Vec::new()),
-            c1: leaf.c1.unwrap_or(Vec::new()),
+
+    pub fn get_proof(&self, id: u32) -> MerkleProof {
+        if self.ms.is_none() {
+            warn!("get_proof@McTree called while None Mc tree");
         }
+        self.ms.unwrap().gen_proof(id as usize).into()
     }
-}
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum SummationEntry {
-    Leaf(SummationLeaf),
-    NonLeaf(SummationNonLeaf),
-    Commit(CommitEntry),
+
+    pub fn insert_node(&mut self, node: SummationLeaf) {
+        if self.summation_array.len() >= self.nr_real as usize {
+            error!("insert more then expected");
+        }
+        self.summation_array.push(SummationEntry::Leaf(node));
+    }
 }

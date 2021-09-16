@@ -7,7 +7,7 @@ use std::{
     convert::{Into, TryInto},
     io,
     iter::FromIterator,
-    net::{IpAddr, Ipv6Addr,Ipv4Addr, SocketAddr},
+    net::{IpAddr, Ipv4Addr, SocketAddr},
     process::exit,
     sync::{Arc, Condvar, Mutex, RwLock},
 };
@@ -19,7 +19,11 @@ use tarpc::{
 };
 mod common;
 use crate::common::{
-    aggregation::{merkle::*, CommitEntry, SummationEntry, SummationLeaf},
+    aggregation::{
+        merkle::*,
+        node::{CommitEntry, SummationEntry, SummationLeaf},
+        McTree, MsTree,
+    },
     hash_commitment, new_rsa_pub_key,
     server_service::ServerService,
 };
@@ -31,31 +35,29 @@ pub enum STATE {
 const NR_COMMIT: u32 = 8;
 const NR_SYBIL: u32 = 8;
 const NR_PARAMETER: u32 = 4096 * 10;
-pub struct Server {
-    pub commit_array: BTreeMap<Vec<u8>, MerkleHash>,
-    pub mc: Option<MerkleTree>,
-    pub summation_array: Vec<SummationEntry>,
-    pub ms: Option<MerkleTree>,
-    pub state: STATE,
-    //pub model: Vec<u8>,
-}
-impl Server {
-    pub fn new() -> Self {
-        Self {
-            commit_array: BTreeMap::new(),
-            mc: None,
-            summation_array: Vec::new(),
-            ms: None,
-            state: STATE::Commit,
-            //model: vec![0u8; NR_PARAMETER as usize],
-        }
-    }
-}
+//pub struct Server {
+//    pub commit_array: BTreeMap<Vec<u8>, MerkleHash>,
+//    pub mc: Option<MerkleTree>,
+//    pub summation_array: Vec<SummationEntry>,
+//    pub ms: Option<MerkleTree>,
+//    pub state: STATE,
+//    //pub model: Vec<u8>,
+//}
+//impl Server {
+//    pub fn new() -> Self {
+//        Self {
+//            commit_array: BTreeMap::new(),
+//            mc: None,
+//            summation_array: Vec::new(),
+//            ms: None,
+//            state: STATE::Commit,
+//            //model: vec![0u8; NR_PARAMETER as usize],
+//        }
+//    }
+//}
 #[derive(Clone)]
 pub struct InnerServer {
     addr: SocketAddr,
-    server: Arc<RwLock<Server>>,
-    cond: Arc<(Mutex<u32>, Condvar)>,
 }
 impl InnerServer {
     pub fn new(
@@ -72,8 +74,10 @@ impl InnerServer {
 }
 #[tarpc::server]
 impl ServerService for InnerServer {
-    type AggregateCommitFut = Ready<MerkleProof>;
-    type AggregateDataFut = Ready<MerkleProof>;
+    type AggregateCommitFut = Ready<()>;
+    type AggregateDataFut = Ready<()>;
+    //type GetMcProofFut = Ready<MerkleProof>;
+    //type GetMsProofFut = Ready<MerkleProof>;
     type VerifyFut = Ready<Vec<(SummationEntry, MerkleProof)>>;
     type RetrieveModelFut = Ready<Vec<u8>>;
     fn aggregate_commit(
@@ -150,8 +154,7 @@ impl ServerService for InnerServer {
             let s = &*self.server.write().unwrap();
             s.mc.as_ref().unwrap().gen_proof(idx.try_into().unwrap())
         };
-
-        future::ready(proof_commit.into())
+        future::ready(())
     }
     fn aggregate_data(
         self,
@@ -160,7 +163,7 @@ impl ServerService for InnerServer {
         cts: Vec<i128>,
         nonce: [u8; 16],
         proofs: Vec<u8>,
-    ) -> Self::AggregateCommitFut {
+    ) -> Self::AggregateDataFut {
         let mut num_clients = self.cond.0.lock().unwrap();
 
         while !matches!(self.server.read().as_ref().unwrap().state, STATE::Data) {
@@ -281,8 +284,7 @@ impl ServerService for InnerServer {
             let s = &*self.server.write().unwrap();
             s.ms.as_ref().unwrap().gen_proof(idx.try_into().unwrap())
         };
-
-        future::ready(proof_leaf.into())
+        future::ready(())
     }
 
     // TODO needs sync here before starting next round

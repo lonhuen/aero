@@ -4,7 +4,6 @@ version = "0.0.1"
 edition = "2018"
 
 [dependencies]
-#ark-groth16 = {version="0.2.0", default-features = false }
 ark-groth16 = {path="./lib/groth16",version="0.2.0",features = ["parallel"]}
 ark-ff = { version = "^0.2.0", default-features = false }
 ark-std = { version = "^0.2.0", default-features = false }
@@ -14,8 +13,8 @@ ark-relations = { version = "^0.2.0", default-features = false }
 ark-serialize= { version = "^0.2.0", default-features = false }
 
 log = "0.4"
-clap = "3.0.0-beta.4"
-
+simplelog = "^0.10.0"
+config = "0.11"
 
 merkle_light = {version="^0.3.1", path="lib/merkle_light-0.3.1/merkle"}
 rust-crypto = "^0.2"
@@ -34,13 +33,6 @@ criterion = "0.3"
 name = "groth16"
 harness = false
 
-#clap = "3.0.0-beta.2"
-#opentelemetry = { version = "0.13", features = ["rt-tokio"] }
-#opentelemetry-jaeger = { version = "0.12", features = ["tokio"] }
-#
-#tracing = { version = "0.1" }
-#tracing-opentelemetry = "0.12"
-#tracing-subscriber = "0.2"
 [[bin]]
 name = "client"
 path = "src/client.rs"
@@ -49,5 +41,11 @@ path = "src/client.rs"
 name = "server"
 path = "src/server.rs"
 
+#[[bin]]
+#name = "board"
+#path = "src/board.rs"
+
 [features]
+default = [ "ark-std/print-trace" ]
 print-trace = [ "ark-std/print-trace" ]
+

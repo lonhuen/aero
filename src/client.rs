@@ -1,13 +1,14 @@
 mod common;
 mod zksnark;
 use crate::common::aggregation::{
-    merkle::HashAlgorithm, merkle::MerkleProof, SummationEntry, SummationLeaf, SummationNonLeaf,
+    merkle::HashAlgorithm,
+    merkle::MerkleProof,
+    node::{SummationEntry, SummationLeaf, SummationNonLeaf},
 };
 use crate::common::server_service::ServerServiceClient;
 use crate::common::{i128vec_to_le_bytes, summation_array_size, ZKProof};
 use crate::zksnark::{Prover, Verifier};
 use ark_std::{end_timer, start_timer};
-use clap::{AppSettings, Clap};
 use crypto::digest::Digest;
 use crypto::sha3::{Sha3, Sha3Mode};
 use futures::Future;
@@ -17,7 +18,7 @@ use rsa::pkcs8::FromPublicKey;
 use rsa::{pkcs8::ToPublicKey, RsaPrivateKey, RsaPublicKey};
 use std::collections::HashSet;
 use std::convert::TryInto;
-use std::net::{IpAddr, Ipv6Addr,Ipv4Addr};
+use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
 use std::sync::mpsc::channel;
 use std::thread::sleep;
 use std::time::{Instant, SystemTime};
@@ -335,8 +336,6 @@ struct Opts {
 }
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let opts: Opts = Opts::parse();
-
     let now = Instant::now();
 
     //let server_addr = (IpAddr::V4(Ipv4Addr::LOCALHOST), 38886u16);
@@ -349,7 +348,7 @@ async fn main() -> anyhow::Result<()> {
         ServerServiceClient::new(client::Config::default(), transport.await?).spawn();
     let mut client = Client::new(inner_client);
 
-    for _ in 0..opts.round {
+    for _ in 0..20 {
         // begin uploading
         let tmpnow = Instant::now();
         let data = client.train_model().await;
