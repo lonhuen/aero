@@ -52,6 +52,8 @@ path = "src/server.rs"
 #path = "src/board.rs"
 
 [features]
-default = [ "print-trace" ]
+default = [ "print-trace"]
+json = []
 print-trace = [ "ark-std/print-trace" ]
+
 

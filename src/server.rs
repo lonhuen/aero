@@ -19,7 +19,7 @@ use bincode::Options;
 use tarpc::{
     context,
     server::{self, Channel, Incoming},
-    tokio_serde::formats::Json,
+    tokio_serde::formats::{Bincode, Json},
 };
 mod common;
 use crate::common::{
@@ -201,13 +201,10 @@ async fn main() -> io::Result<()> {
     let mc_ref = Arc::new(RwLock::new(mc));
     let ms_ref = Arc::new(RwLock::new(ms));
 
-    let mut listener = tarpc::serde_transport::tcp::listen(&server_addr, Json::default)
-        //    Bincode::from(
-        //        // Configure your preferred frame size here.
-        //        bincode::options().with_no_limit(),
-        //    )
-        //})
-        .await?;
+    #[cfg(feature = "json")]
+    let mut listener = tarpc::serde_transport::tcp::listen(&server_addr, Json::default).await?;
+    #[cfg(not(feature = "json"))]
+    let mut listener = tarpc::serde_transport::tcp::listen(&server_addr, Bincode::default).await?;
     listener.config_mut().max_frame_length(usize::MAX);
     listener
         // Ignore accept errors.
