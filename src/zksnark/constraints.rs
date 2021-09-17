@@ -389,9 +389,9 @@ impl<F: Field> ConstraintSynthesizer<F> for Circuit<F> {
                 lc!() + delta_1_var_vec[i] + (F::from(4096u64), Variable::One),
             )?;
         }
-        eprintln!("# of constraints {}", cs.num_constraints());
-        eprintln!("# of instances {}", cs.num_instance_variables());
-        eprintln!("# of witness {}", cs.num_witness_variables());
+        //eprintln!("# of constraints {}", cs.num_constraints());
+        //eprintln!("# of instances {}", cs.num_instance_variables());
+        //eprintln!("# of witness {}", cs.num_witness_variables());
         Ok(())
     }
 }

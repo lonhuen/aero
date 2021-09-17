@@ -1,8 +1,10 @@
+use ark_groth16::verifier;
 use futures::{
     future::{self, Ready},
     prelude::*,
 };
 use log::{error, info, warn};
+use quail::zksnark::{Prover, Verifier};
 use std::{
     collections::BTreeMap,
     convert::{Into, TryInto},
@@ -64,6 +66,8 @@ pub struct InnerServer {
     mc: Arc<RwLock<McTree>>,
     ms: Arc<RwLock<MsTree>>,
     nr_parameter: u32,
+    pvk: Arc<Vec<u8>>,
+    verifier: Arc<Verifier>,
 }
 impl InnerServer {
     pub fn new(
@@ -71,20 +75,22 @@ impl InnerServer {
         mc: &Arc<RwLock<McTree>>,
         ms: &Arc<RwLock<MsTree>>,
         nr_parameter: u32,
+        pvk: &Arc<Vec<u8>>,
+        verifier: &Arc<Verifier>,
     ) -> Self {
         Self {
             addr,
             mc: mc.clone(),
             ms: ms.clone(),
             nr_parameter,
+            pvk: pvk.clone(),
+            verifier: verifier.clone(),
         }
     }
 }
 #[tarpc::server]
 impl ServerService for InnerServer {
     type RetrieveModelFut = Ready<Vec<u8>>;
-
-    type AggregateCommitFut = Ready<()>;
     fn aggregate_commit(
         self,
         _: context::Context,
@@ -175,10 +181,17 @@ impl ServerService for InnerServer {
         future::ready(ret)
     }
 
+    type AggregateCommitFut = Ready<()>;
     fn retrieve_model(self, _: context::Context) -> Self::RetrieveModelFut {
         self.mc.as_ref().write().unwrap().clear();
         self.ms.as_ref().write().unwrap().clear();
         future::ready(vec![0u8; self.nr_parameter as usize])
+    }
+
+    type RetrieveProvingKeyFut = Ready<Vec<u8>>;
+    fn retrieve_proving_key(self, _: context::Context) -> Self::RetrieveModelFut {
+        //future::ready(self.pvk.as_ref().clone())
+        future::ready(vec![0u8; 1])
     }
 }
 #[tokio::main]
@@ -197,15 +210,26 @@ async fn main() -> io::Result<()> {
 
     let mc = McTree::new(nr_real, nr_sybil);
     let ms = MsTree::new(nr_real, nr_sybil);
+    let prover = Prover::setup("./data/encryption.txt");
+    let pvk = prover.serialize_pvk();
+    let verifier = Verifier::new(&prover);
+
+    drop(prover);
 
     let mc_ref = Arc::new(RwLock::new(mc));
     let ms_ref = Arc::new(RwLock::new(ms));
+
+    let prover_ref = Arc::new(pvk);
+    let verifier_ref = Arc::new(verifier);
 
     #[cfg(feature = "json")]
     let mut listener = tarpc::serde_transport::tcp::listen(&server_addr, Json::default).await?;
     #[cfg(not(feature = "json"))]
     let mut listener = tarpc::serde_transport::tcp::listen(&server_addr, Bincode::default).await?;
     listener.config_mut().max_frame_length(usize::MAX);
+
+    println!("Atom: server starts listening");
+
     listener
         // Ignore accept errors.
         .filter_map(|r| future::ready(r.ok()))
@@ -219,6 +243,8 @@ async fn main() -> io::Result<()> {
                 &mc_ref,
                 &ms_ref,
                 nr_parameter,
+                &prover_ref,
+                &verifier_ref,
             );
             channel.execute(inner_server.serve())
         })

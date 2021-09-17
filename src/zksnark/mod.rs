@@ -12,39 +12,44 @@ use ark_groth16::{
 mod constraints;
 use crate::zksnark::constraints::Circuit;
 const NUM_DIMENSION: usize = 4096;
+
+#[derive(Clone)]
 pub struct Prover {
     pub proving_key: ProvingKey<Bls12<Parameters>>,
     pub circuit: Circuit<Fr>,
 }
 impl Prover {
-    pub fn setup(pk_path: &str, vk_path: &str, enc_path: &str) {
+    pub fn setup(enc_path: &str) -> Self {
         let c = Circuit::<Fr>::new(NUM_DIMENSION, enc_path);
         //TODO use OsRng here
         let rng = &mut test_rng();
 
         let params = generate_random_parameters::<Bls12_381, _, _>(c.clone(), rng).unwrap();
-        // write the proving key
-        {
-            let mut buf: Vec<u8> = Vec::new();
-            params.serialize(&mut buf).unwrap();
-            std::fs::write(pk_path, &buf[..]).unwrap();
+        Self {
+            proving_key: params,
+            circuit: c,
         }
+        // write the proving key
+        //{
+        //    let mut buf: Vec<u8> = Vec::new();
+        //    params.serialize(&mut buf).unwrap();
+        //    std::fs::write(pk_path, &buf[..]).unwrap();
+        //}
         //let buf: Vec<u8> = std::fs::read(pk_path).unwrap();
         //let new_params = ProvingKey::<Bls12<Parameters>>::deserialize(&*buf).unwrap();
         //println!("params == new_params? {}", params == new_params);
         // write the verification key
-        {
-            let mut buf: Vec<u8> = Vec::new();
-            params.vk.serialize(&mut buf).unwrap();
-            std::fs::write(vk_path, &buf[..]).unwrap();
-        }
+        //{
+        //    let mut buf: Vec<u8> = Vec::new();
+        //    params.vk.serialize(&mut buf).unwrap();
+        //    std::fs::write(vk_path, &buf[..]).unwrap();
+        //}
     }
-    pub fn new(enc_path: &str, pk_path: &str) -> Self {
+    pub fn new(enc_path: &str, pvk: Vec<u8>) -> Self {
         let c = Circuit::<Fr>::new(NUM_DIMENSION, enc_path);
 
         // read the proving key
-        let buf: Vec<u8> = std::fs::read(pk_path).unwrap();
-        let params = ProvingKey::<Bls12<Parameters>>::deserialize(&*buf).unwrap();
+        let params = ProvingKey::<Bls12<Parameters>>::deserialize(&*pvk).unwrap();
 
         Self {
             proving_key: params,
@@ -70,15 +75,20 @@ impl Prover {
     pub fn deserialize_proof(pf: &Vec<u8>) -> Proof<Bls12<Parameters>> {
         Proof::<Bls12<Parameters>>::deserialize(&**pf).unwrap()
     }
+    pub fn serialize_pvk(&self) -> Vec<u8> {
+        let mut buf: Vec<u8> = Vec::new();
+        self.proving_key.serialize(&mut buf).unwrap();
+        buf
+    }
 }
-
+#[derive(Clone)]
 pub struct Verifier {
     pub pvk: PreparedVerifyingKey<Bls12<Parameters>>,
 }
 impl Verifier {
-    pub fn new(vk_path: &str) -> Self {
-        let buf = std::fs::read(vk_path).unwrap();
-        let vk = VerifyingKey::<Bls12<Parameters>>::deserialize(&*buf).unwrap();
+    pub fn new(prover: &Prover) -> Self {
+        //let buf = std::fs::read(vk_path).unwrap();
+        let vk = prover.proving_key.vk.clone();
         Self { pvk: vk.into() }
     }
 
@@ -96,6 +106,7 @@ impl Verifier {
         verify_proof(&self.pvk, pf, inputs).unwrap()
     }
 }
+/*
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -142,3 +153,4 @@ mod tests {
         assert!(result);
     }
 }
+*/

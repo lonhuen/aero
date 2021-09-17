@@ -13,7 +13,7 @@ use crate::zksnark::{Prover, Verifier};
 use ark_std::{end_timer, start_timer};
 use crypto::digest::Digest;
 use crypto::sha3::{Sha3, Sha3Mode};
-use futures::Future;
+use futures::{future::Ready, Future};
 use log::{error, info, warn};
 use merkle_light::hash::Algorithm;
 use rand::{rngs::StdRng, Rng, SeedableRng};
@@ -67,19 +67,16 @@ impl Client {
     }
 
     // TODO somehow get the file
-    // TODO for now 1 u8 for 1 CT (just to measure performance)
     // we may use seal and process_log.py to get the desired file
     // but it takes about 16s. Also the process_log.py redoes the encryption work + crt conversion.
-    // To simulate, let's
-    // 1. call SEAL encryption
-    // 2. return the encryption.txt
     pub fn encrypt(&mut self, xs: Vec<u8>) {
         let mut rng = rand::rngs::StdRng::from_entropy();
         // call SEAL here to get a log file
         // "data/encryption.txt"
-        //thread::sleep(
-        //    time::Duration::from_millis(87) * (xs.len() / (NUM_DIMENSION as usize)) as u32,
-        //);
+        // TODO (simulation)
+        thread::sleep(
+            time::Duration::from_millis(87) * (xs.len() / (NUM_DIMENSION as usize)) as u32,
+        );
         for _ in 0..xs.len() / NUM_DIMENSION as usize {
             //self.c0s.extend(vec![1i128; NUM_DIMENSION as usize]);
             //self.c1s.extend(vec![1i128; NUM_DIMENSION as usize]);
@@ -90,23 +87,23 @@ impl Client {
         }
         info!("Atom: encryption get c0s len {}", self.c0s.len());
     }
-    // TODO need to fix this with setup phase
-    // but for now, let's read the proof and sleep some time to simulate the create proof
-    pub fn generate_proof(&self) -> Vec<Vec<u8>> {
-        // TODO here we assume we have 10 threads to do this proof generation
+    pub fn generate_proof(&self, pvk: Vec<u8>) -> Vec<Vec<u8>> {
+        // reconstruct the proving key
+        //let gc_proof = start_timer!(|| "proof deserialization");
+        //let prover = Prover::new("./data/encryption.txt", pvk);
+        //end_timer!(gc_proof);
+        //let proof = prover.create_proof_in_bytes();
+        // vec![proof; self.c0s.len() / NUM_DIMENSION as usize]
+        // TODO (simulation) here we assume we have 10 threads to do this proof generation
         thread::sleep(time::Duration::from_millis(
-            //(self.c0s.len() as f64 / NUM_DIMENSION as f64) as u64 * 825,
-            (self.c0s.len() as f64 / NUM_DIMENSION as f64) as u64,
+            (self.c0s.len() as f64 / NUM_DIMENSION as f64) as u64 * 825,
+            // (self.c0s.len() as f64 / NUM_DIMENSION as f64) as u64,
         ));
-        info!(
-            "Atom: generate proofs for {} CTs",
-            self.c0s.len() / NUM_DIMENSION as usize
-        );
         vec![vec![0u8; 192]; self.c0s.len() / NUM_DIMENSION as usize]
     }
 
     // the whole aggregation phase (except the encryption)
-    pub async fn upload(&mut self, xs: Vec<u8>) -> bool {
+    pub async fn upload(&mut self, xs: Vec<u8>, pvk: Vec<u8>) -> bool {
         // set the deadline of the context
         let gc1 = start_timer!(|| "encrypt the gradients");
         self.encrypt(xs);
@@ -126,7 +123,7 @@ impl Client {
             self.inner.get_mc_proof(ctx, self.rsa_pk.clone(), 0u32)
         };
         // while waiting for the commitment, compute the zkproof
-        let proofs = self.generate_proof();
+        let proofs = self.generate_proof(pvk);
 
         // wait for the Mc tree
         let mc_proof = result_commit.await.unwrap().to_proof();
@@ -357,17 +354,14 @@ impl Client {
         .unwrap();
         end_timer!(rm);
         // training time
-        // TODO set this time properly
+        // TODO siumulation set this time properly
         thread::sleep(Duration::from_secs(1));
         //thread::sleep(Duration::from_secs(45));
         gradient
     }
-    pub async fn download_proving_key(&mut self) -> Vec<u8> {
-        let mut ctx = context::current();
-        ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
-        self.inner.retrieve_model(ctx).await.unwrap()
-        // also serialize here
-    }
+    //pub async fn download_proving_key(&mut self) -> Vec<u8> {
+    //    // also serialize here
+    //}
 }
 
 #[tokio::main]
@@ -377,41 +371,41 @@ async fn main() -> anyhow::Result<()> {
     LogUtils::init(&format!("client{}.log", id()));
 
     let nr_real = config.get_int("nr_real") as u32;
-    let nr_sybil = config.get_int("nr_sybil") as u32;
+    //let nr_sybil = config.get_int("nr_sybil") as u32;
     let nr_round = config.get_int("nr_round") as u32;
 
     let server_addr = (
         IpAddr::V4(config.get_addr("server_addr")),
         config.get_int("server_port") as u16,
     );
-    //let transport = tarpc::serde_transport::tcp::connect(server_addr, Json::default);
-    //let transport = tarpc::serde_transport::tcp::connect(server_addr, || {
-    //    Bincode::from(
-    //        // Configure your preferred frame size here.
-    //        bincode::options().with_no_limit(),
-    //    )
-    //});
     #[cfg(feature = "json")]
     let mut transport = tarpc::serde_transport::tcp::connect(server_addr, Json::default);
     #[cfg(not(feature = "json"))]
     let mut transport = tarpc::serde_transport::tcp::connect(server_addr, Bincode::default);
+    let mut pvk_transport = tarpc::serde_transport::tcp::connect(server_addr, Bincode::default);
     transport.config_mut().max_frame_length(usize::MAX);
+    pvk_transport.config_mut().max_frame_length(usize::MAX);
 
-    // WorldClient is generated by the service attribute. It has a constructor `new` that takes a
-    // config and any Transport as input.
     let inner_client =
         ServerServiceClient::new(client::Config::default(), transport.await?).spawn();
+    let pvk_client =
+        ServerServiceClient::new(client::Config::default(), pvk_transport.await?).spawn();
     let mut client = Client::new(inner_client);
 
     for _ in 0..nr_round {
         // begin uploading
         let sr = start_timer!(|| "one round");
         let train = start_timer!(|| "train model");
+        let pvk = {
+            let mut ctx = context::current();
+            ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
+            pvk_client.retrieve_proving_key(ctx)
+        };
         let data = client.train_model().await;
         end_timer!(train);
 
         let rs = start_timer!(|| "upload data");
-        let result = client.upload(data).await;
+        let result = client.upload(data, pvk.await.unwrap()).await;
         end_timer!(rs);
 
         let vr = start_timer!(|| "verify the data");
