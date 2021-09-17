@@ -7,7 +7,7 @@ sudo  tc qdisc add dev eth0 root netem delay 100ms
 sudo tc qdisc change dev eth0 root netem delay 100ms 10ms 25%
 for i in {0..3}; do
 	#round cts
-	time(trickle -s -u 1024 -d 1024 ./target/release/client 2 1 2>&1) | tee client$i.log &
+	time(trickle -s -u 1024 -d 1024 ./target/release/client 2>&1) | tee client$i.log &
 done
 wait
 

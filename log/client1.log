@@ -1,0 +1,100 @@
+Start:   clients
+··Start:   one round
+····Start:   train model
+······Start:   retrieve the model
+08:01:36 [0m[33m[WARN] [0mOpenTelemetry subscriber not installed; making unsampled child context. 
+······End:     retrieve the model ..................................................109.918ms
+····End:     train model ...........................................................1.110s
+····Start:   upload data
+08:01:37 [0m[33m[WARN] [0mOpenTelemetry subscriber not installed; making unsampled child context. 
+······Start:   encrypt the gradients
+······End:     encrypt the gradients ...............................................891.884ms
+······Start:   upload the mc+proof generation
+08:01:38 [0m[33m[WARN] [0mOpenTelemetry subscriber not installed; making unsampled child context. 
+08:01:47 [0m[33m[WARN] [0mOpenTelemetry subscriber not installed; making unsampled child context. 
+······End:     upload the mc+proof generation ......................................8.464s
+······Start:   upload the data
+08:01:47 [0m[33m[WARN] [0mOpenTelemetry subscriber not installed; making unsampled child context. 
+08:01:47 [0m[33m[WARN] [0mOpenTelemetry subscriber not installed; making unsampled child context. 
+······End:     upload the data .....................................................1.581s
+····End:     upload data ...........................................................11.37s
+····Start:   verify the data
+······Start:   verify
+········Start:   receive verify
+08:01:48 [0m[33m[WARN] [0mOpenTelemetry subscriber not installed; making unsampled child context. 
+········End:     receive verify ....................................................2.324s
+········Start:   verify the proofs
+········End:     verify the proofs .................................................113.818ms
+······End:     verify the data .....................................................2.438s
+····End:     one round .............................................................14.585s
+····Start:   one round
+······Start:   train model
+········Start:   retrieve the model
+08:01:51 [0m[33m[WARN] [0mOpenTelemetry subscriber not installed; making unsampled child context. 
+········End:     retrieve the model ................................................107.330ms
+······End:     train model .........................................................1.107s
+······Start:   upload data
+08:01:52 [0m[33m[WARN] [0mOpenTelemetry subscriber not installed; making unsampled child context. 
+········Start:   encrypt the gradients
+········End:     encrypt the gradients .............................................910.543ms
+········Start:   upload the mc+proof generation
+08:01:53 [0m[33m[WARN] [0mOpenTelemetry subscriber not installed; making unsampled child context. 
+08:02:09 [0m[33m[WARN] [0mOpenTelemetry subscriber not installed; making unsampled child context. 
+········End:     upload the mc+proof generation ....................................16.709s
+········Start:   upload the data
+08:02:10 [0m[33m[WARN] [0mOpenTelemetry subscriber not installed; making unsampled child context. 
+08:02:10 [0m[33m[WARN] [0mOpenTelemetry subscriber not installed; making unsampled child context. 
+········End:     upload the data ...................................................2.299s
+······End:     upload data .........................................................20.21s
+······Start:   verify the data
+········Start:   verify
+··········Start:   receive verify
+08:02:12 [0m[33m[WARN] [0mOpenTelemetry subscriber not installed; making unsampled child context. 
+··········End:     receive verify ..................................................4.485s
+··········Start:   verify the proofs
+··········End:     verify the proofs ...............................................227.487ms
+········End:     verify the data ...................................................4.713s
+······End:     one round ...........................................................25.842s
+······Start:   one round
+········Start:   train model
+··········Start:   retrieve the model
+08:02:17 [0m[33m[WARN] [0mOpenTelemetry subscriber not installed; making unsampled child context. 
+··········End:     retrieve the model ..............................................96.53ms
+········End:     train model .......................................................1.96s
+········Start:   upload data
+08:02:18 [0m[33m[WARN] [0mOpenTelemetry subscriber not installed; making unsampled child context. 
+··········Start:   encrypt the gradients
+··········End:     encrypt the gradients ...........................................928.845ms
+··········Start:   upload the mc+proof generation
+08:02:19 [0m[33m[WARN] [0mOpenTelemetry subscriber not installed; making unsampled child context. 
+08:02:44 [0m[33m[WARN] [0mOpenTelemetry subscriber not installed; making unsampled child context. 
+··········End:     upload the mc+proof generation ..................................24.959s
+··········Start:   upload the data
+08:02:44 [0m[33m[WARN] [0mOpenTelemetry subscriber not installed; making unsampled child context. 
+08:02:44 [0m[33m[WARN] [0mOpenTelemetry subscriber not installed; making unsampled child context. 
+··········End:     upload the data .................................................1.449s
+········End:     upload data .......................................................27.447s
+········Start:   verify the data
+··········Start:   verify
+············Start:   receive verify
+08:02:45 [0m[33m[WARN] [0mOpenTelemetry subscriber not installed; making unsampled child context. 
+············End:     receive verify ................................................7.705s
+············Start:   verify the proofs
+············End:     verify the proofs .............................................341.221ms
+··········End:     verify the data .................................................8.49s
+········End:     one round .........................................................36.592s
+········Start:   one round
+··········Start:   train model
+············Start:   retrieve the model
+08:02:53 [0m[33m[WARN] [0mOpenTelemetry subscriber not installed; making unsampled child context. 
+············End:     retrieve the model ............................................97.724ms
+··········End:     train model .....................................................1.97s
+··········Start:   upload data
+08:02:54 [0m[33m[WARN] [0mOpenTelemetry subscriber not installed; making unsampled child context. 
+············Start:   encrypt the gradients
+············End:     encrypt the gradients .........................................947.565ms
+············Start:   upload the mc+proof generation
+08:02:55 [0m[33m[WARN] [0mOpenTelemetry subscriber not installed; making unsampled child context. 
+08:03:28 [0m[33m[WARN] [0mOpenTelemetry subscriber not installed; making unsampled child context. 
+thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: Kind(ConnectionReset)', src/client.rs:129:44
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
