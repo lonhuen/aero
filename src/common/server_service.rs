@@ -9,11 +9,11 @@ pub trait ServerService {
     /// send the data in the aggregation phase, not block, call get_ms_proof later
     async fn aggregate_data(rsa_pk: Vec<u8>, cts: Vec<i128>, nonce: [u8; 16], proofs: Vec<u8>);
     /// Get the inclusion proof of a node inside the commitment merkle tree
-    //async fn get_mc_proof(leaf_id: u32, round: u32) -> MerkleProof;
+    async fn get_mc_proof(rsa_pk: Vec<u8>, round: u32) -> MerkleProof;
     /// Get the inclusion proof of a node inside the summation merkle tree
-    //async fn get_ms_proof(leaf_id: u32, round: u32) -> MerkleProof;
+    async fn get_ms_proof(rsa_pk: Vec<u8>, round: u32) -> MerkleProof;
 
-    async fn verify(vinit: u32, non_leaf_id: Vec<u32>) -> Vec<(SummationEntry, MerkleProof)>;
+    //async fn verify(vinit: u32, non_leaf_id: Vec<u32>) -> Vec<(SummationEntry, MerkleProof)>;
 
     async fn retrieve_model() -> Vec<u8>;
 }

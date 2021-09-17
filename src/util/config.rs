@@ -1,3 +1,6 @@
+use std::net::Ipv4Addr;
+use std::str::FromStr;
+
 use config;
 
 /// config utils
@@ -12,8 +15,17 @@ impl ConfigUtils {
         Self { settings }
     }
 
-    pub fn get(&self, key: &str) -> Result<String, config::ConfigError> {
-        self.settings.get(key)
+    pub fn get(&self, key: &str) -> String {
+        self.settings.get(key).unwrap()
+    }
+
+    pub fn get_addr(&self, key: &str) -> Ipv4Addr {
+        let addr: String = self.settings.get(key).unwrap();
+        Ipv4Addr::from_str(&addr).unwrap()
+    }
+
+    pub fn get_int(&self, key: &str) -> i64 {
+        self.settings.get_int(key).unwrap()
     }
 }
 
@@ -28,6 +40,6 @@ mod tests {
     #[test]
     fn test_config_init() {
         let config = ConfigUtils::init("config.ini");
-        println!("{}", config.get("port").unwrap());
+        println!("{}", config.get("port"));
     }
 }

@@ -26,6 +26,9 @@ serde = { version = "1.0" }
 tarpc = { version = "0.26", features = ["full"] }
 tokio = { version = "1.0", features = ["macros", "net", "rt-multi-thread"] }
 tokio-serde = { version = "0.8", features = ["json"] }
+tracing = { version = "0.1" }
+tracing-opentelemetry = "0.15"
+tracing-subscriber = "0.2"
 [dev-dependencies]
 criterion = "0.3"
 
@@ -46,6 +49,6 @@ path = "src/server.rs"
 #path = "src/board.rs"
 
 [features]
-default = [ "ark-std/print-trace" ]
+default = [ "print-trace" ]
 print-trace = [ "ark-std/print-trace" ]
 

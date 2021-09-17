@@ -1,5 +1,5 @@
 pub mod merkle;
-use log::warn;
+use log::{info, warn};
 use merkle::MerkleTree;
 pub mod node;
 use self::merkle::MerkleProof;
@@ -50,11 +50,15 @@ impl McTree {
         }
     }
 
-    pub fn get_proof(&self, id: u32) -> MerkleProof {
+    pub fn get_proof(&self, rsa_pk: &Vec<u8>) -> MerkleProof {
         if self.mc.is_none() {
             warn!("get_proof@McTree called while None Mc tree");
         }
-        self.mc.unwrap().gen_proof(id as usize).into()
+        let id = self
+            .commit_array
+            .binary_search_by(|probe| probe.rsa_pk.cmp(rsa_pk))
+            .unwrap();
+        self.mc.as_ref().unwrap().gen_proof(id).into()
     }
 
     pub fn insert_node(&mut self, node: CommitEntry) {
@@ -106,16 +110,16 @@ impl MsTree {
             let mut right = self.summation_array.len();
             while left + 1 < right {
                 let a = match self.summation_array[left].clone() {
-                    SummationEntry::NonLeaf(y) => &y,
-                    SummationEntry::Leaf(x) => &x.into(),
+                    SummationEntry::NonLeaf(y) => y,
+                    SummationEntry::Leaf(x) => x.into(),
                     _ => {
                         error!("gen_tree: Not a leaf or nonleaf node");
                         exit(1);
                     }
                 };
                 let b = match self.summation_array[left + 1].clone() {
-                    SummationEntry::NonLeaf(y) => &y,
-                    SummationEntry::Leaf(x) => &x.into(),
+                    SummationEntry::NonLeaf(y) => y,
+                    SummationEntry::Leaf(x) => x.into(),
                     _ => {
                         error!("gen_tree: Not a leaf or nonleaf node");
                         // just to make the compiler happy
@@ -146,11 +150,14 @@ impl MsTree {
         }
     }
 
-    pub fn get_proof(&self, id: u32) -> MerkleProof {
+    pub fn get_proof(&self, rsa_pk: &Vec<u8>) -> MerkleProof {
         if self.ms.is_none() {
             warn!("get_proof@McTree called while None Mc tree");
         }
-        self.ms.unwrap().gen_proof(id as usize).into()
+        let id = self.summation_array[0..self.nr_real as usize]
+            .binary_search_by(|probe| probe.get_leaf_rsa_pk().cmp(rsa_pk))
+            .unwrap();
+        self.ms.as_ref().unwrap().gen_proof(id).into()
     }
 
     pub fn insert_node(&mut self, node: SummationLeaf) {

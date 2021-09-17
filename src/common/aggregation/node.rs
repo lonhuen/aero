@@ -1,6 +1,6 @@
 use crypto::digest::Digest;
 use crypto::sha3::Sha3;
-use log::error;
+use log::{error, info};
 use std::convert::{From, TryInto};
 use std::ops::Add;
 use std::process::exit;
@@ -106,40 +106,40 @@ impl SummationNonLeaf {
     }
 }
 
-//impl Add for SummationNonLeaf {
-//    type Output = SummationNonLeaf;
-//    fn add(self, other: Self) -> Self {
-//        // TODO need modulus here maybe
-//        let len = std::cmp::max(self.c0.len(), other.c0.len());
-//        let mut new_c0: Vec<i128> = Vec::with_capacity(len);
-//        let mut new_c1: Vec<i128> = Vec::with_capacity(len);
-//        if self.c0.len() == other.c0.len() {
-//            for i in 0..len {
-//                new_c0.push(self.c0[i] + other.c0[i]);
-//                new_c1.push(self.c1[i] + other.c1[i]);
-//            }
-//        } else {
-//            for i in 0..len {
-//                let (a, b) = if i > self.c0.len() {
-//                    (0i128, 0i128)
-//                } else {
-//                    (self.c0[i], self.c1[i])
-//                };
-//                let (c, d) = if i > other.c0.len() {
-//                    (0i128, 0i128)
-//                } else {
-//                    (other.c0[i], other.c1[i])
-//                };
-//                new_c0.push(a + c);
-//                new_c1.push(b + d);
-//            }
-//        }
-//        SummationNonLeaf {
-//            c0: new_c0,
-//            c1: new_c1,
-//        }
-//    }
-//}
+impl Add for SummationNonLeaf {
+    type Output = SummationNonLeaf;
+    fn add(self, other: Self) -> Self {
+        // TODO need modulus here maybe
+        let len = std::cmp::max(self.c0.len(), other.c0.len());
+        let mut new_c0: Vec<i128> = Vec::with_capacity(len);
+        let mut new_c1: Vec<i128> = Vec::with_capacity(len);
+        if self.c0.len() == other.c0.len() {
+            for i in 0..len {
+                new_c0.push(self.c0[i] + other.c0[i]);
+                new_c1.push(self.c1[i] + other.c1[i]);
+            }
+        } else {
+            for i in 0..len {
+                let (a, b) = if i > self.c0.len() {
+                    (0i128, 0i128)
+                } else {
+                    (self.c0[i], self.c1[i])
+                };
+                let (c, d) = if i > other.c0.len() {
+                    (0i128, 0i128)
+                } else {
+                    (other.c0[i], other.c1[i])
+                };
+                new_c0.push(a + c);
+                new_c1.push(b + d);
+            }
+        }
+        SummationNonLeaf {
+            c0: new_c0,
+            c1: new_c1,
+        }
+    }
+}
 
 impl<'a, 'b> Add<&'b SummationNonLeaf> for &'a SummationNonLeaf {
     type Output = SummationNonLeaf;
