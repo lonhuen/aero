@@ -2,6 +2,7 @@ use futures::{
     future::{self, Ready},
     prelude::*,
 };
+use log::{error, info, warn};
 use std::{
     collections::BTreeMap,
     convert::{Into, TryInto},
@@ -14,6 +15,7 @@ use std::{
     time::Duration,
 };
 
+use bincode::Options;
 use tarpc::{
     context,
     server::{self, Channel, Incoming},
@@ -61,10 +63,15 @@ pub struct InnerServer {
     addr: SocketAddr,
     mc: Arc<RwLock<McTree>>,
     ms: Arc<RwLock<MsTree>>,
-    nr_parameter: u32
+    nr_parameter: u32,
 }
 impl InnerServer {
-    pub fn new(addr: SocketAddr, mc: &Arc<RwLock<McTree>>, ms: &Arc<RwLock<MsTree>>,nr_parameter:u32) -> Self {
+    pub fn new(
+        addr: SocketAddr,
+        mc: &Arc<RwLock<McTree>>,
+        ms: &Arc<RwLock<MsTree>>,
+        nr_parameter: u32,
+    ) -> Self {
         Self {
             addr,
             mc: mc.clone(),
@@ -116,7 +123,7 @@ impl ServerService for InnerServer {
 
     type GetMcProofFut = Ready<MerkleProof>;
     // TODO for now assume only 1 round
-    fn get_mc_proof(self, _: context::Context, rsa_pk:Vec<u8>, round: u32) -> Self::GetMcProofFut {
+    fn get_mc_proof(self, _: context::Context, rsa_pk: Vec<u8>, round: u32) -> Self::GetMcProofFut {
         loop {
             let mc = self.mc.as_ref().read().unwrap();
             if mc.commit_array.len() >= mc.nr_real as usize {
@@ -130,7 +137,7 @@ impl ServerService for InnerServer {
     }
 
     type GetMsProofFut = Ready<MerkleProof>;
-    fn get_ms_proof(self, _: context::Context, rsa_pk:Vec<u8>, round: u32) -> Self::GetMsProofFut {
+    fn get_ms_proof(self, _: context::Context, rsa_pk: Vec<u8>, round: u32) -> Self::GetMsProofFut {
         loop {
             let ms = self.ms.as_ref().read().unwrap();
             if ms.summation_array.len() >= ms.nr_real as usize {
@@ -143,62 +150,34 @@ impl ServerService for InnerServer {
         future::ready(ms.get_proof(&rsa_pk))
     }
 
-    //type VerifyFut = Ready<Vec<(SummationEntry, MerkleProof)>>;
-    // TODO needs sync here before starting next round
-    //fn verify(self, _: context::Context, vinit: u32, non_leaf_id: Vec<u32>) -> Self::VerifyFut {
-    //    // TODO maybe RwLock? not able to directly read the content
-    //    //first all the leafs
-    //    let mut ret: Vec<(SummationEntry, MerkleProof)> = Vec::new();
-    //    let ms = self.ms.as_ref().read().unwrap();
-    //    let mc = self.mc.as_ref().read().unwrap();
-    //    for i in 0..5 + 1 {
-    //        let node = ms.summation_array[(i + vinit) as usize].clone();
-    //        //println!("{:?}", s.mc.as_ref().unwrap().gen_proof(0));
-    //        let mc_proof: MerkleProof = mc.gen_proof(((i + vinit) % NR_COMMIT) as usize).into();
-    //        let ms_proof: MerkleProof =
-    //            s.ms.as_ref()
-    //                .unwrap()
-    //                .gen_proof(((i + vinit) % NR_COMMIT) as usize)
-    //                .into();
-    //        if let SummationEntry::Leaf(l) = node {
-    //            let pk = l.rsa_pk;
-    //            let hash = s.commit_array.get(&pk).unwrap().clone();
-    //            //println!("commit_array len {}", s.commit_array.len());
-    //            let hash = [0u8; 32];
-    //            ret.push((
-    //                SummationEntry::Commit(CommitEntry {
-    //                    rsa_pk: pk,
-    //                    hash: hash,
-    //                }),
-    //                mc_proof,
-    //            ));
-    //            ret.push((s.summation_array[(i + vinit) as usize].clone(), ms_proof));
-    //        }
-    //    }
-    //    for i in non_leaf_id {
-    //        let ms_proof: MerkleProof = s.ms.as_ref().unwrap().gen_proof(i as usize).into();
-    //        ret.push((s.summation_array[i as usize].clone(), ms_proof));
-    //    }
-    //    drop(s);
-    //    // wait for all the threads to finish
-    //    let mut num_clients = self.cond.0.lock().unwrap();
-    //    *num_clients = *num_clients + 1;
-    //    if *num_clients < NR_COMMIT {
-    //        num_clients = self.cond.1.wait(num_clients).unwrap();
-    //    } else {
-    //        *num_clients = 0;
-    //        // TODO decrypt here and update the model here
-    //        //self.server.write().unwrap().model = vec![0u8; NR_PARAMETER as usize];
-
-    //        self.server.write().unwrap().state = STATE::Commit;
-    //        self.cond.1.notify_all();
-    //    }
-    //    drop(num_clients);
-    //    future::ready(ret)
-    //}
+    type VerifyFut = Ready<Vec<(SummationEntry, MerkleProof)>>;
+    fn verify(self, _: context::Context, vinit: u32, non_leaf_id: Vec<u32>) -> Self::VerifyFut {
+        // TODO the client should call get_ms_proof before verify. Fix this for SGD
+        //first all the leafs
+        let mut ret: Vec<(SummationEntry, MerkleProof)> = Vec::new();
+        let ms = self.ms.as_ref().read().unwrap();
+        let mc = self.mc.as_ref().read().unwrap();
+        for i in 0..5 + 1 {
+            let node = ms.get_node(i + vinit);
+            if let SummationEntry::Leaf(_) = node {
+                let mc_proof: MerkleProof = mc.get_proof_by_id(i + vinit).into();
+                let ms_proof: MerkleProof = ms.get_proof_by_id(i + vinit).into();
+                ret.push((SummationEntry::Commit(mc.get_node(i + vinit)), mc_proof));
+                ret.push((node, ms_proof));
+            } else {
+                warn!("Atom: verify not a leaf node");
+            }
+        }
+        for i in non_leaf_id {
+            let ms_proof: MerkleProof = ms.get_proof_by_id(i).into();
+            ret.push((ms.get_node(i), ms_proof));
+        }
+        future::ready(ret)
+    }
 
     fn retrieve_model(self, _: context::Context) -> Self::RetrieveModelFut {
-        //future::ready(self.server.read().unwrap().model.clone())
+        self.mc.as_ref().write().unwrap().clear();
+        self.ms.as_ref().write().unwrap().clear();
         future::ready(vec![0u8; self.nr_parameter as usize])
     }
 }
@@ -216,13 +195,19 @@ async fn main() -> io::Result<()> {
         config.get_int("server_port") as u16,
     );
 
-    let mut mc = McTree::new(nr_real, nr_sybil);
-    let mut ms = MsTree::new(nr_real, nr_sybil);
+    let mc = McTree::new(nr_real, nr_sybil);
+    let ms = MsTree::new(nr_real, nr_sybil);
 
-    let mut mc_ref = Arc::new(RwLock::new(mc));
-    let mut ms_ref = Arc::new(RwLock::new(ms));
+    let mc_ref = Arc::new(RwLock::new(mc));
+    let ms_ref = Arc::new(RwLock::new(ms));
 
-    let mut listener = tarpc::serde_transport::tcp::listen(&server_addr, Json::default).await?;
+    let mut listener = tarpc::serde_transport::tcp::listen(&server_addr, Json::default)
+        //    Bincode::from(
+        //        // Configure your preferred frame size here.
+        //        bincode::options().with_no_limit(),
+        //    )
+        //})
+        .await?;
     listener.config_mut().max_frame_length(usize::MAX);
     listener
         // Ignore accept errors.
@@ -232,8 +217,12 @@ async fn main() -> io::Result<()> {
         // serve is generated by the service attribute. It takes as input any type implementing
         // the generated World trait.
         .map(|channel| {
-            let inner_server =
-                InnerServer::new(channel.transport().peer_addr().unwrap(), &mc_ref, &ms_ref,nr_parameter);
+            let inner_server = InnerServer::new(
+                channel.transport().peer_addr().unwrap(),
+                &mc_ref,
+                &ms_ref,
+                nr_parameter,
+            );
             channel.execute(inner_server.serve())
         })
         // Max 100 channels.

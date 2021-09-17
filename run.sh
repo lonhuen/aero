@@ -1,3 +1,4 @@
+cargo build --release
 rm ./client*.log
 for i in {0..2}; do
 #round cts

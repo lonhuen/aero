@@ -11,10 +11,11 @@ use crate::common::{i128vec_to_le_bytes, summation_array_size, ZKProof};
 use crate::util::{config::ConfigUtils, log::LogUtils};
 use crate::zksnark::{Prover, Verifier};
 use ark_std::{end_timer, start_timer};
+use bincode::Options;
 use crypto::digest::Digest;
 use crypto::sha3::{Sha3, Sha3Mode};
 use futures::Future;
-use log::info;
+use log::{error, info, warn};
 use merkle_light::hash::Algorithm;
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use rsa::pkcs8::FromPublicKey;
@@ -29,6 +30,7 @@ use std::time::{Instant, SystemTime};
 use std::{net::SocketAddr, time::Duration};
 use std::{thread, time};
 use tarpc::{client, context, tokio_serde::formats::Json};
+//use tarpc::{client, context, tokio_serde::formats::Bincode};
 
 const DEADLINE_TIME: u64 = 600;
 const NUM_DIMENSION: u32 = 4096;
@@ -71,14 +73,19 @@ impl Client {
     // 1. call SEAL encryption
     // 2. return the encryption.txt
     pub fn encrypt(&mut self, xs: Vec<u8>) {
+        let mut rng = rand::rngs::StdRng::from_entropy();
         // call SEAL here to get a log file
         // "data/encryption.txt"
-        thread::sleep(
-            time::Duration::from_millis(87) * (xs.len() / (NUM_DIMENSION as usize)) as u32,
-        );
+        //thread::sleep(
+        //    time::Duration::from_millis(87) * (xs.len() / (NUM_DIMENSION as usize)) as u32,
+        //);
         for _ in 0..xs.len() / NUM_DIMENSION as usize {
-            self.c0s.extend(vec![1i128; NUM_DIMENSION as usize]);
-            self.c1s.extend(vec![1i128; NUM_DIMENSION as usize]);
+            //self.c0s.extend(vec![1i128; NUM_DIMENSION as usize]);
+            //self.c1s.extend(vec![1i128; NUM_DIMENSION as usize]);
+            self.c0s
+                .extend::<Vec<i128>>((0..NUM_DIMENSION).map(|_| rng.gen::<i128>()).collect());
+            self.c1s
+                .extend::<Vec<i128>>((0..NUM_DIMENSION).map(|_| rng.gen::<i128>()).collect());
         }
         info!("Atom: encryption get c0s len {}", self.c0s.len());
     }
@@ -172,167 +179,171 @@ impl Client {
         h
     }
 
+    pub fn get_random_non_leafs(N: u32, s: u32, vinit: u32) -> Vec<u32> {
+        let mut rng = rand::rngs::StdRng::from_entropy();
+        // [0..N): leafs
+        // [N..N+N/2): non-leafs whose children are leafs
+        // N+N/2: possibly 1 leaf + 1 non-leaf
+        // [N+N/2..summation_array_size(N)): non-leafs with non-leaf children
+        let mut non_leafs: Vec<u32> = Vec::new();
+        let array_size = summation_array_size(N);
+        // first pick about s/2 non-leafs whose children are leafs
+        // if no such non-leafs nodes exist, just skip
+        let mut idx = vinit;
+        while idx <= vinit + s {
+            if (idx & 0x1 == 0) && (idx + 1 <= vinit + s) {
+                non_leafs.push(N + idx / 2);
+                idx += 2;
+            } else {
+                idx += 1;
+            }
+        }
+
+        // now randomly pick non-leaf nodes whose children are non-leafs
+        // if s is even, just pick s/2; otherwise either (s+1)/2 or s/2
+        // or put in another way, if s is odd and vmax is even, pick (s+1) / 2
+        // otherwise, pick s/2
+        let nr_gp = {
+            if (s & 0x1 != 0) && ((vinit + s) & 0x1 == 0) {
+                (s + 1) / 2
+            } else {
+                s / 2
+            }
+        };
+        // [0..N)
+        // a[N] = 0 + 1, a[N+1] = 2 + 3,...
+        // a[id_gp - N] = 2 * (id_gp - N),
+        for _ in 0..nr_gp + 1 {
+            // id of grand parent
+            let id_gp = rng.gen_range(N + N / 2..array_size);
+            // the id of the children
+            let left = (id_gp - N) * 2;
+            let right = left + 1;
+            non_leafs.push(id_gp);
+            non_leafs.push(left);
+            non_leafs.push(right);
+        }
+        non_leafs
+    }
+
     // this N should be known from the board
     // s has to be at least 1
-    //pub async fn verify(&self, N: u32, s: u32) {
-    //    assert!(s >= 1, "s should be at least 1");
-    //    // used to trace all the "retrieved" nodes
-    //    // let mut set: HashSet<u32> = HashSet::new();
-    //    // random the v_init
-    //    // retrieve the leafs
-    //    let mut rng = rand::rngs::StdRng::from_entropy();
-    //    // TODO random here
-    //    //let vinit: u32 = rng.gen::<u32>() % N;
-    //    let vinit: u32 = 0;
-    //    // receive the leafs
-    //    // for i in vinit..vinit + s + 1 {
-    //    //     set.insert(i);
-    //    // }
-    //    // [0..N): leafs
-    //    // [N..N+N/2): non-leafs whose children are leafs
-    //    // N+N/2: possibly 1 leaf + 1 non-leaf
-    //    // [N+N/2..summation_array_size(N)): non-leafs with non-leaf children
+    pub async fn verify(&self, N: u32, s: u32) {
+        let gc = start_timer!(|| "verify");
 
-    //    let mut non_leafs: Vec<u32> = Vec::new();
-    //    let array_size = summation_array_size(N);
-    //    // first pick about s/2 non-leafs whose children are leafs
-    //    // if no such non-leafs nodes exist, just skip
-    //    let mut idx = vinit;
-    //    while idx <= vinit + s {
-    //        if (idx & 0x1 == 0) && (idx + 1 <= vinit + s) {
-    //            non_leafs.push(N + idx / 2);
-    //            //set.insert(N + idx / 2);
-    //            idx += 2;
-    //        } else {
-    //            idx += 1;
-    //        }
-    //    }
+        assert!(s >= 1, "s should be at least 1");
+        let mut rng = rand::rngs::StdRng::from_entropy();
+        // TODO random here
+        //let vinit: u32 = rng.gen::<u32>() % N;
+        let vinit: u32 = 0;
 
-    //    // now randomly pick non-leaf nodes whose children are non-leafs
-    //    // if s is even, just pick s/2; otherwise either (s+1)/2 or s/2
-    //    // or put in another way, if s is odd and vmax is even, pick (s+1) / 2
-    //    // otherwise, pick s/2
-    //    let nr_gp = {
-    //        if (s & 0x1 != 0) && ((vinit + s) & 0x1 == 0) {
-    //            (s + 1) / 2
-    //        } else {
-    //            s / 2
-    //        }
-    //    };
-    //    // [0..N)
-    //    // a[N] = 0 + 1, a[N+1] = 2 + 3,...
-    //    // a[id_gp - N] = 2 * (id_gp - N),
-    //    for _ in 0..nr_gp + 1 {
-    //        // id of grand parent
-    //        let id_gp = rng.gen_range(N + N / 2..array_size);
-    //        // the id of the children
-    //        let left = (id_gp - N) * 2;
-    //        let right = left + 1;
-    //        //set.insert(left);
-    //        //set.insert(right);
-    //        non_leafs.push(id_gp);
-    //        non_leafs.push(left);
-    //        non_leafs.push(right);
-    //    }
+        let non_leafs: Vec<u32> = Self::get_random_non_leafs(N, s, vinit);
 
-    //    let result = {
-    //        let mut ctx = context::current();
-    //        ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
-    //        self.inner.verify(ctx, vinit, non_leafs)
-    //    }
-    //    .await
-    //    .unwrap();
+        let gc1 = start_timer!(|| "receive verify");
+        let result = {
+            let mut ctx = context::current();
+            ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
+            self.inner.verify(ctx, vinit, non_leafs)
+        }
+        .await
+        .unwrap();
+        end_timer!(gc1);
 
-    //    for i in 0..s + 1 {
-    //        let mc_node = &result[2 * i as usize];
-    //        let ms_node = &result[(2 * i + 1) as usize];
-    //        // Commit_i appears in Mc
-    //        if !mc_node.1.clone().to_proof().validate::<HashAlgorithm>() {
-    //            assert!(false, "wrong merkle proofs");
-    //        }
-    //        if let SummationEntry::Leaf(s) = &ms_node.0 {
-    //            if s.c0.is_some() {
-    //                let h = s.hash();
-    //                if let SummationEntry::Commit(cm) = &mc_node.0 {
-    //                    //TODO fix this
-    //                    //assert_eq!(h, cm.hash);
-    //                } else {
-    //                    assert!(false, "not commitment entry");
-    //                }
-    //            }
-    //        } else {
-    //            assert!(false, "not leaf nodes!");
-    //        }
-    //    }
+        // verify all the leafs
 
-    //    // offset by the commit and leafs
-    //    let mut i = (s + 1 + s + 1) as usize;
-    //    let mut idx = vinit;
-    //    //let mut ii = 0 as usize;
-    //    while idx <= vinit + s {
-    //        if (idx & 0x1 == 0) && (idx + 1 <= vinit + s) {
-    //            // TODO check these nodes by ref to the leaf nodes
-    //            let parent = &result[i];
-    //            let left = &result[2 * (idx - vinit) as usize + 1];
-    //            let right = &result[2 * (idx - vinit + 1) as usize + 1];
-    //            // check the proofs
-    //            assert!(parent.1.clone().to_proof().validate::<HashAlgorithm>());
-    //            if let SummationEntry::NonLeaf(a) = &parent.0 {
-    //                if let SummationEntry::Leaf(b) = &left.0 {
-    //                    if let SummationEntry::Leaf(c) = &right.0 {
-    //                        for j in 0..a.c0.len() {
-    //                            let option_b = match &b.c0 {
-    //                                Some(v) => v[j],
-    //                                None => 0i128,
-    //                            };
-    //                            let option_c = match &c.c0 {
-    //                                Some(v) => v[j],
-    //                                None => 0i128,
-    //                            };
-    //                            assert_eq!(a.c0[j], option_b + option_c);
-    //                            let option_b = match &b.c1 {
-    //                                Some(v) => v[j],
-    //                                None => 0i128,
-    //                            };
-    //                            let option_c = match &c.c1 {
-    //                                Some(v) => v[j],
-    //                                None => 0i128,
-    //                            };
-    //                            assert_eq!(a.c1[j], option_b + option_c);
-    //                        }
-    //                    }
-    //                }
-    //            }
-    //            i = i + 1;
-    //            //non_leafs.push(N + idx / 2);
-    //            //set.insert(N + idx / 2);
-    //            idx += 2;
-    //        } else {
-    //            idx += 1;
-    //        }
-    //    }
-    //    while i < result.len() {
-    //        let parent = &result[i];
-    //        let left = &result[i + 1];
-    //        let right = &result[i + 2];
-    //        // check the proofs
-    //        assert!(parent.1.clone().to_proof().validate::<HashAlgorithm>());
-    //        assert!(left.1.clone().to_proof().validate::<HashAlgorithm>());
-    //        assert!(right.1.clone().to_proof().validate::<HashAlgorithm>());
-    //        if let SummationEntry::NonLeaf(a) = parent.0.clone() {
-    //            if let SummationEntry::NonLeaf(b) = left.0.clone() {
-    //                if let SummationEntry::NonLeaf(c) = right.0.clone() {
-    //                    // check the sum
-    //                    for j in 0..a.c0.len() {
-    //                        assert_eq!(a.c0[j], b.c0[j] + c.c0[j]);
-    //                        assert_eq!(a.c1[j], b.c1[j] + c.c1[j]);
-    //                    }
-    //                }
-    //            }
-    //        }
-    //        i += 3;
-    //    }
-    //}
+        let gc2 = start_timer!(|| "verify the proofs");
+        for i in 0..s + 1 {
+            let mc_node = &result[2 * i as usize];
+            let ms_node = &result[(2 * i + 1) as usize];
+            // Commit_i appears in Mc
+            assert!(
+                mc_node.1.clone().to_proof().validate::<HashAlgorithm>(),
+                "wrong merkle proofs"
+            );
+            if let SummationEntry::Leaf(s) = &ms_node.0 {
+                if s.c0.is_some() {
+                    let h = s.hash();
+                    if let SummationEntry::Commit(cm) = &mc_node.0 {
+                        //TODO fix this
+                        // assert_eq!(h, cm.hash);
+                    } else {
+                        error!("Atom: Verify not commit entry!");
+                    }
+                }
+            } else {
+                error!("Atom: Verify not leaf nodes entry!");
+            }
+        }
+
+        // offset by the commit and leafs
+        let mut i = (s + 1 + s + 1) as usize;
+        let mut idx = vinit;
+        //let mut ii = 0 as usize;
+        while idx <= vinit + s {
+            if (idx & 0x1 == 0) && (idx + 1 <= vinit + s) {
+                // TODO check these nodes by ref to the leaf nodes
+                let parent = &result[i];
+                let left = &result[2 * (idx - vinit) as usize + 1];
+                let right = &result[2 * (idx - vinit + 1) as usize + 1];
+                // check the proofs
+                assert!(parent.1.clone().to_proof().validate::<HashAlgorithm>());
+
+                if let SummationEntry::NonLeaf(a) = &parent.0 {
+                    if let SummationEntry::Leaf(b) = &left.0 {
+                        if let SummationEntry::Leaf(c) = &right.0 {
+                            for j in 0..a.c0.len() {
+                                let option_b = match &b.c0 {
+                                    Some(v) => v[j],
+                                    None => 0i128,
+                                };
+                                let option_c = match &c.c0 {
+                                    Some(v) => v[j],
+                                    None => 0i128,
+                                };
+                                assert_eq!(a.c0[j], option_b + option_c);
+                                let option_b = match &b.c1 {
+                                    Some(v) => v[j],
+                                    None => 0i128,
+                                };
+                                let option_c = match &c.c1 {
+                                    Some(v) => v[j],
+                                    None => 0i128,
+                                };
+                                assert_eq!(a.c1[j], option_b + option_c);
+                            }
+                        }
+                    }
+                }
+                i = i + 1;
+                idx += 2;
+            } else {
+                idx += 1;
+            }
+        }
+        while i < result.len() {
+            let parent = &result[i];
+            let left = &result[i + 1];
+            let right = &result[i + 2];
+            // check the proofs
+            assert!(parent.1.clone().to_proof().validate::<HashAlgorithm>());
+            assert!(left.1.clone().to_proof().validate::<HashAlgorithm>());
+            assert!(right.1.clone().to_proof().validate::<HashAlgorithm>());
+            if let SummationEntry::NonLeaf(a) = parent.0.clone() {
+                if let SummationEntry::NonLeaf(b) = left.0.clone() {
+                    if let SummationEntry::NonLeaf(c) = right.0.clone() {
+                        // check the sum
+                        for j in 0..a.c0.len() {
+                            assert_eq!(a.c0[j], b.c0[j] + c.c0[j]);
+                            assert_eq!(a.c1[j], b.c1[j] + c.c1[j]);
+                        }
+                    }
+                }
+            }
+            i += 3;
+        }
+
+        end_timer!(gc2);
+    }
 
     pub async fn train_model(&mut self) -> Vec<u8> {
         let rm = start_timer!(|| "retrieve the model");
@@ -360,19 +371,27 @@ impl Client {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let start = start_timer!(|| "start of clients");
-
+    let start = start_timer!(|| "clients");
     let config = ConfigUtils::init("config.ini");
     LogUtils::init(&format!("client{}.log", id()));
 
     let nr_real = config.get_int("nr_real") as u32;
     let nr_sybil = config.get_int("nr_sybil") as u32;
+    let nr_round = config.get_int("nr_round") as u32;
 
     let server_addr = (
         IpAddr::V4(config.get_addr("server_addr")),
         config.get_int("server_port") as u16,
     );
-    let transport = tarpc::serde_transport::tcp::connect(server_addr, Json::default);
+    //let transport = tarpc::serde_transport::tcp::connect(server_addr, Json::default);
+    //let transport = tarpc::serde_transport::tcp::connect(server_addr, || {
+    //    Bincode::from(
+    //        // Configure your preferred frame size here.
+    //        bincode::options().with_no_limit(),
+    //    )
+    //});
+    let mut transport = tarpc::serde_transport::tcp::connect(server_addr, Json::default);
+    transport.config_mut().max_frame_length(usize::MAX);
 
     // WorldClient is generated by the service attribute. It has a constructor `new` that takes a
     // config and any Transport as input.
@@ -380,8 +399,9 @@ async fn main() -> anyhow::Result<()> {
         ServerServiceClient::new(client::Config::default(), transport.await?).spawn();
     let mut client = Client::new(inner_client);
 
-    for _ in 0..1 {
+    for _ in 0..nr_round {
         // begin uploading
+        let sr = start_timer!(|| "one round");
         let train = start_timer!(|| "train model");
         let data = client.train_model().await;
         end_timer!(train);
@@ -390,11 +410,11 @@ async fn main() -> anyhow::Result<()> {
         let result = client.upload(data).await;
         end_timer!(rs);
 
-        //let vr= start_timer!(|| "upload data");
-        //client.verify(100, 5).await;
-        //end_timer!(vr);
+        let vr = start_timer!(|| "verify the data");
+        client.verify(nr_real, 5).await;
+        end_timer!(vr);
+        end_timer!(sr);
     }
-
     end_timer!(start);
     Ok(())
 }

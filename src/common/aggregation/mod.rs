@@ -27,8 +27,8 @@ impl McTree {
 
     pub fn get_node(&self, id: u32) -> CommitEntry {
         if id >= self.nr_real {
-            warn!("should not reach here");
-            CommitEntry::new()
+            info!("Atom: Mc get node more than nr_real");
+            self.commit_array[(id % self.nr_real) as usize].clone()
         } else {
             self.commit_array[id as usize].clone()
         }
@@ -61,11 +61,20 @@ impl McTree {
         self.mc.as_ref().unwrap().gen_proof(id).into()
     }
 
+    pub fn get_proof_by_id(&self, id: u32) -> MerkleProof {
+        self.mc.as_ref().unwrap().gen_proof(id as usize).into()
+    }
+
     pub fn insert_node(&mut self, node: CommitEntry) {
         if self.commit_array.len() >= self.nr_real as usize {
             error!("insert more then expected");
         }
         self.commit_array.push(node);
+    }
+
+    pub fn clear(&mut self) {
+        self.commit_array.clear();
+        self.mc = None;
     }
 }
 
@@ -87,8 +96,8 @@ impl MsTree {
 
     pub fn get_node(&self, id: u32) -> SummationEntry {
         if id >= self.nr_real {
-            warn!("should not reach here");
-            SummationEntry::new_leaf()
+            info!("Atom: Ms get node more than nr_real");
+            self.summation_array[(id % self.nr_real) as usize].clone()
         } else {
             self.summation_array[id as usize].clone()
         }
@@ -144,7 +153,8 @@ impl MsTree {
                             [0u8; 32]
                         }
                     })
-                    .chain((0..self.nr_sybil).into_iter().map(|_| [0u8; 32])),
+                    // TODO maybe more precise about the # of sybils here
+                    .chain((0..(2 * self.nr_sybil)).into_iter().map(|_| [0u8; 32])),
             ));
             true
         }
@@ -160,10 +170,19 @@ impl MsTree {
         self.ms.as_ref().unwrap().gen_proof(id).into()
     }
 
+    pub fn get_proof_by_id(&self, id: u32) -> MerkleProof {
+        self.ms.as_ref().unwrap().gen_proof(id as usize).into()
+    }
+
     pub fn insert_node(&mut self, node: SummationLeaf) {
         if self.summation_array.len() >= self.nr_real as usize {
             error!("insert more then expected");
         }
         self.summation_array.push(SummationEntry::Leaf(node));
+    }
+
+    pub fn clear(&mut self) {
+        self.summation_array.clear();
+        self.ms = None;
     }
 }
