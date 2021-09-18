@@ -6,7 +6,7 @@ use crate::common::aggregation::{
     merkle::MerkleProof,
     node::{SummationEntry, SummationLeaf, SummationNonLeaf},
 };
-use crate::common::server_service::ServerServiceClient;
+use crate::common::server_service::{init_tracing, ServerServiceClient};
 use crate::common::{i128vec_to_le_bytes, summation_array_size, ZKProof};
 use crate::util::{config::ConfigUtils, log::LogUtils};
 use crate::zksnark::{Prover, Verifier};
@@ -70,6 +70,8 @@ impl Client {
     // we may use seal and process_log.py to get the desired file
     // but it takes about 16s. Also the process_log.py redoes the encryption work + crt conversion.
     pub fn encrypt(&mut self, xs: Vec<u8>) {
+        self.c0s.clear();
+        self.c1s.clear();
         let mut rng = rand::rngs::StdRng::from_entropy();
         // call SEAL here to get a log file
         // "data/encryption.txt"
@@ -88,6 +90,7 @@ impl Client {
         info!("Atom: encryption get c0s len {}", self.c0s.len());
     }
     pub fn generate_proof(&self, pvk: Vec<u8>) -> Vec<Vec<u8>> {
+        let mut rng = rand::rngs::StdRng::from_entropy();
         // reconstruct the proving key
         //let gc_proof = start_timer!(|| "proof deserialization");
         //let prover = Prover::new("./data/encryption.txt", pvk);
@@ -95,11 +98,16 @@ impl Client {
         //let proof = prover.create_proof_in_bytes();
         // vec![proof; self.c0s.len() / NUM_DIMENSION as usize]
         // TODO (simulation) here we assume we have 10 threads to do this proof generation
+        let mut ret: Vec<Vec<u8>> = Vec::with_capacity(self.c0s.len() / NUM_DIMENSION as usize);
         thread::sleep(time::Duration::from_millis(
             (self.c0s.len() as f64 / NUM_DIMENSION as f64) as u64 * 825,
             // (self.c0s.len() as f64 / NUM_DIMENSION as f64) as u64,
         ));
-        vec![vec![0u8; 192]; self.c0s.len() / NUM_DIMENSION as usize]
+        for _ in 0..self.c0s.len() / NUM_DIMENSION as usize {
+            ret.push((0..192).map(|_| rng.gen::<u8>()).collect());
+        }
+        ret
+        //vec![vec![0u8; 192]; self.c0s.len() / NUM_DIMENSION as usize]
     }
 
     // the whole aggregation phase (except the encryption)
@@ -366,9 +374,10 @@ impl Client {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    init_tracing(&format!("Atom Client{}", id()))?;
     let start = start_timer!(|| "clients");
     let config = ConfigUtils::init("config.ini");
-    LogUtils::init(&format!("client{}.log", id()));
+    //LogUtils::init(&format!("client{}.log", id()));
 
     let nr_real = config.get_int("nr_real") as u32;
     //let nr_sybil = config.get_int("nr_sybil") as u32;
@@ -414,5 +423,6 @@ async fn main() -> anyhow::Result<()> {
         end_timer!(sr);
     }
     end_timer!(start);
+    opentelemetry::global::shutdown_tracer_provider();
     Ok(())
 }

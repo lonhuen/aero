@@ -1,5 +1,25 @@
 use super::aggregation::merkle::MerkleProof;
 use super::aggregation::node::SummationEntry;
+use std::env;
+use tracing_subscriber::{fmt::format::FmtSpan, prelude::*};
+
+// credit to https://github.com/google/tarpc/blob/master/example-service/src/lib.rs
+pub fn init_tracing(service_name: &str) -> anyhow::Result<()> {
+    env::set_var("OTEL_BSP_MAX_EXPORT_BATCH_SIZE", "12");
+
+    let tracer = opentelemetry_jaeger::new_pipeline()
+        .with_service_name(service_name)
+        .with_max_packet_size(2usize.pow(13))
+        .install_batch(opentelemetry::runtime::Tokio)?;
+
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::EnvFilter::from_default_env())
+        .with(tracing_subscriber::fmt::layer().with_span_events(FmtSpan::NEW | FmtSpan::CLOSE))
+        .with(tracing_opentelemetry::layer().with_tracer(tracer))
+        .try_init()?;
+
+    Ok(())
+}
 
 // This is the service definition
 #[tarpc::service]

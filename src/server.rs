@@ -5,6 +5,7 @@ use futures::{
 };
 use log::{error, info, warn};
 use quail::zksnark::{Prover, Verifier};
+use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{
     collections::BTreeMap,
     convert::{Into, TryInto},
@@ -31,7 +32,7 @@ use crate::common::{
         McTree, MsTree,
     },
     hash_commitment, new_rsa_pub_key,
-    server_service::ServerService,
+    server_service::{init_tracing, ServerService},
 };
 mod util;
 use crate::util::{config::ConfigUtils, log::LogUtils};
@@ -185,7 +186,8 @@ impl ServerService for InnerServer {
     fn retrieve_model(self, _: context::Context) -> Self::RetrieveModelFut {
         self.mc.as_ref().write().unwrap().clear();
         self.ms.as_ref().write().unwrap().clear();
-        future::ready(vec![0u8; self.nr_parameter as usize])
+        let mut rng = rand::rngs::StdRng::from_entropy();
+        future::ready((0..self.nr_parameter).map(|_| rng.gen::<u8>()).collect())
     }
 
     type RetrieveProvingKeyFut = Ready<Vec<u8>>;
@@ -195,8 +197,9 @@ impl ServerService for InnerServer {
     }
 }
 #[tokio::main]
-async fn main() -> io::Result<()> {
-    LogUtils::init("server.log");
+async fn main() -> anyhow::Result<()> {
+    init_tracing("Atom Server")?;
+    //LogUtils::init("server.log");
 
     let config = ConfigUtils::init("config.ini");
     let nr_real = config.get_int("nr_real") as u32;
