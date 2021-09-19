@@ -221,13 +221,15 @@ impl Client {
         // a[id_gp - N] = 2 * (id_gp - N),
         for _ in 0..nr_gp + 1 {
             // id of grand parent
-            let id_gp = rng.gen_range(N + N / 2..array_size);
-            // the id of the children
-            let left = (id_gp - N) * 2;
-            let right = left + 1;
-            non_leafs.push(id_gp);
-            non_leafs.push(left);
-            non_leafs.push(right);
+            if N+N/2 < array_size {
+                let id_gp = rng.gen_range(N + N / 2..array_size);
+                // the id of the children
+                let left = (id_gp - N) * 2;
+                let right = left + 1;
+                non_leafs.push(id_gp);
+                non_leafs.push(left);
+                non_leafs.push(right);
+            }
         }
         non_leafs
     }

@@ -2,211 +2,22 @@ Start:   clients
 ··Start:   one round
 ····Start:   train model
 ······Start:   retrieve the model
-······End:     retrieve the model ..................................................101.428ms
-····End:     train model ...........................................................1.101s
+······End:     retrieve the model ..................................................3.769ms
+····End:     train model ...........................................................1.3s
 ····Start:   upload data
 ······Start:   encrypt the gradients
-······End:     encrypt the gradients ...............................................891.656ms
+······End:     encrypt the gradients ...............................................892.126ms
 ······Start:   upload the mc+proof generation
-······End:     upload the mc+proof generation ......................................8.436s
+······End:     upload the mc+proof generation ......................................8.251s
 ······Start:   upload the data
-······End:     upload the data .....................................................1.4s
-····End:     upload data ...........................................................10.437s
+······End:     upload the data .....................................................1.602s
+····End:     upload data ...........................................................10.747s
 ····Start:   verify the data
 ······Start:   verify
 ········Start:   receive verify
-········End:     receive verify ....................................................2.391s
+········End:     receive verify ....................................................25.383s
 ········Start:   verify the proofs
-········End:     verify the proofs .................................................116.553ms
-······End:     verify the data .....................................................2.509s
-····End:     one round .............................................................14.48s
-····Start:   one round
-······Start:   train model
-········Start:   retrieve the model
-········End:     retrieve the model ................................................99.932ms
-······End:     train model .........................................................1.100s
-······Start:   upload data
-········Start:   encrypt the gradients
-········End:     encrypt the gradients .............................................890.309ms
-········Start:   upload the mc+proof generation
-········End:     upload the mc+proof generation ....................................8.463s
-········Start:   upload the data
-········End:     upload the data ...................................................1.512s
-······End:     upload data .........................................................10.976s
-······Start:   verify the data
-········Start:   verify
-··········Start:   receive verify
-··········End:     receive verify ..................................................2.316s
-··········Start:   verify the proofs
-··········End:     verify the proofs ...............................................116.699ms
-········End:     verify the data ...................................................2.433s
-······End:     one round ...........................................................14.510s
-······Start:   one round
-········Start:   train model
-··········Start:   retrieve the model
-··········End:     retrieve the model ..............................................101.862ms
-········End:     train model .......................................................1.102s
-········Start:   upload data
-··········Start:   encrypt the gradients
-··········End:     encrypt the gradients ...........................................890.268ms
-··········Start:   upload the mc+proof generation
-··········End:     upload the mc+proof generation ..................................8.454s
-··········Start:   upload the data
-··········End:     upload the data .................................................1.607s
-········End:     upload data .......................................................11.56s
-········Start:   verify the data
-··········Start:   verify
-············Start:   receive verify
-············End:     receive verify ................................................2.267s
-············Start:   verify the proofs
-············End:     verify the proofs .............................................119.683ms
-··········End:     verify the data .................................................2.387s
-········End:     one round .........................................................14.545s
-········Start:   one round
-··········Start:   train model
-············Start:   retrieve the model
-············End:     retrieve the model ............................................93.887ms
-··········End:     train model .....................................................1.94s
-··········Start:   upload data
-············Start:   encrypt the gradients
-············End:     encrypt the gradients .........................................890.224ms
-············Start:   upload the mc+proof generation
-············End:     upload the mc+proof generation ................................8.455s
-············Start:   upload the data
-············End:     upload the data ...............................................1.300s
-··········End:     upload data .....................................................10.745s
-··········Start:   verify the data
-············Start:   verify
-··············Start:   receive verify
-··············End:     receive verify ..............................................2.203s
-··············Start:   verify the proofs
-··············End:     verify the proofs ...........................................118.874ms
-············End:     verify the data ...............................................2.322s
-··········End:     one round .......................................................14.162s
-··········Start:   one round
-············Start:   train model
-··············Start:   retrieve the model
-··············End:     retrieve the model ..........................................108.678ms
-············End:     train model ...................................................1.108s
-············Start:   upload data
-··············Start:   encrypt the gradients
-··············End:     encrypt the gradients .......................................890.234ms
-··············Start:   upload the mc+proof generation
-··············End:     upload the mc+proof generation ..............................8.450s
-··············Start:   upload the data
-··············End:     upload the data .............................................1.81s
-············End:     upload data ...................................................10.530s
-············Start:   verify the data
-··············Start:   verify
-················Start:   receive verify
-················End:     receive verify ............................................2.30s
-················Start:   verify the proofs
-················End:     verify the proofs .........................................120.335ms
-··············End:     verify the data .............................................2.151s
-············End:     one round .....................................................13.790s
-············Start:   one round
-··············Start:   train model
-················Start:   retrieve the model
-················End:     retrieve the model ........................................96.474ms
-··············End:     train model .................................................1.96s
-··············Start:   upload data
-················Start:   encrypt the gradients
-················End:     encrypt the gradients .....................................890.625ms
-················Start:   upload the mc+proof generation
-················End:     upload the mc+proof generation ............................8.441s
-················Start:   upload the data
-················End:     upload the data ...........................................1.329s
-··············End:     upload data .................................................10.757s
-··············Start:   verify the data
-················Start:   verify
-··················Start:   receive verify
-··················End:     receive verify ..........................................1.740s
-··················Start:   verify the proofs
-··················End:     verify the proofs .......................................114.42ms
-················End:     verify the data ...........................................1.854s
-··············End:     one round ...................................................13.709s
-··············Start:   one round
-················Start:   train model
-··················Start:   retrieve the model
-··················End:     retrieve the model ......................................106.688ms
-················End:     train model ...............................................1.106s
-················Start:   upload data
-··················Start:   encrypt the gradients
-··················End:     encrypt the gradients ...................................891.434ms
-··················Start:   upload the mc+proof generation
-··················End:     upload the mc+proof generation ..........................8.459s
-··················Start:   upload the data
-··················End:     upload the data .........................................1.438s
-················End:     upload data ...............................................10.882s
-················Start:   verify the data
-··················Start:   verify
-····················Start:   receive verify
-····················End:     receive verify ........................................2.762s
-····················Start:   verify the proofs
-····················End:     verify the proofs .....................................123.366ms
-··················End:     verify the data .........................................2.885s
-················End:     one round .................................................14.875s
-················Start:   one round
-··················Start:   train model
-····················Start:   retrieve the model
-····················End:     retrieve the model ....................................102.146ms
-··················End:     train model .............................................1.102s
-··················Start:   upload data
-····················Start:   encrypt the gradients
-····················End:     encrypt the gradients .................................890.335ms
-····················Start:   upload the mc+proof generation
-····················End:     upload the mc+proof generation ........................8.459s
-····················Start:   upload the data
-····················End:     upload the data .......................................736.152ms
-··················End:     upload data .............................................10.194s
-··················Start:   verify the data
-····················Start:   verify
-······················Start:   receive verify
-······················End:     receive verify ......................................2.980s
-······················Start:   verify the proofs
-······················End:     verify the proofs ...................................118.653ms
-····················End:     verify the data .......................................3.99s
-··················End:     one round ...............................................14.396s
-··················Start:   one round
-····················Start:   train model
-······················Start:   retrieve the model
-······················End:     retrieve the model ..................................93.214ms
-····················End:     train model ...........................................1.93s
-····················Start:   upload data
-······················Start:   encrypt the gradients
-······················End:     encrypt the gradients ...............................890.228ms
-······················Start:   upload the mc+proof generation
-······················End:     upload the mc+proof generation ......................8.453s
-······················Start:   upload the data
-······················End:     upload the data .....................................732.68ms
-····················End:     upload data ...........................................10.173s
-····················Start:   verify the data
-······················Start:   verify
-························Start:   receive verify
-························End:     receive verify ....................................2.798s
-························Start:   verify the proofs
-························End:     verify the proofs .................................117.655ms
-······················End:     verify the data .....................................2.915s
-····················End:     one round .............................................14.183s
-····················Start:   one round
-······················Start:   train model
-························Start:   retrieve the model
-························End:     retrieve the model ................................108.573ms
-······················End:     train model .........................................1.108s
-······················Start:   upload data
-························Start:   encrypt the gradients
-························End:     encrypt the gradients .............................890.211ms
-························Start:   upload the mc+proof generation
-························End:     upload the mc+proof generation ....................8.453s
-························Start:   upload the data
-························End:     upload the data ...................................738.924ms
-······················End:     upload data .........................................10.191s
-······················Start:   verify the data
-························Start:   verify
-··························Start:   receive verify
-··························End:     receive verify ..................................2.353s
-··························Start:   verify the proofs
-··························End:     verify the proofs ...............................115.971ms
-························End:     verify the data ...................................2.469s
-······················End:     one round ...........................................13.769s
-····················End:     clients ...............................................142.463s
+········End:     verify the proofs .................................................125.310ms
+······End:     verify the data .....................................................25.510s
+····End:     one round .............................................................37.261s
+··End:     clients .................................................................37.406s
