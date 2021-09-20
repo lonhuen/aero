@@ -16,11 +16,11 @@ use crypto::sha3::{Sha3, Sha3Mode};
 use log::{error, info, warn};
 use rand::{Rng, SeedableRng};
 use rsa::{pkcs8::ToPublicKey, RsaPrivateKey, RsaPublicKey};
-use std::net::IpAddr;
-use std::process::id;
 use std::sync::Arc;
 use std::thread::sleep;
 use std::time::{Instant, SystemTime};
+use std::{fs::File, io::BufReader, net::IpAddr};
+use std::{io::BufRead, process::id};
 use std::{net::SocketAddr, time::Duration};
 use std::{thread, time};
 use tarpc::{
@@ -34,22 +34,22 @@ const DEADLINE_TIME: u64 = 600;
 const NUM_DIMENSION: u32 = 4096;
 pub struct Client {
     inner: ServerServiceClient,
-    //rlwe_pk: Arc<PublicKey>,
-    //prover: Prover,
     rsa_pk: Vec<u8>,
-    rsa_vk: RsaPrivateKey,
+    _rsa_vk: RsaPrivateKey,
     c0s: Vec<i128>,
     c1s: Vec<i128>,
+    rs: Vec<i128>,
+    e0s: Vec<i128>,
+    e1s: Vec<i128>,
+    d0s: Vec<i32>,
+    d1s: Vec<i32>,
     nonce: [u8; 16],
 }
 
 impl Client {
     // TODO random this nounce
     pub fn new(inner: ServerServiceClient) -> Self {
-        // first download the proving key from the server
-
         let bits = 2048;
-        //let mut rng = rand::rngs::StdRng::seed_from_u64(Instant::now().);
         let mut rng = rand::rngs::StdRng::from_entropy();
         let private_key = RsaPrivateKey::new(&mut rng, bits).expect("failed to generate a key");
         let public_key = RsaPublicKey::from(&private_key);
@@ -57,53 +57,96 @@ impl Client {
             inner,
             //prover: prover,
             rsa_pk: public_key.to_public_key_pem().unwrap().into_bytes(),
-            rsa_vk: private_key,
+            _rsa_vk: private_key,
             c0s: Vec::new(),
             c1s: Vec::new(),
+            rs: Vec::new(),
+            e0s: Vec::new(),
+            e1s: Vec::new(),
+            d0s: Vec::new(),
+            d1s: Vec::new(),
             nonce: [0u8; 16],
         }
     }
 
-    // TODO somehow get the file
-    // we may use seal and process_log.py to get the desired file
-    // but it takes about 16s. Also the process_log.py redoes the encryption work + crt conversion.
-    pub fn encrypt(&mut self, xs: Vec<u8>) {
-        let mut rng = rand::rngs::StdRng::from_entropy();
+    pub fn encrypt(&mut self, xs: Vec<u8>, pk0: &Vec<i128>, pk1: &Vec<i128>) {
+        let gc = start_timer!(|| "new public key");
+        let rlwe_pk = Arc::new(PublicKey::new(pk0, pk1));
         self.c0s.clear();
         self.c1s.clear();
-        for _ in 0..xs.len() / NUM_DIMENSION as usize {
-            self.c0s
-                .extend::<Vec<i128>>((0..NUM_DIMENSION).map(|_| rng.gen::<i128>()).collect());
-            self.c1s
-                .extend::<Vec<i128>>((0..NUM_DIMENSION).map(|_| rng.gen::<i128>()).collect());
+        self.rs.clear();
+        self.e0s.clear();
+        self.e1s.clear();
+        self.d0s.clear();
+        self.d1s.clear();
+        end_timer!(gc);
+        let gc = start_timer!(|| "encrypt");
+        for i in 0..xs.len() / NUM_DIMENSION as usize {
+            let gc1 = start_timer!(|| "encrypt once");
+            let (r, e0, e1, d0, d1, ct) = rlwe_pk
+                .as_ref()
+                .encrypt(xs[i * NUM_DIMENSION as usize..(i + 1) * NUM_DIMENSION as usize].to_vec());
+            end_timer!(gc1);
+            self.rs.extend(r);
+            self.e0s.extend(e0);
+            self.e1s.extend(e1);
+            self.d0s.extend(d0);
+            self.d1s.extend(d1);
+            self.c1s.extend(ct.c_0);
+            self.c1s.extend(ct.c_1);
         }
+        end_timer!(gc);
     }
     pub fn generate_proof(&self, pvk: Vec<u8>) -> Vec<Vec<u8>> {
         let mut rng = rand::rngs::StdRng::from_entropy();
-        // reconstruct the proving key
-        //let gc_proof = start_timer!(|| "proof deserialization");
-        //let prover = Prover::new("./data/encryption.txt", pvk);
-        //end_timer!(gc_proof);
-        //let proof = prover.create_proof_in_bytes();
-        // vec![proof; self.c0s.len() / NUM_DIMENSION as usize]
+        let mut ret: Vec<Vec<u8>> =
+            Vec::with_capacity(self.c0s.len() / NUM_DIMENSION as usize * 192);
         // TODO (simulation) here we assume we have 10 threads to do this proof generation
-        let mut ret: Vec<Vec<u8>> = Vec::with_capacity(self.c0s.len() / NUM_DIMENSION as usize);
         thread::sleep(time::Duration::from_millis(
             (self.c0s.len() as f64 / NUM_DIMENSION as f64) as u64 * 825,
-            // (self.c0s.len() as f64 / NUM_DIMENSION as f64) as u64,
         ));
         for _ in 0..self.c0s.len() / NUM_DIMENSION as usize {
             ret.push((0..192).map(|_| rng.gen::<u8>()).collect());
         }
+        // TODO fix this. we just need encryption keys
+        // TODO modify the groth16 library to prove in batch
+        // let prover = Prover::new("data/encryption.txt", pvk);
         ret
-        //vec![vec![0u8; 192]; self.c0s.len() / NUM_DIMENSION as usize]
     }
 
     // the whole aggregation phase (except the encryption)
     pub async fn upload(&mut self, xs: Vec<u8>, pvk: Vec<u8>) -> bool {
         // set the deadline of the context
         let gc1 = start_timer!(|| "encrypt the gradients");
-        self.encrypt(xs);
+        // TODO the keys should be retrieved from the committee with signature
+        // but now let's assume the keys are already retrieved
+        let (pk0, pk1) = {
+            let mut pk_0 = [0i128; 4096];
+            let mut pk_1 = [0i128; 4096];
+            let file = match File::open("./data/encryption.txt") {
+                Ok(f) => f,
+                Err(_) => panic!(),
+            };
+            let reader = BufReader::new(file);
+            for line in reader.lines() {
+                if let Ok(l) = line {
+                    let vec = l.split(" ").collect::<Vec<&str>>();
+                    for i in 1..vec.len() {
+                        if l.contains("pk_0") {
+                            if let Ok(x) = i128::from_str_radix(vec[i], 10) {
+                                pk_0[i - 1] = x;
+                            }
+                        } else if l.contains("pk_1") {
+                            if let Ok(x) = i128::from_str_radix(vec[i], 10) {
+                                pk_1[i - 1] = x;
+                            }
+                        }
+                    }
+                }
+            }
+            (pk_0.to_vec(), pk_1.to_vec())
+        };
+        self.encrypt(xs, &pk0, &pk1);
         // generate commitment to all the CTs
         let cm = self.hash();
         end_timer!(gc1);

@@ -9,7 +9,7 @@ use std::{
 fn encrypt(pk: &PublicKey) {
     // read the key
     //let prover = Prover::new("data/encryption.txt", "data/pk.txt");
-    pk.encrypt([0i128; 4096].to_vec());
+    pk.encrypt([0u8; 4096].to_vec());
 }
 
 fn matrix_mut(p: &Vec<i128>, q: &Vec<i128>) -> Vec<i128> {
@@ -64,7 +64,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         q.push(rng.gen_range(0..3));
     }
     group.bench_function("encrypt", |b| b.iter(|| encrypt(&pk)));
-    group.bench_function("matrix multiplication", |b| b.iter(|| matrix_mut(&p, &q)));
+    //group.bench_function("matrix multiplication", |b| b.iter(|| matrix_mut(&p, &q)));
     group.finish();
 }
 

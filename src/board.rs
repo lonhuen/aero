@@ -68,7 +68,7 @@ fn main() {
                 }
             }
         }
-        PublicKey::new(pk_0.to_vec(), pk_1.to_vec())
+        PublicKey::new(&pk_0.to_vec(), &pk_1.to_vec())
     };
-    pk.encrypt([0i128; 4096].to_vec());
+    pk.encrypt([0u8; 4096].to_vec());
 }
