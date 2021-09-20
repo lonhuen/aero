@@ -20,6 +20,8 @@ merkle_light = {version="^0.3.1", path="lib/merkle_light-0.3.1/merkle"}
 rust-crypto = "^0.2"
 rsa = {version="0.5.0",features=["serde"]}
 rand = "0.8.0"
+rand_distr="0.4.2"
+ndarray = "0.15.0"
 anyhow = "1.0"
 futures = "0.3"
 serde = { version = "1.0" }
@@ -37,8 +39,12 @@ opentelemetry-jaeger = { version = "0.15", features = ["rt-tokio"] }
 [dev-dependencies]
 criterion = "0.3"
 
+# [[bench]]
+# name = "groth16"
+# harness = false
+
 [[bench]]
-name = "groth16"
+name = "rlwe"
 harness = false
 
 [[bin]]
@@ -49,9 +55,9 @@ path = "src/client.rs"
 name = "server"
 path = "src/server.rs"
 
-#[[bin]]
-#name = "board"
-#path = "src/board.rs"
+[[bin]]
+name = "board"
+path = "src/board.rs"
 
 [features]
 default = [ "print-trace"]

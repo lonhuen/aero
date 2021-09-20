@@ -13,17 +13,12 @@ use crate::zksnark::{Prover, Verifier};
 use ark_std::{end_timer, start_timer};
 use crypto::digest::Digest;
 use crypto::sha3::{Sha3, Sha3Mode};
-use futures::{future::Ready, Future};
 use log::{error, info, warn};
-use merkle_light::hash::Algorithm;
-use rand::{rngs::StdRng, Rng, SeedableRng};
-use rsa::pkcs8::FromPublicKey;
+use rand::{Rng, SeedableRng};
 use rsa::{pkcs8::ToPublicKey, RsaPrivateKey, RsaPublicKey};
-use std::collections::HashSet;
-use std::convert::TryInto;
-use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+use std::net::IpAddr;
 use std::process::id;
-use std::sync::mpsc::channel;
+use std::sync::Arc;
 use std::thread::sleep;
 use std::time::{Instant, SystemTime};
 use std::{net::SocketAddr, time::Duration};
@@ -32,11 +27,14 @@ use tarpc::{
     client, context,
     tokio_serde::formats::{Bincode, Json},
 };
+mod rlwe;
+use rlwe::PublicKey;
 
 const DEADLINE_TIME: u64 = 600;
 const NUM_DIMENSION: u32 = 4096;
 pub struct Client {
     inner: ServerServiceClient,
+    //rlwe_pk: Arc<PublicKey>,
     //prover: Prover,
     rsa_pk: Vec<u8>,
     rsa_vk: RsaPrivateKey,
@@ -70,24 +68,15 @@ impl Client {
     // we may use seal and process_log.py to get the desired file
     // but it takes about 16s. Also the process_log.py redoes the encryption work + crt conversion.
     pub fn encrypt(&mut self, xs: Vec<u8>) {
+        let mut rng = rand::rngs::StdRng::from_entropy();
         self.c0s.clear();
         self.c1s.clear();
-        let mut rng = rand::rngs::StdRng::from_entropy();
-        // call SEAL here to get a log file
-        // "data/encryption.txt"
-        // TODO (simulation)
-        thread::sleep(
-            time::Duration::from_millis(87) * (xs.len() / (NUM_DIMENSION as usize)) as u32,
-        );
         for _ in 0..xs.len() / NUM_DIMENSION as usize {
-            //self.c0s.extend(vec![1i128; NUM_DIMENSION as usize]);
-            //self.c1s.extend(vec![1i128; NUM_DIMENSION as usize]);
             self.c0s
                 .extend::<Vec<i128>>((0..NUM_DIMENSION).map(|_| rng.gen::<i128>()).collect());
             self.c1s
                 .extend::<Vec<i128>>((0..NUM_DIMENSION).map(|_| rng.gen::<i128>()).collect());
         }
-        info!("Atom: encryption get c0s len {}", self.c0s.len());
     }
     pub fn generate_proof(&self, pvk: Vec<u8>) -> Vec<Vec<u8>> {
         let mut rng = rand::rngs::StdRng::from_entropy();
@@ -221,7 +210,7 @@ impl Client {
         // a[id_gp - N] = 2 * (id_gp - N),
         for _ in 0..nr_gp + 1 {
             // id of grand parent
-            if N+N/2 < array_size {
+            if N + N / 2 < array_size {
                 let id_gp = rng.gen_range(N + N / 2..array_size);
                 // the id of the children
                 let left = (id_gp - N) * 2;
