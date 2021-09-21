@@ -12,7 +12,7 @@ use std::{
     thread::sleep,
     time::Duration,
 };
-use tracing::{error, info, warn};
+use tracing::{error, event, info, instrument, span, warn, Level};
 
 use tarpc::{
     context,
@@ -196,7 +196,8 @@ impl ServerService for InnerServer {
 async fn main() -> anyhow::Result<()> {
     let config = ConfigUtils::init("config.ini");
     init_tracing("Atom Server", config.get_agent_endpoint())?;
-    //LogUtils::init("server.log");
+
+    let _span = span!(Level::INFO, "Atom Server").entered();
 
     let nr_real = config.get_int("nr_real") as u32;
     let nr_sybil = config.get_int("nr_sybil") as u32;

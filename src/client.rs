@@ -14,8 +14,7 @@ use ark_std::{end_timer, start_timer};
 extern crate blake3;
 #[cfg(not(feature = "hashfn_blake3"))]
 use crypto::{digest::Digest, sha3::Sha3};
-use tracing::{error, info, warn};
-use tracing::{event, instrument, span, Level};
+use tracing::{error, event, info, instrument, span, warn, Level};
 
 use rand::{Rng, SeedableRng};
 use rsa::{pkcs8::ToPublicKey, RsaPrivateKey, RsaPublicKey};
@@ -421,7 +420,7 @@ async fn main() -> anyhow::Result<()> {
         config.get_agent_endpoint(),
     )?;
 
-    let _span = span!(Level::WARN, "Atom Client").entered();
+    let _span = span!(Level::INFO, "Atom Client").entered();
 
     let start = start_timer!(|| "clients");
 

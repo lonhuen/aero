@@ -1,12 +1,11 @@
 pub mod merkle;
 use merkle::MerkleTree;
-use tracing::{info, warn};
 pub mod node;
 use self::{merkle::MerkleProof, node::SummationNonLeaf};
 use node::{CommitEntry, SummationEntry, SummationLeaf};
 use rayon::prelude::*;
 use std::iter::FromIterator;
-use tracing::error;
+use tracing::{error, info, instrument, warn};
 
 use ark_std::{end_timer, start_timer};
 
@@ -38,6 +37,7 @@ impl McTree {
         }
     }
 
+    #[instrument(skip_all)]
     pub fn gen_tree(&mut self) -> bool {
         if self.commit_array.len() < self.nr_real as usize {
             false
@@ -132,6 +132,7 @@ impl MsTree {
         ret
     }
 
+    #[instrument(skip_all)]
     pub fn gen_tree(&mut self) -> bool {
         if self.summation_array.len() < self.nr_real as usize {
             false
