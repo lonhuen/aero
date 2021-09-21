@@ -5,24 +5,19 @@ use futures::{
 };
 use log::{error, info, warn};
 use quail::zksnark::{Prover, Verifier};
-use rand::{rngs::StdRng, Rng, SeedableRng};
+use rand::{Rng, SeedableRng};
 use std::{
-    collections::BTreeMap,
-    convert::{Into, TryInto},
-    io,
-    iter::FromIterator,
-    net::{IpAddr, Ipv4Addr, SocketAddr},
-    process::exit,
-    sync::{Arc, Condvar, Mutex, RwLock},
+    convert::Into,
+    net::{IpAddr, SocketAddr},
+    sync::{Arc, RwLock},
     thread::sleep,
     time::Duration,
 };
 
-use bincode::Options;
 use tarpc::{
     context,
     server::{self, Channel, Incoming},
-    tokio_serde::formats::{Bincode, Json},
+    tokio_serde::formats::Bincode,
 };
 mod common;
 use crate::common::{
@@ -31,7 +26,6 @@ use crate::common::{
         node::{CommitEntry, SummationEntry, SummationLeaf},
         McTree, MsTree,
     },
-    new_rsa_pub_key,
     server_service::{init_tracing, ServerService},
 };
 mod util;
@@ -123,7 +117,9 @@ impl ServerService for InnerServer {
         // TODO also verify the proof
         let mut ms = self.ms.as_ref().write().unwrap();
         ms.insert_node(SummationLeaf::from_ct(rsa_pk, cts, nonce));
-        ms.gen_tree();
+        if ms.gen_tree() {
+            info!("root {:?}", ms.get_root())
+        }
         drop(ms);
         future::ready(())
     }
@@ -165,7 +161,7 @@ impl ServerService for InnerServer {
         let ms = self.ms.as_ref().read().unwrap();
         let mc = self.mc.as_ref().read().unwrap();
         for i in 0..5 + 1 {
-            let node = ms.get_node(i + vinit);
+            let node = ms.get_leaf_node(i + vinit);
             if let SummationEntry::Leaf(_) = node {
                 let mc_proof: MerkleProof = mc.get_proof_by_id(i + vinit).into();
                 let ms_proof: MerkleProof = ms.get_proof_by_id(i + vinit).into();
@@ -177,7 +173,7 @@ impl ServerService for InnerServer {
         }
         for i in non_leaf_id {
             let ms_proof: MerkleProof = ms.get_proof_by_id(i).into();
-            ret.push((ms.get_node(i), ms_proof));
+            ret.push((ms.get_nonleaf_node(i), ms_proof));
         }
         future::ready(ret)
     }

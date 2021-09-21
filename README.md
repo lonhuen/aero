@@ -3,3 +3,6 @@
 # TODO
 - [x] The implementation of Merkletree for now can only prove inclusion of a block, but not a block with id=i; Maybe this needs to be implemented. In that case, the client should know the # of devices and thus knows the structure of the tree.
 - [x] Merkletree for now can only prove inclusion of a leaf node.
+
+# Third-party Library
+1. merkle_light: Modified to expose the MerkleProof for serialization

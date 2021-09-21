@@ -126,7 +126,7 @@ impl<F: Field> Circuit<F> {
     //    }
     //}
 
-    pub fn i128toField(&self, x: i128) -> F {
+    pub fn i128to_field(&self, x: i128) -> F {
         if x < 0 {
             -F::from_random_bytes(&((-x).to_le_bytes())[..]).unwrap()
         } else {
@@ -141,13 +141,13 @@ impl<F: Field> ConstraintSynthesizer<F> for Circuit<F> {
             .pk_0
             .to_vec()
             .iter()
-            .map(|&x| self.i128toField(x))
+            .map(|&x| self.i128to_field(x))
             .collect::<Vec<_>>();
         let pk_1 = self
             .pk_1
             .to_vec()
             .iter()
-            .map(|&x| self.i128toField(x))
+            .map(|&x| self.i128to_field(x))
             .collect::<Vec<_>>();
         let pf = F::from(0xffffee001u64) * F::from(0xffffc4001u64) * F::from(0x1ffffe0001u64);
 
@@ -155,49 +155,49 @@ impl<F: Field> ConstraintSynthesizer<F> for Circuit<F> {
         let mut c0_val_vec = Vec::new();
         let mut c0_var_vec = Vec::new();
         for i in 0..self.num_dimension {
-            c0_val_vec.push(self.i128toField(self.c_0[i]));
+            c0_val_vec.push(self.i128to_field(self.c_0[i]));
             c0_var_vec.push(cs.new_input_variable(|| Ok(c0_val_vec[i]))?);
         }
         // c1
         let mut c1_val_vec = Vec::new();
         let mut c1_var_vec = Vec::new();
         for i in 0..self.num_dimension {
-            c1_val_vec.push(self.i128toField(self.c_1[i]));
+            c1_val_vec.push(self.i128to_field(self.c_1[i]));
             c1_var_vec.push(cs.new_input_variable(|| Ok(c1_val_vec[i]))?);
         }
         // r
         let mut r_val_vec = Vec::new();
         let mut r_var_vec = Vec::new();
         for i in 0..self.num_dimension {
-            r_val_vec.push(self.i128toField(self.r[i]));
+            r_val_vec.push(self.i128to_field(self.r[i]));
             r_var_vec.push(cs.new_witness_variable(|| Ok(r_val_vec[i]))?);
         }
         // e0
         let mut e0_val_vec = Vec::new();
         let mut e0_var_vec = Vec::new();
         for i in 0..self.num_dimension {
-            e0_val_vec.push(self.i128toField(self.e_0[i]));
+            e0_val_vec.push(self.i128to_field(self.e_0[i]));
             e0_var_vec.push(cs.new_witness_variable(|| Ok(e0_val_vec[i]))?);
         }
         // e2
         let mut e1_val_vec = Vec::new();
         let mut e1_var_vec = Vec::new();
         for i in 0..self.num_dimension {
-            e1_val_vec.push(self.i128toField(self.e_1[i]));
+            e1_val_vec.push(self.i128to_field(self.e_1[i]));
             e1_var_vec.push(cs.new_witness_variable(|| Ok(e1_val_vec[i]))?);
         }
         // delta_0
         let mut delta_0_val_vec = Vec::new();
         let mut delta_0_var_vec = Vec::new();
         for i in 0..self.num_dimension {
-            delta_0_val_vec.push(self.i128toField(self.delta_0[i]));
+            delta_0_val_vec.push(self.i128to_field(self.delta_0[i]));
             delta_0_var_vec.push(cs.new_witness_variable(|| Ok(delta_0_val_vec[i]))?);
         }
         // delta_1
         let mut delta_1_val_vec = Vec::new();
         let mut delta_1_var_vec = Vec::new();
         for i in 0..self.num_dimension {
-            delta_1_val_vec.push(self.i128toField(self.delta_1[i]));
+            delta_1_val_vec.push(self.i128to_field(self.delta_1[i]));
             delta_1_var_vec.push(cs.new_witness_variable(|| Ok(delta_1_val_vec[i]))?);
         }
         // pk_0 * r + e_0 = c_0 + delta_0 * q
@@ -224,7 +224,7 @@ impl<F: Field> ConstraintSynthesizer<F> for Circuit<F> {
         let mut m_val_vec = Vec::new();
         let mut m_var_vec = Vec::new();
         for i in 0..self.num_dimension {
-            m_val_vec.push(self.i128toField(self.m[i]));
+            m_val_vec.push(self.i128to_field(self.m[i]));
             m_var_vec.push(cs.new_witness_variable(|| Ok(m_val_vec[i]))?);
         }
         // pk_1 * r + e_0 + m = c_1 + delta_1 * q

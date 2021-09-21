@@ -3,7 +3,6 @@ mod util;
 mod zksnark;
 use crate::common::aggregation::{
     merkle::HashAlgorithm,
-    merkle::MerkleProof,
     node::{SummationEntry, SummationLeaf, SummationNonLeaf},
 };
 use crate::common::server_service::{init_tracing, ServerServiceClient};
@@ -19,16 +18,12 @@ use log::{error, info, warn};
 use rand::{Rng, SeedableRng};
 use rsa::{pkcs8::ToPublicKey, RsaPrivateKey, RsaPublicKey};
 use std::sync::Arc;
-use std::thread::sleep;
-use std::time::{Instant, SystemTime};
+use std::time::Duration;
+use std::time::SystemTime;
 use std::{fs::File, io::BufReader, net::IpAddr};
 use std::{io::BufRead, process::id};
-use std::{net::SocketAddr, time::Duration};
 use std::{thread, time};
-use tarpc::{
-    client, context,
-    tokio_serde::formats::{Bincode, Json},
-};
+use tarpc::{client, context, tokio_serde::formats::Bincode};
 mod rlwe;
 use rlwe::PublicKey;
 
@@ -230,20 +225,21 @@ impl Client {
         hasher.finalize().into()
     }
 
-    pub fn get_random_non_leafs(N: u32, s: u32, vinit: u32) -> Vec<u32> {
+    pub fn get_random_non_leafs(n: u32, s: u32, vinit: u32) -> Vec<u32> {
         let mut rng = rand::rngs::StdRng::from_entropy();
         // [0..N): leafs
         // [N..N+N/2): non-leafs whose children are leafs
         // N+N/2: possibly 1 leaf + 1 non-leaf
         // [N+N/2..summation_array_size(N)): non-leafs with non-leaf children
         let mut non_leafs: Vec<u32> = Vec::new();
-        let array_size = summation_array_size(N);
+        let array_size = summation_array_size(n);
         // first pick about s/2 non-leafs whose children are leafs
         // if no such non-leafs nodes exist, just skip
-        let mut idx = vinit;
-        while idx <= vinit + s {
-            if (idx & 0x1 == 0) && (idx + 1 <= vinit + s) {
-                non_leafs.push(N + idx / 2);
+        let mut idx = 0;
+        while idx <= s {
+            let ii = (idx + vinit) % n;
+            if (ii & 0x1 == 0) && (ii + 1 <= n) {
+                non_leafs.push(n + ii / 2);
                 idx += 2;
             } else {
                 idx += 1;
@@ -266,10 +262,10 @@ impl Client {
         // a[id_gp - N] = 2 * (id_gp - N),
         for _ in 0..nr_gp + 1 {
             // id of grand parent
-            if N + N / 2 < array_size {
-                let id_gp = rng.gen_range(N + N / 2..array_size);
+            if n + n / 2 < array_size {
+                let id_gp = rng.gen_range(n + n / 2..array_size);
                 // the id of the children
-                let left = (id_gp - N) * 2;
+                let left = (id_gp - n) * 2;
                 let right = left + 1;
                 non_leafs.push(id_gp);
                 non_leafs.push(left);
@@ -281,7 +277,7 @@ impl Client {
 
     // this N should be known from the board
     // s has to be at least 1
-    pub async fn verify(&self, N: u32, s: u32) {
+    pub async fn verify(&self, n: u32, s: u32) {
         let gc = start_timer!(|| "verify");
 
         assert!(s >= 1, "s should be at least 1");
@@ -290,7 +286,7 @@ impl Client {
         //let vinit: u32 = rng.gen::<u32>() % N;
         let vinit: u32 = 0;
 
-        let non_leafs: Vec<u32> = Self::get_random_non_leafs(N, s, vinit);
+        let non_leafs: Vec<u32> = Self::get_random_non_leafs(n, s, vinit);
 
         let gc1 = start_timer!(|| "receive verify");
         let result = {
@@ -333,7 +329,8 @@ impl Client {
         let mut idx = vinit;
         //let mut ii = 0 as usize;
         while idx <= vinit + s {
-            if (idx & 0x1 == 0) && (idx + 1 <= vinit + s) {
+            let ii = idx % n;
+            if (ii & 0x1 == 0) && (ii + 1 <= vinit + s) {
                 // TODO check these nodes by ref to the leaf nodes
                 let parent = &result[i];
                 let left = &result[2 * (idx - vinit) as usize + 1];
@@ -341,31 +338,20 @@ impl Client {
                 // check the proofs
                 assert!(parent.1.clone().to_proof().validate::<HashAlgorithm>());
 
-                if let SummationEntry::NonLeaf(a) = &parent.0 {
-                    if let SummationEntry::Leaf(b) = &left.0 {
-                        if let SummationEntry::Leaf(c) = &right.0 {
-                            for j in 0..a.c0.len() {
-                                let option_b = match &b.c0 {
-                                    Some(v) => v[j],
-                                    None => 0i128,
-                                };
-                                let option_c = match &c.c0 {
-                                    Some(v) => v[j],
-                                    None => 0i128,
-                                };
-                                assert_eq!(a.c0[j], option_b + option_c);
-                                let option_b = match &b.c1 {
-                                    Some(v) => v[j],
-                                    None => 0i128,
-                                };
-                                let option_c = match &c.c1 {
-                                    Some(v) => v[j],
-                                    None => 0i128,
-                                };
-                                assert_eq!(a.c1[j], option_b + option_c);
-                            }
-                        }
+                let c = match (&left.0, &right.0) {
+                    (SummationEntry::Leaf(a), SummationEntry::Leaf(b)) => a + b,
+                    //(SummationEntry::Leaf(a), SummationEntry::NonLeaf(b)) => a + b,
+                    //(SummationEntry::NonLeaf(a), SummationEntry::Leaf(b)) => a + b,
+                    //(SummationEntry::NonLeaf(a), SummationEntry::NonLeaf(b)) => a + b,
+                    _ => {
+                        panic!("Not leaf nodes in verifying summation");
                     }
+                };
+
+                if let SummationEntry::NonLeaf(a) = &parent.0 {
+                    assert_eq!(&c, a);
+                } else {
+                    //error!("Parent not a nonleaf node when leaf");
                 }
                 i = i + 1;
                 idx += 2;
@@ -381,16 +367,20 @@ impl Client {
             assert!(parent.1.clone().to_proof().validate::<HashAlgorithm>());
             assert!(left.1.clone().to_proof().validate::<HashAlgorithm>());
             assert!(right.1.clone().to_proof().validate::<HashAlgorithm>());
-            if let SummationEntry::NonLeaf(a) = parent.0.clone() {
-                if let SummationEntry::NonLeaf(b) = left.0.clone() {
-                    if let SummationEntry::NonLeaf(c) = right.0.clone() {
-                        // check the sum
-                        for j in 0..a.c0.len() {
-                            assert_eq!(a.c0[j], b.c0[j] + c.c0[j]);
-                            assert_eq!(a.c1[j], b.c1[j] + c.c1[j]);
-                        }
-                    }
+            // possibly leaf + non_leaf when the # of leafs is odd
+            let c = match (&left.0, &right.0) {
+                (SummationEntry::NonLeaf(a), SummationEntry::NonLeaf(b)) => a + b,
+                (SummationEntry::Leaf(a), SummationEntry::NonLeaf(b)) => a + b,
+                //(SummationEntry::Leaf(a), SummationEntry::Leaf(b)) => a + b,
+                //(SummationEntry::NonLeaf(a), SummationEntry::Leaf(b)) => a + b,
+                _ => {
+                    panic!("Not leaf nodes in verifying summation");
                 }
+            };
+            if let SummationEntry::NonLeaf(a) = &parent.0 {
+                assert_eq!(&c, a);
+            } else {
+                //error!("Parent not a nonleaf node when nonleaf");
             }
             i += 3;
         }

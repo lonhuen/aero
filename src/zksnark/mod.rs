@@ -7,7 +7,7 @@ use ark_bls12_381::{Bls12_381, Fr, FrParameters, Parameters};
 use ark_ec::models::bls12::Bls12;
 use ark_groth16::{
     create_random_proof, generate_random_parameters, verify_proof, PreparedVerifyingKey, Proof,
-    ProvingKey, VerifyingKey,
+    ProvingKey,
 };
 mod constraints;
 use crate::zksnark::constraints::Circuit;
@@ -124,7 +124,7 @@ mod tests {
             .to_vec()
             .iter()
             .chain(prover.circuit.c_1.to_vec().iter())
-            .map(|&x| prover.circuit.i128toField(x))
+            .map(|&x| prover.circuit.i128to_field(x))
             .collect::<Vec<_>>();
         let verifier = Verifier::new("data/vk.txt");
         //let result = verifier.verify_proof_from_bytes(&proof, &inputs);
@@ -144,7 +144,7 @@ mod tests {
             .to_vec()
             .iter()
             .chain(prover.circuit.c_1.to_vec().iter())
-            .map(|&x| prover.circuit.i128toField(x))
+            .map(|&x| prover.circuit.i128to_field(x))
             .collect::<Vec<_>>();
         let verifier = Verifier::new("data/vk.txt");
         //let result = verifier.verify_proof_from_bytes(&proof, &inputs);

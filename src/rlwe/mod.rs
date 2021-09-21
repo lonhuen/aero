@@ -1,6 +1,5 @@
-use ark_std::{end_timer, start_timer};
+//use ark_std::{end_timer, start_timer};
 use log::error;
-use std::sync::Arc;
 
 pub const NUM_DIMENSION: usize = 4096;
 pub const MODULUS: i128 = 649033470896967801447398927572993i128;

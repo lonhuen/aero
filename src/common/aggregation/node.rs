@@ -3,10 +3,10 @@ use crate::common::i128vec_to_le_bytes;
 extern crate blake3;
 #[cfg(not(feature = "hashfn_blake3"))]
 use crypto::{digest::Digest, sha3::Sha3};
-use log::{error, info};
-use std::convert::{From, TryInto};
+use log::error;
+use rayon::iter::repeatn;
+use rayon::prelude::*;
 use std::ops::Add;
-use std::process::exit;
 use tarpc::serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -140,37 +140,30 @@ impl SummationNonLeaf {
     }
 }
 
+fn add_two_vec(a: Option<&Vec<i128>>, b: Option<&Vec<i128>>) -> Vec<i128> {
+    // TODO need modulus here maybe
+    let tmp = Vec::<i128>::new();
+    let left = a.unwrap_or(&tmp);
+    let right = b.unwrap_or(&tmp);
+    let (longer, shorter) = if left.len() > right.len() {
+        (left, right)
+    } else {
+        (right, left)
+    };
+    shorter
+        .par_iter()
+        .chain(repeatn(&0i128, longer.len() - shorter.len()))
+        .zip(longer.par_iter())
+        .map(|(x, y)| x + y)
+        .collect()
+}
+
 impl Add for SummationNonLeaf {
     type Output = SummationNonLeaf;
     fn add(self, other: Self) -> Self {
-        // TODO need modulus here maybe
-        let len = std::cmp::max(self.c0.len(), other.c0.len());
-        let mut new_c0: Vec<i128> = Vec::with_capacity(len);
-        let mut new_c1: Vec<i128> = Vec::with_capacity(len);
-        if self.c0.len() == other.c0.len() {
-            for i in 0..len {
-                new_c0.push(self.c0[i] + other.c0[i]);
-                new_c1.push(self.c1[i] + other.c1[i]);
-            }
-        } else {
-            for i in 0..len {
-                let (a, b) = if i > self.c0.len() {
-                    (0i128, 0i128)
-                } else {
-                    (self.c0[i], self.c1[i])
-                };
-                let (c, d) = if i > other.c0.len() {
-                    (0i128, 0i128)
-                } else {
-                    (other.c0[i], other.c1[i])
-                };
-                new_c0.push(a + c);
-                new_c1.push(b + d);
-            }
-        }
         SummationNonLeaf {
-            c0: new_c0,
-            c1: new_c1,
+            c0: add_two_vec(Some(&self.c0), Some(&other.c0)),
+            c1: add_two_vec(Some(&self.c1), Some(&other.c1)),
         }
     }
 }
@@ -179,34 +172,64 @@ impl<'a, 'b> Add<&'b SummationNonLeaf> for &'a SummationNonLeaf {
     type Output = SummationNonLeaf;
 
     fn add(self, other: &'b SummationNonLeaf) -> SummationNonLeaf {
-        // TODO need modulus here maybe
-        let len = std::cmp::max(self.c0.len(), other.c0.len());
-        let mut new_c0: Vec<i128> = Vec::with_capacity(len);
-        let mut new_c1: Vec<i128> = Vec::with_capacity(len);
-        if self.c0.len() == other.c0.len() {
-            for i in 0..len {
-                new_c0.push(self.c0[i] + other.c0[i]);
-                new_c1.push(self.c1[i] + other.c1[i]);
-            }
-        } else {
-            for i in 0..len {
-                let (a, b) = if i > self.c0.len() {
-                    (0i128, 0i128)
-                } else {
-                    (self.c0[i], self.c1[i])
-                };
-                let (c, d) = if i > other.c0.len() {
-                    (0i128, 0i128)
-                } else {
-                    (other.c0[i], other.c1[i])
-                };
-                new_c0.push(a + c);
-                new_c1.push(b + d);
-            }
-        }
         SummationNonLeaf {
-            c0: new_c0,
-            c1: new_c1,
+            c0: add_two_vec(Some(&self.c0), Some(&other.c0)),
+            c1: add_two_vec(Some(&self.c1), Some(&other.c1)),
+        }
+    }
+}
+
+impl<'a, 'b> Add<&'b SummationLeaf> for &'a SummationNonLeaf {
+    type Output = SummationNonLeaf;
+
+    fn add(self, other: &'b SummationLeaf) -> SummationNonLeaf {
+        SummationNonLeaf {
+            c0: add_two_vec(Some(&self.c0), other.c0.as_ref()),
+            c1: add_two_vec(Some(&self.c1), other.c1.as_ref()),
+        }
+    }
+}
+
+impl<'a, 'b> Add<&'b SummationNonLeaf> for &'a SummationLeaf {
+    type Output = SummationNonLeaf;
+
+    fn add(self, other: &'b SummationNonLeaf) -> SummationNonLeaf {
+        SummationNonLeaf {
+            c0: add_two_vec(self.c0.as_ref(), Some(&other.c0)),
+            c1: add_two_vec(self.c1.as_ref(), Some(&other.c1)),
+        }
+    }
+}
+
+impl<'a, 'b> Add<&'b SummationLeaf> for &'a SummationLeaf {
+    type Output = SummationNonLeaf;
+
+    fn add(self, other: &'b SummationLeaf) -> SummationNonLeaf {
+        SummationNonLeaf {
+            c0: add_two_vec(self.c0.as_ref(), other.c0.as_ref()),
+            c1: add_two_vec(self.c0.as_ref(), other.c1.as_ref()),
+        }
+    }
+}
+
+impl PartialEq for SummationNonLeaf {
+    fn eq(&self, other: &Self) -> bool {
+        if (self.c0.len() != other.c0.len()) || (self.c1.len() != other.c1.len()) {
+            false
+        } else {
+            let a = self
+                .c0
+                .par_iter()
+                .zip(other.c0.par_iter())
+                .map(|(x, y)| x == y)
+                .reduce(|| true, |x, y| x && y);
+            let b = self
+                .c1
+                .par_iter()
+                .zip(other.c1.par_iter())
+                .map(|(x, y)| x == y)
+                .reduce(|| true, |x, y| x && y);
+            a && b
         }
     }
 }
@@ -219,6 +242,7 @@ impl From<SummationLeaf> for SummationNonLeaf {
         }
     }
 }
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum SummationEntry {
     Leaf(SummationLeaf),
@@ -235,8 +259,7 @@ impl SummationEntry {
         if let SummationEntry::Leaf(l) = self {
             &l.rsa_pk
         } else {
-            error!("get_leaf_rsa_pk@SummationEntry: not a leaf");
-            exit(-1);
+            panic!("get_leaf_rsa_pk@SummationEntry: not a leaf");
         }
     }
 }

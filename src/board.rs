@@ -39,11 +39,30 @@
 //
 mod rlwe;
 use crate::rlwe::PublicKey;
-use blake3::Hash;
+use rayon::iter::repeatn;
+use rayon::prelude::*;
 use std::{
     fs::File,
     io::{prelude::*, BufReader},
 };
+
+fn add_two_vec(a: Option<&Vec<i128>>, b: Option<&Vec<i128>>) -> Vec<i128> {
+    let tmp = Vec::<i128>::new();
+    let left = a.unwrap_or(&tmp);
+    let right = b.unwrap_or(&tmp);
+    let (longer, shorter) = if left.len() > right.len() {
+        (left, right)
+    } else {
+        (right, left)
+    };
+    shorter
+        .par_iter()
+        .chain(repeatn(&0i128, longer.len() - shorter.len()))
+        .zip(longer.par_iter())
+        .map(|(x, y)| x + y)
+        .collect()
+}
+
 fn main() {
     let pk = {
         let mut pk_0 = [0i128; 4096];
@@ -82,4 +101,12 @@ fn main() {
     hasher.update(b"baz");
     let hash2: [u8; 32] = hasher.finalize().into();
     println!("{:?}", hash2);
+    //let a = None;
+    let a = vec![1i128; 4096];
+    let d = Some(vec![2i128; 4096]);
+    let b = None;
+    let c = add_two_vec(Some(&a), d.as_ref());
+    println!("{:?}", c);
+    let c = add_two_vec(b, Some(&a));
+    println!("{:?}", c);
 }

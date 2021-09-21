@@ -1,5 +1,4 @@
 use super::aggregation::merkle::MerkleProof;
-use super::aggregation::node::SummationEntry;
 
 /// Trait for service of the bulletin board
 #[tarpc::service]

@@ -2,14 +2,15 @@ pub mod merkle;
 use log::{info, warn};
 use merkle::MerkleTree;
 pub mod node;
-use self::merkle::MerkleProof;
+use self::{merkle::MerkleProof, node::SummationNonLeaf};
 use log::error;
-use node::{CommitEntry, SummationEntry, SummationLeaf, SummationNonLeaf};
+use node::{CommitEntry, SummationEntry, SummationLeaf};
 use rayon::prelude::*;
 use std::iter::FromIterator;
-use std::process::exit;
 
 use ark_std::{end_timer, start_timer};
+
+use super::summation_array_size;
 
 pub struct McTree {
     pub nr_real: u32,
@@ -44,14 +45,6 @@ impl McTree {
             self.commit_array
                 .sort_by(|a, b| a.rsa_pk.partial_cmp(&b.rsa_pk).unwrap());
             let gc = start_timer!(|| "hash of mc elements");
-            //{
-            //    self.mc = Some(MerkleTree::from_iter(
-            //        self.commit_array
-            //            .iter()
-            //            .map(|x| x.hash())
-            //            .chain((0..self.nr_sybil).into_iter().map(|_| [0u8; 32])),
-            //    ));
-            //}
             self.mc = Some(MerkleTree::from_iter(
                 self.commit_array
                     .par_iter()
@@ -95,26 +88,48 @@ impl McTree {
 pub struct MsTree {
     pub nr_real: u32,
     pub nr_sybil: u32,
+    pub nr_non_leaf: u32,
     pub summation_array: Vec<SummationEntry>,
     pub ms: Option<MerkleTree>,
 }
 impl MsTree {
     pub fn new(nr_real: u32, nr_sybil: u32) -> Self {
+        let nr_non_leaf = summation_array_size(nr_real);
         MsTree {
             nr_real,
+            nr_non_leaf,
             nr_sybil,
             summation_array: Vec::with_capacity(nr_real as usize),
             ms: None,
         }
     }
 
-    pub fn get_node(&self, id: u32) -> SummationEntry {
+    pub fn get_leaf_node(&self, id: u32) -> SummationEntry {
         if id >= self.nr_real {
-            info!("Atom: Ms get node more than nr_real");
+            info!("Atom: Ms get leaf node more than nr_real");
             self.summation_array[(id % self.nr_real) as usize].clone()
         } else {
             self.summation_array[id as usize].clone()
         }
+    }
+
+    pub fn get_nonleaf_node(&self, id: u32) -> SummationEntry {
+        if (id < self.nr_real) || (id >= self.nr_real + self.nr_non_leaf) {
+            error!("Atom: Ms get leaf node more than nr_real+nr_non_leaf");
+            self.summation_array[(id % (self.nr_real + self.nr_non_leaf)) as usize].clone()
+        } else {
+            self.summation_array[id as usize].clone()
+        }
+    }
+
+    pub fn get_root(&self) -> &SummationNonLeaf {
+        let ret = match self.summation_array.last().as_ref().unwrap() {
+            SummationEntry::NonLeaf(x) => x,
+            _ => {
+                panic!("Root node is not a nonleaf node");
+            }
+        };
+        ret
     }
 
     pub fn gen_tree(&mut self) -> bool {
@@ -132,45 +147,21 @@ impl MsTree {
             let mut left = 0;
             let mut right = self.summation_array.len();
             while left + 1 < right {
-                let a = match self.summation_array[left].clone() {
-                    SummationEntry::NonLeaf(y) => y,
-                    SummationEntry::Leaf(x) => x.into(),
+                let c = match (&self.summation_array[left], &self.summation_array[left + 1]) {
+                    (SummationEntry::NonLeaf(left), SummationEntry::NonLeaf(right)) => left + right,
+                    (SummationEntry::NonLeaf(left), SummationEntry::Leaf(right)) => left + right,
+                    (SummationEntry::Leaf(left), SummationEntry::NonLeaf(right)) => right + left,
+                    (SummationEntry::Leaf(left), SummationEntry::Leaf(right)) => left + right,
                     _ => {
-                        error!("gen_tree: Not a leaf or nonleaf node");
-                        exit(1);
+                        panic!("gen_tree: Not a leaf or nonleaf node");
                     }
                 };
-                let b = match self.summation_array[left + 1].clone() {
-                    SummationEntry::NonLeaf(y) => y,
-                    SummationEntry::Leaf(x) => x.into(),
-                    _ => {
-                        error!("gen_tree: Not a leaf or nonleaf node");
-                        // just to make the compiler happy
-                        exit(1);
-                    }
-                };
-                let c = a + b;
                 self.summation_array.push(SummationEntry::NonLeaf(c));
                 left += 2;
                 right += 1;
             }
             let gc = start_timer!(|| "gen tree of ms");
-            //self.ms = Some(MerkleTree::from_iter(
-            //    self.summation_array
-            //        .iter()
-            //        .map(|x| match x {
-            //            SummationEntry::Leaf(y) => y.hash(),
-            //            SummationEntry::NonLeaf(y) => y.hash(),
-            //            // just to make compiler happy
-            //            // never reach here
-            //            _ => {
-            //                error!("commitment in summation array");
-            //                [0u8; 32]
-            //            }
-            //        })
-            //        // TODO maybe more precise about the # of sybils here
-            //        .chain((0..(2 * self.nr_sybil)).into_iter().map(|_| [0u8; 32])),
-            //));
+
             self.ms = Some(MerkleTree::from_iter(
                 self.summation_array
                     .par_iter()
