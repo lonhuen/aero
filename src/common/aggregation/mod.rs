@@ -1,12 +1,12 @@
 pub mod merkle;
-use log::{info, warn};
 use merkle::MerkleTree;
+use tracing::{info, warn};
 pub mod node;
 use self::{merkle::MerkleProof, node::SummationNonLeaf};
-use log::error;
 use node::{CommitEntry, SummationEntry, SummationLeaf};
 use rayon::prelude::*;
 use std::iter::FromIterator;
+use tracing::error;
 
 use ark_std::{end_timer, start_timer};
 

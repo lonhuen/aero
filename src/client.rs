@@ -5,16 +5,18 @@ use crate::common::aggregation::{
     merkle::HashAlgorithm,
     node::{SummationEntry, SummationLeaf, SummationNonLeaf},
 };
-use crate::common::server_service::{init_tracing, ServerServiceClient};
+use crate::common::server_service::ServerServiceClient;
 use crate::common::{i128vec_to_le_bytes, summation_array_size, ZKProof};
-use crate::util::{config::ConfigUtils, log::LogUtils};
+use crate::util::{config::ConfigUtils, log::init_tracing};
 use crate::zksnark::{Prover, Verifier};
 use ark_std::{end_timer, start_timer};
 #[cfg(feature = "hashfn_blake3")]
 extern crate blake3;
 #[cfg(not(feature = "hashfn_blake3"))]
 use crypto::{digest::Digest, sha3::Sha3};
-use log::{error, info, warn};
+use tracing::{error, info, warn};
+use tracing::{event, instrument, span, Level};
+
 use rand::{Rng, SeedableRng};
 use rsa::{pkcs8::ToPublicKey, RsaPrivateKey, RsaPublicKey};
 use std::sync::Arc;
@@ -76,6 +78,7 @@ impl Client {
         self.d1s.clear();
     }
 
+    #[instrument(skip_all)]
     pub fn encrypt(&mut self, xs: Vec<u8>, pk0: &Vec<i128>, pk1: &Vec<i128>) {
         let gc = start_timer!(|| "new public key");
         let rlwe_pk = Arc::new(PublicKey::new(pk0, pk1));
@@ -94,6 +97,7 @@ impl Client {
             self.c1s.extend(ct.c_1);
         }
     }
+    #[instrument(skip_all)]
     pub fn generate_proof(&self, pvk: Vec<u8>) -> Vec<Vec<u8>> {
         let mut rng = rand::rngs::StdRng::from_entropy();
         let mut ret: Vec<Vec<u8>> =
@@ -112,6 +116,7 @@ impl Client {
     }
 
     // the whole aggregation phase (except the encryption)
+    #[instrument(skip_all)]
     pub async fn upload(&mut self, xs: Vec<u8>, pvk: Vec<u8>) -> bool {
         // set the deadline of the context
         let gc1 = start_timer!(|| "encrypt the gradients");
@@ -277,6 +282,7 @@ impl Client {
 
     // this N should be known from the board
     // s has to be at least 1
+    #[instrument(skip_all)]
     pub async fn verify(&self, n: u32, s: u32) {
         let gc = start_timer!(|| "verify");
 
@@ -388,6 +394,7 @@ impl Client {
         end_timer!(gc2);
     }
 
+    #[instrument(skip(self))]
     pub async fn train_model(&mut self) -> Vec<u8> {
         let rm = start_timer!(|| "retrieve the model");
         let gradient = {
@@ -408,10 +415,15 @@ impl Client {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    init_tracing(&format!("Atom Client{}", id()))?;
-    let start = start_timer!(|| "clients");
     let config = ConfigUtils::init("config.ini");
-    //LogUtils::init(&format!("client{}.log", id()));
+    init_tracing(
+        &format!("Atom client {}", std::process::id()),
+        config.get_agent_endpoint(),
+    )?;
+
+    let _span = span!(Level::WARN, "Atom Client").entered();
+
+    let start = start_timer!(|| "clients");
 
     let nr_real = config.get_int("nr_real") as u32;
     //let nr_sybil = config.get_int("nr_sybil") as u32;

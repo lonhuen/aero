@@ -3,11 +3,11 @@ use crate::common::i128vec_to_le_bytes;
 extern crate blake3;
 #[cfg(not(feature = "hashfn_blake3"))]
 use crypto::{digest::Digest, sha3::Sha3};
-use log::error;
 use rayon::iter::repeatn;
 use rayon::prelude::*;
 use std::ops::Add;
 use tarpc::serde::{Deserialize, Serialize};
+use tracing::error;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CommitEntry {

@@ -3,7 +3,6 @@ use futures::{
     future::{self, Ready},
     prelude::*,
 };
-use log::{error, info, warn};
 use quail::zksnark::{Prover, Verifier};
 use rand::{Rng, SeedableRng};
 use std::{
@@ -13,6 +12,7 @@ use std::{
     thread::sleep,
     time::Duration,
 };
+use tracing::{error, info, warn};
 
 use tarpc::{
     context,
@@ -26,10 +26,10 @@ use crate::common::{
         node::{CommitEntry, SummationEntry, SummationLeaf},
         McTree, MsTree,
     },
-    server_service::{init_tracing, ServerService},
+    server_service::ServerService,
 };
 mod util;
-use crate::util::{config::ConfigUtils, log::LogUtils};
+use crate::util::{config::ConfigUtils, log::init_tracing};
 pub enum STATE {
     Commit,
     Data,
@@ -194,10 +194,10 @@ impl ServerService for InnerServer {
 }
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    init_tracing("Atom Server")?;
+    let config = ConfigUtils::init("config.ini");
+    init_tracing("Atom Server", config.get_agent_endpoint())?;
     //LogUtils::init("server.log");
 
-    let config = ConfigUtils::init("config.ini");
     let nr_real = config.get_int("nr_real") as u32;
     let nr_sybil = config.get_int("nr_sybil") as u32;
     let nr_parameter = config.get_int("nr_parameter") as u32;

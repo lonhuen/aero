@@ -1,48 +1,22 @@
-use ark_std::{add_to_trace, end_timer, start_timer};
-use log::{debug, error, info};
-use simplelog::{
-    ColorChoice, CombinedLogger, Config, LevelFilter, TermLogger, TerminalMode, WriteLogger,
-};
-use std::fs::File;
+use std::env;
+use tracing_subscriber::filter::LevelFilter;
+use tracing_subscriber::{fmt::format::FmtSpan, prelude::*};
 
-/// log utils
-pub struct LogUtils {}
+pub fn init_tracing(service_name: &str, agent_endpoint: &str) -> anyhow::Result<()> {
+    let tracer = opentelemetry_jaeger::new_pipeline()
+        .with_agent_endpoint(agent_endpoint)
+        .with_service_name(service_name)
+        .install_batch(opentelemetry::runtime::Tokio)?;
 
-impl LogUtils {
-    pub fn init(fpath: &str) {
-        CombinedLogger::init(vec![
-            TermLogger::new(
-                LevelFilter::Warn,
-                Config::default(),
-                TerminalMode::Mixed,
-                ColorChoice::Auto,
-            ),
-            WriteLogger::new(
-                LevelFilter::Info,
-                Config::default(),
-                File::create(fpath).unwrap(),
-            ),
-        ])
-        .unwrap();
-    }
-}
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::from_default_env()
+                .add_directive(LevelFilter::INFO.into()),
+        )
+        .with(tracing_subscriber::fmt::layer().with_span_events(FmtSpan::ENTER | FmtSpan::EXIT))
+        //.with(tracing_subscriber::fmt::layer().with_span_events(FmtSpan::NONE))
+        .with(tracing_opentelemetry::layer().with_tracer(tracer))
+        .try_init()?;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // config.ini content
-    // debug = false
-    // port = 3223
-    // host = "0.0.0.0"
-    #[test]
-    fn test_init() {
-        let gc = start_timer!(|| "test start_timer");
-        add_to_trace!(|| "title", || "interesting");
-        end_timer!(gc);
-        LogUtils::init("test.log");
-        error!("Bright red error");
-        info!("This only appears in the log file");
-        debug!("This level is currently not enabled for any logger");
-    }
+    Ok(())
 }

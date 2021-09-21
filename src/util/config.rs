@@ -27,6 +27,12 @@ impl ConfigUtils {
     pub fn get_int(&self, key: &str) -> i64 {
         self.settings.get_int(key).unwrap()
     }
+
+    pub fn get_agent_endpoint(&self) -> &str {
+        self.settings
+            .get("agent_endpoint")
+            .unwrap_or("localhost:6831")
+    }
 }
 
 #[cfg(test)]

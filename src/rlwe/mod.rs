@@ -1,11 +1,9 @@
-//use ark_std::{end_timer, start_timer};
-use log::error;
+use tracing::error;
 
 pub const NUM_DIMENSION: usize = 4096;
 pub const MODULUS: i128 = 649033470896967801447398927572993i128;
 
 pub mod rand_poly;
-//TODO make pk_0 and pk_1 matrix of scalar
 /// [p0, -p4095, ..., -p1]
 /// [p1, p0, -p4095, ..., -p2] * [r0 r1 ... r4095] = [c0, c1, ..., c4095]
 ///        ...
