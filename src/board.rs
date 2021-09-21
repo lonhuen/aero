@@ -39,6 +39,7 @@
 //
 mod rlwe;
 use crate::rlwe::PublicKey;
+use blake3::Hash;
 use std::{
     fs::File,
     io::{prelude::*, BufReader},
@@ -71,4 +72,14 @@ fn main() {
         PublicKey::new(&pk_0.to_vec(), &pk_1.to_vec())
     };
     pk.encrypt([0u8; 4096].to_vec());
+    // Hash an input all at once.
+    let hash1 = blake3::hash(b"foobarbaz");
+
+    // Hash an input incrementally.
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(b"foo");
+    hasher.update(b"bar");
+    hasher.update(b"baz");
+    let hash2: [u8; 32] = hasher.finalize().into();
+    println!("{:?}", hash2);
 }

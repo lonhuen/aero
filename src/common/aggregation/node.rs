@@ -1,13 +1,13 @@
-use crypto::digest::Digest;
-use crypto::sha3::Sha3;
+use crate::common::i128vec_to_le_bytes;
+#[cfg(feature = "hashfn_blake3")]
+extern crate blake3;
+#[cfg(not(feature = "hashfn_blake3"))]
+use crypto::{digest::Digest, sha3::Sha3};
 use log::{error, info};
 use std::convert::{From, TryInto};
 use std::ops::Add;
 use std::process::exit;
 use tarpc::serde::{Deserialize, Serialize};
-
-use crate::common::aggregation::merkle::MerkleHash;
-use crate::common::i128vec_to_le_bytes;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CommitEntry {
@@ -22,13 +22,21 @@ impl CommitEntry {
             hash: [0u8; 32],
         }
     }
-    pub fn hash(&self) -> MerkleHash {
+    #[cfg(not(feature = "hashfn_blake3"))]
+    pub fn hash(&self) -> [u8; 32] {
         let mut hasher = Sha3::sha3_256();
         hasher.input(&self.rsa_pk);
         hasher.input(&self.hash);
         let mut h = [0u8; 32];
         hasher.result(&mut h);
         h
+    }
+    #[cfg(feature = "hashfn_blake3")]
+    pub fn hash(&self) -> [u8; 32] {
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(&self.rsa_pk);
+        hasher.update(&self.hash);
+        hasher.finalize().into()
     }
 }
 
@@ -61,6 +69,7 @@ impl SummationLeaf {
             r: Some(r),
         }
     }
+    #[cfg(not(feature = "hashfn_blake3"))]
     pub fn hash(&self) -> [u8; 32] {
         let mut hasher = Sha3::sha3_256();
 
@@ -79,6 +88,21 @@ impl SummationLeaf {
         hasher.result(&mut h);
         h
     }
+    #[cfg(feature = "hashfn_blake3")]
+    pub fn hash(&self) -> [u8; 32] {
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(&self.rsa_pk);
+        if let Some(c0) = self.c0.as_ref() {
+            hasher.update(&i128vec_to_le_bytes(c0));
+        }
+        if let Some(c1) = self.c1.as_ref() {
+            hasher.update(&i128vec_to_le_bytes(c1));
+        }
+        if let Some(r) = self.r.as_ref() {
+            hasher.update(r);
+        }
+        hasher.finalize().into()
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -92,6 +116,7 @@ impl SummationNonLeaf {
     //    let c1 = vec![0i128; 4096];
     //    SummationNonLeaf { c0, c1 }
     //}
+    #[cfg(not(feature = "hashfn_blake3"))]
     pub fn hash(&self) -> [u8; 32] {
         let mut hasher = Sha3::sha3_256();
 
@@ -103,6 +128,15 @@ impl SummationNonLeaf {
         let mut h = [0u8; 32];
         hasher.result(&mut h);
         h
+    }
+    #[cfg(feature = "hashfn_blake3")]
+    pub fn hash(&self) -> [u8; 32] {
+        let mut hasher = blake3::Hasher::new();
+        let c0_bytes = i128vec_to_le_bytes(&self.c0);
+        let c1_bytes = i128vec_to_le_bytes(&self.c1);
+        hasher.update(&c0_bytes);
+        hasher.update(&c1_bytes);
+        hasher.finalize().into()
     }
 }
 

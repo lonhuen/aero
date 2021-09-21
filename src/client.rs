@@ -11,8 +11,10 @@ use crate::common::{i128vec_to_le_bytes, summation_array_size, ZKProof};
 use crate::util::{config::ConfigUtils, log::LogUtils};
 use crate::zksnark::{Prover, Verifier};
 use ark_std::{end_timer, start_timer};
-use crypto::digest::Digest;
-use crypto::sha3::{Sha3, Sha3Mode};
+#[cfg(feature = "hashfn_blake3")]
+extern crate blake3;
+#[cfg(not(feature = "hashfn_blake3"))]
+use crypto::{digest::Digest, sha3::Sha3};
 use log::{error, info, warn};
 use rand::{Rng, SeedableRng};
 use rsa::{pkcs8::ToPublicKey, RsaPrivateKey, RsaPublicKey};
@@ -68,10 +70,8 @@ impl Client {
             nonce: [0u8; 16],
         }
     }
-
-    pub fn encrypt(&mut self, xs: Vec<u8>, pk0: &Vec<i128>, pk1: &Vec<i128>) {
-        let gc = start_timer!(|| "new public key");
-        let rlwe_pk = Arc::new(PublicKey::new(pk0, pk1));
+    #[inline(always)]
+    fn clear(&mut self) {
         self.c0s.clear();
         self.c1s.clear();
         self.rs.clear();
@@ -79,14 +79,17 @@ impl Client {
         self.e1s.clear();
         self.d0s.clear();
         self.d1s.clear();
+    }
+
+    pub fn encrypt(&mut self, xs: Vec<u8>, pk0: &Vec<i128>, pk1: &Vec<i128>) {
+        let gc = start_timer!(|| "new public key");
+        let rlwe_pk = Arc::new(PublicKey::new(pk0, pk1));
+        self.clear();
         end_timer!(gc);
-        let gc = start_timer!(|| "encrypt");
         for i in 0..xs.len() / NUM_DIMENSION as usize {
-            let gc1 = start_timer!(|| "encrypt once");
             let (r, e0, e1, d0, d1, ct) = rlwe_pk
                 .as_ref()
                 .encrypt(xs[i * NUM_DIMENSION as usize..(i + 1) * NUM_DIMENSION as usize].to_vec());
-            end_timer!(gc1);
             self.rs.extend(r);
             self.e0s.extend(e0);
             self.e1s.extend(e1);
@@ -95,7 +98,6 @@ impl Client {
             self.c1s.extend(ct.c_0);
             self.c1s.extend(ct.c_1);
         }
-        end_timer!(gc);
     }
     pub fn generate_proof(&self, pvk: Vec<u8>) -> Vec<Vec<u8>> {
         let mut rng = rand::rngs::StdRng::from_entropy();
@@ -204,6 +206,8 @@ impl Client {
         //}
         ms_proof.validate::<HashAlgorithm>() && mc_proof.validate::<HashAlgorithm>()
     }
+
+    #[cfg(not(feature = "hashfn_blake3"))]
     fn hash(&mut self) -> [u8; 32] {
         // t = Hash(r, c0, c1,..., pi)
         let mut hasher = Sha3::sha3_256();
@@ -215,6 +219,15 @@ impl Client {
         let mut h = [0u8; 32];
         hasher.result(&mut h);
         h
+    }
+    #[cfg(feature = "hashfn_blake3")]
+    fn hash(&mut self) -> [u8; 32] {
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(&self.nonce);
+        hasher.update(&i128vec_to_le_bytes(&self.c0s));
+        hasher.update(&i128vec_to_le_bytes(&self.c1s));
+        hasher.update(&self.rsa_pk);
+        hasher.finalize().into()
     }
 
     pub fn get_random_non_leafs(N: u32, s: u32, vinit: u32) -> Vec<u32> {

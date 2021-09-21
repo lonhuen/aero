@@ -77,7 +77,7 @@ impl McTree {
         self.mc = None;
     }
 }
-
+// since Vector is in heap, the sort won't move the actual data. just the pointer will be moved.
 pub struct MsTree {
     pub nr_real: u32,
     pub nr_sybil: u32,

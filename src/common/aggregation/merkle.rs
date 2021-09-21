@@ -4,8 +4,8 @@ use merkle_light::hash::Algorithm;
 use std::hash::Hasher;
 use tarpc::serde::{Deserialize, Serialize};
 
-pub type MerkleHash = [u8; 32];
-pub type MerkleTree = merkle_light::merkle::MerkleTree<MerkleHash, HashAlgorithm>;
+//pub type MerkleHash = [u8; 32];
+pub type MerkleTree = merkle_light::merkle::MerkleTree<[u8; 32], HashAlgorithm>;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct MerkleProof {
@@ -60,9 +60,9 @@ impl Hasher for HashAlgorithm {
     }
 }
 
-impl Algorithm<MerkleHash> for HashAlgorithm {
+impl Algorithm<[u8; 32]> for HashAlgorithm {
     #[inline]
-    fn hash(&mut self) -> MerkleHash {
+    fn hash(&mut self) -> [u8; 32] {
         let mut h = [0u8; 32];
         self.0.result(&mut h);
         h

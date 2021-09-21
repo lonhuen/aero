@@ -31,7 +31,7 @@ use crate::common::{
         node::{CommitEntry, SummationEntry, SummationLeaf},
         McTree, MsTree,
     },
-    hash_commitment, new_rsa_pub_key,
+    new_rsa_pub_key,
     server_service::{init_tracing, ServerService},
 };
 mod util;

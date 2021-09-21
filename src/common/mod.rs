@@ -9,14 +9,14 @@ pub mod aggregation;
 pub mod board_service;
 pub mod server_service;
 
-pub fn hash_commitment(rsa_pk: &Vec<u8>, cm: &[u8; 32]) -> [u8; 32] {
-    let mut hasher = Sha3::sha3_256();
-    hasher.input(rsa_pk);
-    hasher.input(cm);
-    let mut h = [0u8; 32];
-    hasher.result(&mut h);
-    h
-}
+//pub fn hash_commitment(rsa_pk: &Vec<u8>, cm: &[u8; 32]) -> [u8; 32] {
+//    let mut hasher = Sha3::sha3_256();
+//    hasher.input(rsa_pk);
+//    hasher.input(cm);
+//    let mut h = [0u8; 32];
+//    hasher.result(&mut h);
+//    h
+//}
 // T(2k) = T(k) + 2k
 // T(2k+1) = T(k+1) + 2k
 // T(n) = T(floor(n+1)/2) + n & ~0x1

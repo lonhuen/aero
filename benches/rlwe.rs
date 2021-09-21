@@ -1,5 +1,7 @@
+use ark_std::{end_timer, start_timer};
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use quail::rlwe::{PublicKey, MODULUS};
+use quail::common::aggregation::node::*;
+use quail::rlwe::{PublicKey, MODULUS, NUM_DIMENSION};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use std::{
     fs::File,
@@ -24,9 +26,16 @@ fn matrix_mut(p: &Vec<i128>, q: &Vec<i128>) -> Vec<i128> {
     ret
 }
 
+fn sort(buf: &mut Vec<SummationLeaf>) {
+    let gc = start_timer!(|| "sort");
+    buf.sort_by_key(|l| l.rsa_pk.clone());
+    end_timer!(gc);
+}
+
 fn criterion_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("encrypt");
     group.significance_level(0.1).sample_size(30);
+    /*
     let pk = {
         let mut pk_0 = [0i128; 4096];
         let mut pk_1 = [0i128; 4096];
@@ -63,7 +72,21 @@ fn criterion_benchmark(c: &mut Criterion) {
     for _ in 0..4096 {
         q.push(rng.gen_range(0..3));
     }
-    group.bench_function("encrypt", |b| b.iter(|| encrypt(&pk)));
+    */
+    let mut rng = rand::rngs::StdRng::from_entropy();
+    let mut buf = {
+        (0..200)
+            .map(|_| {
+                SummationLeaf::from_ct(
+                    (0..500).map(|_| rng.gen::<u8>()).collect(),
+                    (0..NUM_DIMENSION * 0).map(|_| rng.gen::<i128>()).collect(),
+                    [0u8; 16],
+                )
+            })
+            .collect()
+    };
+    group.bench_function("sort", |b| b.iter(|| sort(&mut buf)));
+    //group.bench_function("encrypt", |b| b.iter(|| encrypt(&pk)));
     //group.bench_function("matrix multiplication", |b| b.iter(|| matrix_mut(&p, &q)));
     group.finish();
 }
