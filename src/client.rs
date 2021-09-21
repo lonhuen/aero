@@ -414,9 +414,6 @@ impl Client {
         //thread::sleep(Duration::from_secs(45));
         gradient
     }
-    //pub async fn download_proving_key(&mut self) -> Vec<u8> {
-    //    // also serialize here
-    //}
 }
 
 #[tokio::main]

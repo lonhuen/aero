@@ -5,8 +5,11 @@ pub mod node;
 use self::merkle::MerkleProof;
 use log::error;
 use node::{CommitEntry, SummationEntry, SummationLeaf, SummationNonLeaf};
+use rayon::prelude::*;
 use std::iter::FromIterator;
 use std::process::exit;
+
+use ark_std::{end_timer, start_timer};
 
 pub struct McTree {
     pub nr_real: u32,
@@ -40,12 +43,23 @@ impl McTree {
         } else {
             self.commit_array
                 .sort_by(|a, b| a.rsa_pk.partial_cmp(&b.rsa_pk).unwrap());
+            let gc = start_timer!(|| "hash of mc elements");
+            //{
+            //    self.mc = Some(MerkleTree::from_iter(
+            //        self.commit_array
+            //            .iter()
+            //            .map(|x| x.hash())
+            //            .chain((0..self.nr_sybil).into_iter().map(|_| [0u8; 32])),
+            //    ));
+            //}
             self.mc = Some(MerkleTree::from_iter(
                 self.commit_array
-                    .iter()
+                    .par_iter()
                     .map(|x| x.hash())
-                    .chain((0..self.nr_sybil).into_iter().map(|_| [0u8; 32])),
+                    .chain((0..self.nr_sybil).into_par_iter().map(|_| [0u8; 32]))
+                    .collect::<Vec<[u8; 32]>>(),
             ));
+            end_timer!(gc);
             true
         }
     }
@@ -140,9 +154,26 @@ impl MsTree {
                 left += 2;
                 right += 1;
             }
+            let gc = start_timer!(|| "gen tree of ms");
+            //self.ms = Some(MerkleTree::from_iter(
+            //    self.summation_array
+            //        .iter()
+            //        .map(|x| match x {
+            //            SummationEntry::Leaf(y) => y.hash(),
+            //            SummationEntry::NonLeaf(y) => y.hash(),
+            //            // just to make compiler happy
+            //            // never reach here
+            //            _ => {
+            //                error!("commitment in summation array");
+            //                [0u8; 32]
+            //            }
+            //        })
+            //        // TODO maybe more precise about the # of sybils here
+            //        .chain((0..(2 * self.nr_sybil)).into_iter().map(|_| [0u8; 32])),
+            //));
             self.ms = Some(MerkleTree::from_iter(
                 self.summation_array
-                    .iter()
+                    .par_iter()
                     .map(|x| match x {
                         SummationEntry::Leaf(y) => y.hash(),
                         SummationEntry::NonLeaf(y) => y.hash(),
@@ -154,8 +185,10 @@ impl MsTree {
                         }
                     })
                     // TODO maybe more precise about the # of sybils here
-                    .chain((0..(2 * self.nr_sybil)).into_iter().map(|_| [0u8; 32])),
+                    .chain((0..(2 * self.nr_sybil)).into_par_iter().map(|_| [0u8; 32]))
+                    .collect::<Vec<[u8; 32]>>(),
             ));
+            end_timer!(gc);
             true
         }
     }

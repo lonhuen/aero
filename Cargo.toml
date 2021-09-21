@@ -64,7 +64,6 @@ path = "src/board.rs"
 [features]
 default = [ "print-trace","hashfn_blake3"]
 hashfn_blake3=[]
-hashfn_sha3=[]
 json = []
 print-trace = [ "ark-std/print-trace" ]
 
