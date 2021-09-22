@@ -117,6 +117,7 @@ impl Client {
     // the whole aggregation phase (except the encryption)
     #[instrument(skip_all)]
     pub async fn upload(&mut self, xs: Vec<u8>, pvk: Vec<u8>) -> bool {
+        println!("rsa_pk len {:?}", self.rsa_pk.len());
         // set the deadline of the context
         let gc1 = start_timer!(|| "encrypt the gradients");
         // TODO the keys should be retrieved from the committee with signature
@@ -425,7 +426,7 @@ async fn main() -> anyhow::Result<()> {
     let start = start_timer!(|| "clients");
 
     let nr_real = config.get_int("nr_real") as u32;
-    //let nr_sybil = config.get_int("nr_sybil") as u32;
+    let nr_sim = config.get_int("nr_simulated") as u32;
     let nr_round = config.get_int("nr_round") as u32;
 
     let server_addr = (
@@ -463,7 +464,7 @@ async fn main() -> anyhow::Result<()> {
         end_timer!(rs);
 
         let vr = start_timer!(|| "verify the data");
-        client.verify(nr_real, 5).await;
+        client.verify(nr_real + nr_sim, 5).await;
         end_timer!(vr);
         end_timer!(sr);
     }

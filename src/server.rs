@@ -127,6 +127,7 @@ impl ServerService for InnerServer {
     type GetMcProofFut = Ready<MerkleProof>;
     // TODO for now assume only 1 round
     fn get_mc_proof(self, _: context::Context, rsa_pk: Vec<u8>, round: u32) -> Self::GetMcProofFut {
+        // TODO fix with condition variable
         loop {
             let mc = self.mc.as_ref().read().unwrap();
             if mc.commit_array.len() >= mc.nr_real as usize {
@@ -200,6 +201,7 @@ async fn main() -> anyhow::Result<()> {
     let _span = span!(Level::INFO, "Atom Server").entered();
 
     let nr_real = config.get_int("nr_real") as u32;
+    let nr_sim = config.get_int("nr_simulated") as u32;
     let nr_sybil = config.get_int("nr_sybil") as u32;
     let nr_parameter = config.get_int("nr_parameter") as u32;
 
@@ -208,8 +210,8 @@ async fn main() -> anyhow::Result<()> {
         config.get_int("server_port") as u16,
     );
 
-    let mc = McTree::new(nr_real, nr_sybil);
-    let ms = MsTree::new(nr_real, nr_sybil);
+    let mc = McTree::new(nr_real + nr_sim, nr_sybil);
+    let ms = MsTree::new(nr_real + nr_sim, nr_sybil);
     let prover = Prover::setup("./data/encryption.txt");
     let pvk = prover.serialize_pvk();
     let verifier = Verifier::new(&prover);
