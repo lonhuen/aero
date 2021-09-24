@@ -14,7 +14,7 @@ use ark_std::{end_timer, start_timer};
 extern crate blake3;
 #[cfg(not(feature = "hashfn_blake3"))]
 use crypto::{digest::Digest, sha3::Sha3};
-use tracing::{error, event, info, instrument, span, warn, Level};
+use tracing::{error, event, instrument, span, warn, Level};
 
 use rand::{Rng, SeedableRng};
 use rsa::{pkcs8::ToPublicKey, RsaPrivateKey, RsaPublicKey};
@@ -27,6 +27,7 @@ use std::{thread, time};
 use tarpc::{client, context, tokio_serde::formats::Bincode};
 mod rlwe;
 use rlwe::PublicKey;
+use tracing_subscriber::filter::LevelFilter;
 
 const DEADLINE_TIME: u64 = 600;
 const NUM_DIMENSION: u32 = 4096;
@@ -68,17 +69,17 @@ impl LightClient {
         rand::thread_rng().gen::<[u8; 32]>()
     }
 
-    pub async fn train_model(&self) {
+    pub async fn train_model(&self, round: u32) {
         let rm = start_timer!(|| "retrieve the model");
         for _ in 0..self.nr_lc as usize {
             let mut ctx = context::current();
             ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
-            let _ = self.inner.retrieve_model(ctx).await;
+            let _ = self.inner.retrieve_model(ctx, round).await;
         }
         end_timer!(rm);
     }
 
-    pub async fn upload(&self) {
+    pub async fn upload(&self, round: u32) {
         // set the deadline of the context
         // generate commitment to all the CTs
         let cm = Self::random_hash();
@@ -90,7 +91,7 @@ impl LightClient {
             ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
             let _ = self
                 .inner
-                .aggregate_commit(ctx, self.rsa_pk[i].clone(), cm)
+                .aggregate_commit(ctx, round, self.rsa_pk[i].clone(), cm)
                 .await;
         }
         // get all the mc_proof
@@ -99,7 +100,7 @@ impl LightClient {
             ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
             let _ = self
                 .inner
-                .get_mc_proof(ctx, self.rsa_pk[i].clone(), 0u32)
+                .get_mc_proof(ctx, round, self.rsa_pk[i].clone())
                 .await;
         }
 
@@ -111,6 +112,7 @@ impl LightClient {
                 .inner
                 .aggregate_data(
                     ctx,
+                    round,
                     self.rsa_pk[i].clone(),
                     self.cts.clone(),
                     self.nonce,
@@ -125,7 +127,7 @@ impl LightClient {
             ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
             let _ = self
                 .inner
-                .get_ms_proof(ctx, self.rsa_pk[i].clone(), 0u32)
+                .get_ms_proof(ctx, round, self.rsa_pk[i].clone())
                 .await;
         }
     }
@@ -137,9 +139,10 @@ async fn main() -> anyhow::Result<()> {
     init_tracing(
         &format!("LightWeight Atom client {}", std::process::id()),
         config.get_agent_endpoint(),
+        LevelFilter::WARN,
     )?;
 
-    let _span = span!(Level::INFO, "LightWeight Atom Client").entered();
+    let _span = span!(Level::WARN, "LightWeight Atom Client").entered();
 
     let start = start_timer!(|| "clients");
 
@@ -161,15 +164,15 @@ async fn main() -> anyhow::Result<()> {
         ServerServiceClient::new(client::Config::default(), transport.await?).spawn();
     let mut client = LightClient::new(inner_client, nr_lc, nr_parameter);
 
-    for _ in 0..nr_round {
+    for i in 0..nr_round {
         // begin uploading
         let sr = start_timer!(|| "one round");
         let train = start_timer!(|| "train model");
-        client.train_model().await;
+        client.train_model(i).await;
         end_timer!(train);
 
         let rs = start_timer!(|| "upload data");
-        let _ = client.upload().await;
+        let _ = client.upload(i).await;
         end_timer!(rs);
 
         //let vr = start_timer!(|| "verify the data");

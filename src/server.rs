@@ -1,24 +1,28 @@
 use ark_groth16::verifier;
+
 use futures::{
-    future::{self, Ready},
+    future::{self, Join, Ready},
     prelude::*,
 };
 use quail::zksnark::{Prover, Verifier};
 use rand::{Rng, SeedableRng};
+use rayon::{ThreadPool, ThreadPoolBuilder};
 use std::{
     convert::Into,
     net::{IpAddr, SocketAddr},
-    sync::{Arc, RwLock},
+    sync::{Arc, Mutex, RwLock},
     thread::sleep,
     time::Duration,
 };
-use tracing::{error, event, info, instrument, span, warn, Level};
-
 use tarpc::{
     context,
-    server::{self, Channel, Incoming},
+    server::{self, incoming::Incoming, Channel},
     tokio_serde::formats::Bincode,
 };
+use tokio::sync::Notify;
+use tokio::task::JoinHandle;
+use tracing::{error, event, instrument, span, warn, Level};
+use tracing_subscriber::filter::LevelFilter;
 mod common;
 use crate::common::{
     aggregation::{
@@ -28,12 +32,18 @@ use crate::common::{
     },
     server_service::ServerService,
 };
+
 mod util;
 use crate::util::{config::ConfigUtils, log::init_tracing};
+mod back_server;
+use back_server::Server;
+
+#[derive(Debug, Clone, Copy)]
+#[repr(u8)]
 pub enum STATE {
-    Commit,
-    Data,
-    Verify,
+    Commit(u32),
+    Data(u32),
+    Verify(u32),
 }
 //pub struct Server {
 //    pub commit_array: BTreeMap<Vec<u8>, MerkleHash>,
@@ -58,147 +68,99 @@ pub enum STATE {
 #[derive(Clone)]
 pub struct InnerServer {
     addr: SocketAddr,
-    mc: Arc<RwLock<McTree>>,
-    ms: Arc<RwLock<MsTree>>,
-    nr_parameter: u32,
-    pvk: Arc<Vec<u8>>,
-    verifier: Arc<Verifier>,
+    pool: Arc<ThreadPool>,
+    server: Server,
 }
 impl InnerServer {
-    pub fn new(
-        addr: SocketAddr,
-        mc: &Arc<RwLock<McTree>>,
-        ms: &Arc<RwLock<MsTree>>,
-        nr_parameter: u32,
-        pvk: &Arc<Vec<u8>>,
-        verifier: &Arc<Verifier>,
-    ) -> Self {
+    pub fn new(addr: SocketAddr, pool: &Arc<ThreadPool>, server: &Server) -> Self {
         Self {
             addr,
-            mc: mc.clone(),
-            ms: ms.clone(),
-            nr_parameter,
-            pvk: pvk.clone(),
-            verifier: verifier.clone(),
+            pool: pool.clone(),
+            server: server.clone(),
         }
     }
 }
 #[tarpc::server]
 impl ServerService for InnerServer {
-    type RetrieveModelFut = Ready<Vec<u8>>;
-    fn aggregate_commit(
+    //type AggregateCommitFut = Ready<()>;
+    async fn aggregate_commit(
         self,
         _: context::Context,
+        round: u32,
         rsa_pk: Vec<u8>,
         commitment: [u8; 32],
-    ) -> Self::AggregateCommitFut {
-        // wait for enough commitments
-        // TODO maybe wait for some time rather than some # of commitments
-        // TODO to fix: should check if duplicate commitments come
-        let mut mc = self.mc.as_ref().write().unwrap();
-        mc.insert_node(CommitEntry {
-            rsa_pk,
-            hash: commitment,
-        });
-        mc.gen_tree();
-        drop(mc);
-        future::ready(())
+    ) {
+        self.pool
+            .as_ref()
+            .install(|| self.server.aggregate_commit(round, rsa_pk, commitment))
     }
 
-    type AggregateDataFut = Ready<()>;
-    fn aggregate_data(
+    async fn aggregate_data(
         self,
         _: context::Context,
+        round: u32,
         rsa_pk: Vec<u8>,
         cts: Vec<i128>,
         nonce: [u8; 16],
         proofs: Vec<u8>,
-    ) -> Self::AggregateDataFut {
-        // TODO also verify the proof
-        let mut ms = self.ms.as_ref().write().unwrap();
-        ms.insert_node(SummationLeaf::from_ct(rsa_pk, cts, nonce));
-        if ms.gen_tree() {
-            info!("root {:?}", ms.get_root())
-        }
-        drop(ms);
-        future::ready(())
+    ) {
+        self.pool.as_ref().install(|| {
+            self.server
+                .aggregate_data(round, rsa_pk, cts, nonce, proofs)
+        });
     }
 
-    type GetMcProofFut = Ready<MerkleProof>;
+    //type GetMcProofFut = Ready<MerkleProof>;
     // TODO for now assume only 1 round
-    fn get_mc_proof(self, _: context::Context, rsa_pk: Vec<u8>, round: u32) -> Self::GetMcProofFut {
-        // TODO fix with condition variable
-        loop {
-            let mc = self.mc.as_ref().read().unwrap();
-            if mc.commit_array.len() >= mc.nr_real as usize {
-                break;
-            }
-            drop(mc);
-            sleep(Duration::from_millis(100));
-        }
-        let mc = self.mc.as_ref().read().unwrap();
-        future::ready(mc.get_proof(&rsa_pk))
+    async fn get_mc_proof(self, _: context::Context, round: u32, rsa_pk: Vec<u8>) -> MerkleProof {
+        self.pool
+            .as_ref()
+            .install(|| self.server.get_mc_proof(round, rsa_pk))
     }
 
-    type GetMsProofFut = Ready<MerkleProof>;
-    fn get_ms_proof(self, _: context::Context, rsa_pk: Vec<u8>, round: u32) -> Self::GetMsProofFut {
-        loop {
-            let ms = self.ms.as_ref().read().unwrap();
-            if ms.summation_array.len() >= ms.nr_real as usize {
-                break;
-            }
-            drop(ms);
-            sleep(Duration::from_millis(100));
-        }
-        let ms = self.ms.as_ref().read().unwrap();
-        future::ready(ms.get_proof(&rsa_pk))
+    //type GetMsProofFut = Ready<MerkleProof>;
+    async fn get_ms_proof(self, _: context::Context, round: u32, rsa_pk: Vec<u8>) -> MerkleProof {
+        self.pool
+            .as_ref()
+            .install(|| self.server.get_ms_proof(round, rsa_pk))
     }
 
-    type VerifyFut = Ready<Vec<(SummationEntry, MerkleProof)>>;
-    fn verify(self, _: context::Context, vinit: u32, non_leaf_id: Vec<u32>) -> Self::VerifyFut {
-        // TODO the client should call get_ms_proof before verify. Fix this for SGD
-        //first all the leafs
-        let mut ret: Vec<(SummationEntry, MerkleProof)> = Vec::new();
-        let ms = self.ms.as_ref().read().unwrap();
-        let mc = self.mc.as_ref().read().unwrap();
-        for i in 0..5 + 1 {
-            let node = ms.get_leaf_node(i + vinit);
-            if let SummationEntry::Leaf(_) = node {
-                let mc_proof: MerkleProof = mc.get_proof_by_id(i + vinit).into();
-                let ms_proof: MerkleProof = ms.get_proof_by_id(i + vinit).into();
-                ret.push((SummationEntry::Commit(mc.get_node(i + vinit)), mc_proof));
-                ret.push((node, ms_proof));
-            } else {
-                warn!("Atom: verify not a leaf node");
-            }
-        }
-        for i in non_leaf_id {
-            let ms_proof: MerkleProof = ms.get_proof_by_id(i).into();
-            ret.push((ms.get_nonleaf_node(i), ms_proof));
-        }
-        future::ready(ret)
+    //type VerifyFut = Ready<Vec<(SummationEntry, MerkleProof)>>;
+    async fn verify(
+        self,
+        _: context::Context,
+        vinit: u32,
+        non_leaf_id: Vec<u32>,
+    ) -> Vec<(SummationEntry, MerkleProof)> {
+        self.pool
+            .as_ref()
+            .install(|| self.server.verify(vinit, non_leaf_id))
     }
 
-    type AggregateCommitFut = Ready<()>;
-    fn retrieve_model(self, _: context::Context) -> Self::RetrieveModelFut {
-        self.mc.as_ref().write().unwrap().clear();
-        self.ms.as_ref().write().unwrap().clear();
-        let mut rng = rand::rngs::StdRng::from_entropy();
-        future::ready((0..self.nr_parameter).map(|_| rng.gen::<u8>()).collect())
+    //type RetrieveModelFut = Ready<Vec<u8>>;
+    async fn retrieve_model(self, _: context::Context, round: u32) -> Vec<u8> {
+        self.pool
+            .as_ref()
+            .install(|| self.server.retrieve_model(round))
     }
 
-    type RetrieveProvingKeyFut = Ready<Vec<u8>>;
-    fn retrieve_proving_key(self, _: context::Context) -> Self::RetrieveModelFut {
-        //future::ready(self.pvk.as_ref().clone())
-        future::ready(vec![0u8; 1])
+    //type RetrieveProvingKeyFut = Ready<Vec<u8>>;
+    async fn retrieve_proving_key(self, _: context::Context, round: u32) -> Vec<u8> {
+        self.pool
+            .as_ref()
+            .install(|| self.server.retrieve_proving_key(round))
     }
 }
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let config = ConfigUtils::init("config.ini");
-    init_tracing("Atom Server", config.get_agent_endpoint())?;
+    init_tracing(
+        "Atom Server",
+        config.get_agent_endpoint(),
+        LevelFilter::WARN,
+    )?;
 
-    let _span = span!(Level::INFO, "Atom Server").entered();
+    let _span = span!(Level::WARN, "Atom Server").entered();
 
     let nr_real = config.get_int("nr_real") as u32;
     let nr_sim = config.get_int("nr_simulated") as u32;
@@ -210,19 +172,22 @@ async fn main() -> anyhow::Result<()> {
         config.get_int("server_port") as u16,
     );
 
-    let mc = McTree::new(nr_real + nr_sim, nr_sybil);
-    let ms = MsTree::new(nr_real + nr_sim, nr_sybil);
-    let prover = Prover::setup("./data/encryption.txt");
-    let pvk = prover.serialize_pvk();
-    let verifier = Verifier::new(&prover);
+    //let mc = McTree::new(nr_real + nr_sim, nr_sybil);
+    //let ms = MsTree::new(nr_real + nr_sim, nr_sybil);
+    //let prover = Prover::setup("./data/encryption.txt");
+    //let pvk = prover.serialize_pvk();
+    //let verifier = Verifier::new(&prover);
 
-    drop(prover);
+    //drop(prover);
 
-    let mc_ref = Arc::new(RwLock::new(mc));
-    let ms_ref = Arc::new(RwLock::new(ms));
+    //let mc_ref = Arc::new(RwLock::new(mc));
+    //let ms_ref = Arc::new(RwLock::new(ms));
 
-    let prover_ref = Arc::new(pvk);
-    let verifier_ref = Arc::new(verifier);
+    //let prover_ref = Arc::new(pvk);
+    //let verifier_ref = Arc::new(verifier);
+
+    let pool = Arc::new(ThreadPoolBuilder::new().num_threads(8).build().unwrap());
+    let server = Server::setup(nr_real, nr_sim, nr_sybil, nr_parameter, &pool);
 
     #[cfg(feature = "json")]
     let mut listener = tarpc::serde_transport::tcp::listen(&server_addr, Json::default).await?;
@@ -236,19 +201,11 @@ async fn main() -> anyhow::Result<()> {
         // Ignore accept errors.
         .filter_map(|r| future::ready(r.ok()))
         .map(server::BaseChannel::with_defaults)
-        .max_channels_per_key(999, |t| t.transport().peer_addr().unwrap().ip())
-        // serve is generated by the service attribute. It takes as input any type implementing
-        // the generated World trait.
         .map(|channel| {
-            let inner_server = InnerServer::new(
-                channel.transport().peer_addr().unwrap(),
-                &mc_ref,
-                &ms_ref,
-                nr_parameter,
-                &prover_ref,
-                &verifier_ref,
-            );
+            let inner_server =
+                InnerServer::new(channel.transport().peer_addr().unwrap(), &pool, &server);
             channel.execute(inner_server.serve())
+            //tokio::spawn(channel.execute(inner_server.serve()))
         })
         // Max 100 channels.
         .buffer_unordered(999)

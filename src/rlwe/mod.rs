@@ -75,7 +75,7 @@ impl PublicKey {
     /// message will be consumed
     pub fn encrypt(
         &self,
-        m: Vec<u8>,
+        m: &[u8],
     ) -> (
         Vec<i128>,
         Vec<i128>,

@@ -37,76 +37,26 @@
 //    println!("hello world!");
 //}
 //
-mod rlwe;
-use crate::rlwe::PublicKey;
-use rayon::iter::repeatn;
-use rayon::prelude::*;
-use std::{
-    fs::File,
-    io::{prelude::*, BufReader},
-};
+use std::sync::Arc;
+use tokio::sync::Notify;
 
-fn add_two_vec(a: Option<&Vec<i128>>, b: Option<&Vec<i128>>) -> Vec<i128> {
-    let tmp = Vec::<i128>::new();
-    let left = a.unwrap_or(&tmp);
-    let right = b.unwrap_or(&tmp);
-    let (longer, shorter) = if left.len() > right.len() {
-        (left, right)
-    } else {
-        (right, left)
-    };
-    shorter
-        .par_iter()
-        .chain(repeatn(&0i128, longer.len() - shorter.len()))
-        .zip(longer.par_iter())
-        .map(|(x, y)| x + y)
-        .collect()
-}
+#[tokio::main]
+async fn main() {
+    let notify = Arc::new(Notify::new());
+    let notify2 = notify.clone();
 
-fn main() {
-    let pk = {
-        let mut pk_0 = [0i128; 4096];
-        let mut pk_1 = [0i128; 4096];
-        let file = match File::open("./data/encryption.txt") {
-            Ok(f) => f,
-            Err(_) => panic!(),
-        };
-        let reader = BufReader::new(file);
-        for line in reader.lines() {
-            if let Ok(l) = line {
-                let vec = l.split(" ").collect::<Vec<&str>>();
-                for i in 1..vec.len() {
-                    if l.contains("pk_0") {
-                        if let Ok(x) = i128::from_str_radix(vec[i], 10) {
-                            pk_0[i - 1] = x;
-                        }
-                    } else if l.contains("pk_1") {
-                        if let Ok(x) = i128::from_str_radix(vec[i], 10) {
-                            pk_1[i - 1] = x;
-                        }
-                    }
-                }
-            }
-        }
-        PublicKey::new(&pk_0.to_vec(), &pk_1.to_vec())
-    };
-    pk.encrypt([0u8; 4096].to_vec());
-    // Hash an input all at once.
-    let hash1 = blake3::hash(b"foobarbaz");
+    let notified1 = notify.notified();
+    let notified2 = notify.notified();
 
-    // Hash an input incrementally.
-    let mut hasher = blake3::Hasher::new();
-    hasher.update(b"foo");
-    hasher.update(b"bar");
-    hasher.update(b"baz");
-    let hash2: [u8; 32] = hasher.finalize().into();
-    println!("{:?}", hash2);
-    //let a = None;
-    let a = vec![1i128; 4096];
-    let d = Some(vec![2i128; 4096]);
-    let b = None;
-    let c = add_two_vec(Some(&a), d.as_ref());
-    println!("{:?}", c);
-    let c = add_two_vec(b, Some(&a));
-    println!("{:?}", c);
+    let handle = tokio::spawn(async move {
+        println!("sending notifications");
+        notify2.notify_waiters();
+    });
+
+    notified1.await;
+    notified2.await;
+    println!("received notifications");
+    let notified3 = notify.notified();
+    notified3.await;
+    println!("received 3rd notifications");
 }

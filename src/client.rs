@@ -14,7 +14,7 @@ use ark_std::{end_timer, start_timer};
 extern crate blake3;
 #[cfg(not(feature = "hashfn_blake3"))]
 use crypto::{digest::Digest, sha3::Sha3};
-use tracing::{error, event, info, instrument, span, warn, Level};
+use tracing::{error, event, instrument, span, warn, Level};
 
 use rand::{Rng, SeedableRng};
 use rsa::{pkcs8::ToPublicKey, RsaPrivateKey, RsaPublicKey};
@@ -25,6 +25,7 @@ use std::{fs::File, io::BufReader, net::IpAddr};
 use std::{io::BufRead, process::id};
 use std::{thread, time};
 use tarpc::{client, context, tokio_serde::formats::Bincode};
+use tracing_subscriber::filter::LevelFilter;
 mod rlwe;
 use rlwe::PublicKey;
 
@@ -77,7 +78,7 @@ impl Client {
         self.d1s.clear();
     }
 
-    #[instrument(skip_all)]
+    #[instrument(level = "warn", skip_all)]
     pub fn encrypt(&mut self, xs: Vec<u8>, pk0: &Vec<i128>, pk1: &Vec<i128>) {
         let gc = start_timer!(|| "new public key");
         let rlwe_pk = Arc::new(PublicKey::new(pk0, pk1));
@@ -86,18 +87,19 @@ impl Client {
         for i in 0..xs.len() / NUM_DIMENSION as usize {
             let (r, e0, e1, d0, d1, ct) = rlwe_pk
                 .as_ref()
-                .encrypt(xs[i * NUM_DIMENSION as usize..(i + 1) * NUM_DIMENSION as usize].to_vec());
+                .encrypt(&xs[i * NUM_DIMENSION as usize..(i + 1) * NUM_DIMENSION as usize]);
             self.rs.extend(r);
             self.e0s.extend(e0);
             self.e1s.extend(e1);
             self.d0s.extend(d0);
             self.d1s.extend(d1);
-            self.c1s.extend(ct.c_0);
+            self.c0s.extend(ct.c_0);
             self.c1s.extend(ct.c_1);
         }
     }
-    #[instrument(skip_all)]
+    #[instrument(level = "warn", skip_all)]
     pub fn generate_proof(&self, pvk: Vec<u8>) -> Vec<Vec<u8>> {
+        let gc = start_timer!(|| "start proof generation");
         let mut rng = rand::rngs::StdRng::from_entropy();
         let mut ret: Vec<Vec<u8>> =
             Vec::with_capacity(self.c0s.len() / NUM_DIMENSION as usize * 192);
@@ -111,13 +113,13 @@ impl Client {
         // TODO fix this. we just need encryption keys
         // TODO modify the groth16 library to prove in batch
         // let prover = Prover::new("data/encryption.txt", pvk);
+        end_timer!(gc);
         ret
     }
 
     // the whole aggregation phase (except the encryption)
-    #[instrument(skip_all)]
-    pub async fn upload(&mut self, xs: Vec<u8>, pvk: Vec<u8>) -> bool {
-        println!("rsa_pk len {:?}", self.rsa_pk.len());
+    #[instrument(level = "warn", skip_all)]
+    pub async fn upload(&mut self, round: u32, xs: Vec<u8>, pvk: Vec<u8>) -> bool {
         // set the deadline of the context
         let gc1 = start_timer!(|| "encrypt the gradients");
         // TODO the keys should be retrieved from the committee with signature
@@ -160,9 +162,9 @@ impl Client {
             ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
             let _ = self
                 .inner
-                .aggregate_commit(ctx, self.rsa_pk.clone(), cm)
+                .aggregate_commit(ctx, round, self.rsa_pk.clone(), cm)
                 .await;
-            self.inner.get_mc_proof(ctx, self.rsa_pk.clone(), 0u32)
+            self.inner.get_mc_proof(ctx, round, self.rsa_pk.clone())
         };
         // while waiting for the commitment, compute the zkproof
         let proofs = self.generate_proof(pvk);
@@ -187,9 +189,16 @@ impl Client {
             ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
             let _ = self
                 .inner
-                .aggregate_data(ctx, self.rsa_pk.clone(), cts_bytes, self.nonce, proof_bytes)
+                .aggregate_data(
+                    ctx,
+                    round,
+                    self.rsa_pk.clone(),
+                    cts_bytes,
+                    self.nonce,
+                    proof_bytes,
+                )
                 .await;
-            self.inner.get_ms_proof(ctx, self.rsa_pk.clone(), 0u32)
+            self.inner.get_ms_proof(ctx, round, self.rsa_pk.clone())
         };
 
         let ms_proof = result_data.await.unwrap().to_proof();
@@ -202,7 +211,7 @@ impl Client {
         //    let mut h = [0u8; 32];
         //    hasher.result(&mut h);
         //    let mut x = HashAlgorithm::new();
-        //    info!("hash {:?}", x.leaf(h));
+        //    warn!("hash {:?}", x.leaf(h));
         //}
         ms_proof.validate::<HashAlgorithm>() && mc_proof.validate::<HashAlgorithm>()
     }
@@ -230,6 +239,7 @@ impl Client {
         hasher.finalize().into()
     }
 
+    //TODO maybe fix when "# of clients < s"
     pub fn get_random_non_leafs(n: u32, s: u32, vinit: u32) -> Vec<u32> {
         let mut rng = rand::rngs::StdRng::from_entropy();
         // [0..N): leafs
@@ -282,7 +292,7 @@ impl Client {
 
     // this N should be known from the board
     // s has to be at least 1
-    #[instrument(skip_all)]
+    #[instrument(level = "warn", skip_all)]
     pub async fn verify(&self, n: u32, s: u32) {
         let gc = start_timer!(|| "verify");
 
@@ -394,13 +404,13 @@ impl Client {
         end_timer!(gc2);
     }
 
-    #[instrument(skip(self))]
-    pub async fn train_model(&mut self) -> Vec<u8> {
+    #[instrument(level = "warn", skip_all)]
+    pub async fn train_model(&mut self, round: u32) -> Vec<u8> {
         let rm = start_timer!(|| "retrieve the model");
         let gradient = {
             let mut ctx = context::current();
             ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
-            self.inner.retrieve_model(ctx)
+            self.inner.retrieve_model(ctx, round)
         }
         .await
         .unwrap();
@@ -419,9 +429,10 @@ async fn main() -> anyhow::Result<()> {
     init_tracing(
         &format!("Atom client {}", std::process::id()),
         config.get_agent_endpoint(),
+        LevelFilter::WARN,
     )?;
 
-    let _span = span!(Level::INFO, "Atom Client").entered();
+    let _span = span!(Level::WARN, "Atom Client").entered();
 
     let start = start_timer!(|| "clients");
 
@@ -447,20 +458,20 @@ async fn main() -> anyhow::Result<()> {
         ServerServiceClient::new(client::Config::default(), pvk_transport.await?).spawn();
     let mut client = Client::new(inner_client);
 
-    for _ in 0..nr_round {
+    for i in 0..nr_round {
         // begin uploading
         let sr = start_timer!(|| "one round");
         let train = start_timer!(|| "train model");
         let pvk = {
             let mut ctx = context::current();
             ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
-            pvk_client.retrieve_proving_key(ctx)
+            pvk_client.retrieve_proving_key(ctx, i)
         };
-        let data = client.train_model().await;
+        let data = client.train_model(i).await;
         end_timer!(train);
 
         let rs = start_timer!(|| "upload data");
-        let result = client.upload(data, pvk.await.unwrap()).await;
+        let result = client.upload(i, data, pvk.await.unwrap()).await;
         end_timer!(rs);
 
         let vr = start_timer!(|| "verify the data");
