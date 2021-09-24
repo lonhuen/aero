@@ -18,7 +18,11 @@ pub trait ServerService {
     /// Get the inclusion proof of a node inside the summation merkle tree
     async fn get_ms_proof(round: u32, rsa_pk: Vec<u8>) -> MerkleProof;
 
-    async fn verify(vinit: u32, non_leaf_id: Vec<u32>) -> Vec<(SummationEntry, MerkleProof)>;
+    async fn verify(
+        round: u32,
+        vinit: u32,
+        non_leaf_id: Vec<u32>,
+    ) -> Vec<(SummationEntry, MerkleProof)>;
 
     async fn retrieve_model(round: u32) -> Vec<u8>;
     async fn retrieve_proving_key(round: u32) -> Vec<u8>;

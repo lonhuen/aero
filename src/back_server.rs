@@ -18,13 +18,17 @@ use tracing::{error, event, instrument, span, warn, Level};
 
 use crate::util::{config::ConfigUtils, log::init_tracing};
 
+// 2 hours
+const WAITTIME: u64 = 7200;
+
 #[derive(Debug, Clone, Copy)]
 #[repr(u8)]
-pub enum STATE {
-    Commit(u32),
-    Data(u32),
-    Verify(u32),
+pub enum STAGE {
+    Commit,
+    Data,
+    Verify,
 }
+pub type STATE = (STAGE, u32);
 #[derive(Clone)]
 pub struct Server {
     mc: Arc<RwLock<McTree>>,
@@ -61,19 +65,10 @@ impl Server {
         let mc_ref = Arc::new(RwLock::new(mc));
         let ms_ref = Arc::new(RwLock::new(ms));
 
-        let cond = Arc::new((Mutex::new(STATE::Commit(0)), Condvar::new()));
-        let timer_cond = Arc::new((Mutex::new(STATE::Commit(0)), Condvar::new()));
-        let timer_mc = Arc::new((Mutex::new(STATE::Commit(0)), Condvar::new()));
+        let cond = Arc::new((Mutex::new((STAGE::Commit, 0)), Condvar::new()));
+        //let timer_cond = cond.clone();
 
-        let canceller = Timer::after(Duration::from_secs(10), move |_| {
-            let (lock, cvar) = &*timer_cond;
-            let mut state = lock.lock().unwrap();
-            if let STATE::Commit(x) = *state {
-                *state = STATE::Data(x);
-                cvar.notify_all();
-            }
-        })
-        .unwrap();
+        let canceller = Timer::after(Duration::from_secs(WAITTIME), move |_| {}).unwrap();
 
         Self {
             mc: mc_ref,
@@ -88,13 +83,27 @@ impl Server {
     }
 
     #[instrument(level = "warn", skip_all)]
-    pub fn next_stage_to(&self, target: STATE) {
+    pub fn next_stage_to(&self, target: STAGE) {
         let (lock, cvar) = &*self.cond;
         let mut state = lock.lock().unwrap();
-        match (*state, target) {
-            (STATE::Commit(x), STATE::Data(_)) => *state = STATE::Data(x),
-            (STATE::Data(x), STATE::Verify(_)) => *state = STATE::Verify(x),
-            (STATE::Verify(x), STATE::Commit(_)) => *state = STATE::Commit(x + 1),
+        match (state.0, target) {
+            (STAGE::Commit, STAGE::Data) => {
+                //let _ = self.canceller.as_ref().read().unwrap().cancel();
+                //self.next_stage_to(STAGE::Data);
+                //let cond = self.cond.clone();
+                //let canceller = Timer::after(Duration::from_secs(WAITTIME), move |_| {
+                //    let (lock, cvar) = &*cond.clone();
+                //    let mut state = lock.lock().unwrap();
+                //    if let STATE::Data(x) = *state {
+                //        *state = STATE::Verify(x);
+                //        cvar.notify_all();
+                //    }
+                //})
+                //.unwrap();
+                *state = (STAGE::Data, state.1);
+            }
+            (STAGE::Data, STAGE::Verify) => *state = (STAGE::Verify, state.1),
+            (STAGE::Verify, STAGE::Commit) => *state = (STAGE::Commit, state.1 + 1),
             _ => {}
         };
         warn!("Server move to stage {:?}", *state);
@@ -113,17 +122,23 @@ impl Server {
     //    warn!("Server move to stage {:?}", *state);
     //    cvar.notify_all();
     //}
+    /// wait till target stage; if exceed, return false
     #[instrument(level = "warn", skip_all)]
-    pub fn wait_till(&self, target: STATE) {
+    pub fn wait_till(&self, target: STAGE, round: u32) -> bool {
         let (lock, cvar) = &*self.cond;
         let mut state = lock.lock().unwrap();
-        loop {
-            match (*state, target) {
-                (STATE::Commit(_), STATE::Commit(_)) => break,
-                (STATE::Data(_), STATE::Data(_)) => break,
-                (STATE::Verify(_), STATE::Verify(_)) => break,
-                _ => {
-                    state = cvar.wait(state).unwrap();
+        if round != state.1 && state.1 + 1 != round {
+            false
+        } else {
+            loop {
+                match (state.0, target) {
+                    (STAGE::Commit, STAGE::Commit) => return true,
+                    (STAGE::Data, STAGE::Data) => return true,
+                    (STAGE::Verify, STAGE::Verify) => return true,
+                    _ => {
+                        warn!("in {:?}{:?} wait {:?}{:?}", state.0, state.1, target, round);
+                        state = cvar.wait(state).unwrap();
+                    }
                 }
             }
         }
@@ -135,7 +150,11 @@ impl Server {
         // TODO to fix: should check if duplicate commitments come
         // TODO maybe wait for some time rather than some # of commitments
         // TODO fix this
-        self.wait_till(STATE::Commit(0));
+        let ret = self.wait_till(STAGE::Commit, round);
+        // data from previous round
+        if !ret {
+            return;
+        }
         let flag = {
             let mut mc = self.mc.as_ref().write().unwrap();
             mc.insert_node(CommitEntry {
@@ -146,19 +165,19 @@ impl Server {
         };
         // if we've got enough elements, move to next stage
         if flag {
-            let _ = self.canceller.as_ref().read().unwrap().cancel();
-            self.next_stage_to(STATE::Data(0));
-            let cond = self.cond.clone();
-            let canceller = Timer::after(Duration::from_secs(10), move |_| {
-                let (lock, cvar) = &*cond.clone();
-                let mut state = lock.lock().unwrap();
-                if let STATE::Data(x) = *state {
-                    *state = STATE::Verify(x);
-                    cvar.notify_all();
-                }
-            })
-            .unwrap();
-            *self.canceller.as_ref().write().unwrap() = canceller;
+            //let _ = self.canceller.as_ref().read().unwrap().cancel();
+            self.next_stage_to(STAGE::Data);
+            //let cond = self.cond.clone();
+            //let canceller = Timer::after(Duration::from_secs(WAITTIME), move |_| {
+            //    let (lock, cvar) = &*cond.clone();
+            //    let mut state = lock.lock().unwrap();
+            //    if let STAGE::Data = state.0 {
+            //        *state = (STAGE::Verify, state.1);
+            //        cvar.notify_all();
+            //    }
+            //})
+            //.unwrap();
+            //*self.canceller.as_ref().write().unwrap() = canceller;
         }
     }
 
@@ -171,7 +190,10 @@ impl Server {
         nonce: [u8; 16],
         proofs: Vec<u8>,
     ) {
-        self.wait_till(STATE::Data(round));
+        let ret = self.wait_till(STAGE::Data, round);
+        if !ret {
+            return;
+        }
         // TODO also verify the proof
         let flag = {
             let mut ms = self.ms.as_ref().write().unwrap();
@@ -180,45 +202,74 @@ impl Server {
             ms.gen_tree()
         };
         if flag {
-            let _ = self.canceller.as_ref().read().unwrap().cancel();
-            self.next_stage_to(STATE::Verify(0));
-            let cond = self.cond.clone();
-            let mc = self.ms.clone();
-            let ms = self.mc.clone();
-            let canceller = Timer::after(Duration::from_secs(10), move |_| {
-                let (lock, cvar) = &*cond.clone();
-                let mut state = lock.lock().unwrap();
-                if let STATE::Verify(x) = *state {
-                    ms.write().unwrap().clear();
-                    mc.write().unwrap().clear();
-                    *state = STATE::Commit(x + 1);
-                    cvar.notify_all();
-                }
-            })
-            .unwrap();
-            *self.canceller.as_ref().write().unwrap() = canceller;
+            //let _ = self.canceller.as_ref().read().unwrap().cancel();
+            //self.next_stage_to(STAGE::Verify);
+            self.next_stage_to(STAGE::Verify);
+            self.ms.write().unwrap().clear();
+            self.mc.write().unwrap().clear();
+            self.next_stage_to(STAGE::Commit);
+            //let cond = self.cond.clone();
+            //let mc = self.ms.clone();
+            //let ms = self.mc.clone();
+            //let canceller = Timer::after(Duration::from_secs(10), move |_| {
+            //    let (lock, cvar) = &*cond.clone();
+            //    let mut state = lock.lock().unwrap();
+            //    if let STAGE::Verify = state.0 {
+            //        ms.write().unwrap().clear();
+            //        mc.write().unwrap().clear();
+            //        *state = (STAGE::Commit, state.1 + 1);
+            //        //println!("Server move to stage {:?}", *state);
+            //        warn!("Server move to stage {:?}", *state);
+            //        cvar.notify_all();
+            //    }
+            //})
+            //.unwrap();
+            //*self.canceller.as_ref().write().unwrap() = canceller;
         }
     }
 
     //type GetMcProofFut = Ready<MerkleProof>;
-    // TODO for now assume only 1 round
     pub fn get_mc_proof(&self, round: u32, rsa_pk: Vec<u8>) -> MerkleProof {
         // TODO fix with condition variable
-        let _ = self.wait_till(STATE::Data(0));
+        let ret = self.wait_till(STAGE::Data, round);
+        if !ret {
+            return MerkleProof {
+                lemma: Vec::new(),
+                path: Vec::new(),
+            };
+        }
         let mc = self.mc.as_ref().read().unwrap();
         mc.get_proof(&rsa_pk)
     }
 
     //type GetMsProofFut = Ready<MerkleProof>;
     pub fn get_ms_proof(&self, round: u32, rsa_pk: Vec<u8>) -> MerkleProof {
-        self.wait_till(STATE::Verify(0));
-        let ms = self.ms.as_ref().read().unwrap();
-        ms.get_proof(&rsa_pk)
+        //let ret = self.wait_till(STAGE::Verify, round);
+        //if !ret {
+        //    return MerkleProof {
+        //        lemma: Vec::new(),
+        //        path: Vec::new(),
+        //    };
+        //}
+        //let ms = self.ms.as_ref().read().unwrap();
+        //ms.get_proof(&rsa_pk)
+        MerkleProof {
+            lemma: Vec::new(),
+            path: Vec::new(),
+        }
     }
 
     //type VerifyFut = Ready<Vec<(SummationEntry, MerkleProof)>>;
-    pub fn verify(&self, vinit: u32, non_leaf_id: Vec<u32>) -> Vec<(SummationEntry, MerkleProof)> {
-        self.wait_till(STATE::Verify(0));
+    pub fn verify(
+        &self,
+        round: u32,
+        vinit: u32,
+        non_leaf_id: Vec<u32>,
+    ) -> Vec<(SummationEntry, MerkleProof)> {
+        let ret = self.wait_till(STAGE::Verify, round);
+        if !ret {
+            return Vec::new();
+        }
         // TODO the client should call get_ms_proof before verify. Fix this for SGD
         //first all the leafs
         let mut ret: Vec<(SummationEntry, MerkleProof)> = Vec::new();

@@ -14,8 +14,8 @@ pub fn init_tracing(
 
     tracing_subscriber::registry()
         .with(tracing_subscriber::EnvFilter::from_default_env().add_directive(filter.into()))
-        //.with(tracing_subscriber::fmt::layer().with_span_events(FmtSpan::ENTER | FmtSpan::EXIT))
-        .with(tracing_subscriber::fmt::layer().with_span_events(FmtSpan::NONE))
+        .with(tracing_subscriber::fmt::layer().with_span_events(FmtSpan::NEW | FmtSpan::CLOSE))
+        //.with(tracing_subscriber::fmt::layer().with_span_events(FmtSpan::NONE))
         .with(tracing_opentelemetry::layer().with_tracer(tracer))
         .try_init()?;
 

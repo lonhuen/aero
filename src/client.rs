@@ -78,7 +78,7 @@ impl Client {
         self.d1s.clear();
     }
 
-    #[instrument(level = "warn", skip_all)]
+    #[instrument(level = "warn", skip_all, name = "encrypt")]
     pub fn encrypt(&mut self, xs: Vec<u8>, pk0: &Vec<i128>, pk1: &Vec<i128>) {
         let gc = start_timer!(|| "new public key");
         let rlwe_pk = Arc::new(PublicKey::new(pk0, pk1));
@@ -97,7 +97,7 @@ impl Client {
             self.c1s.extend(ct.c_1);
         }
     }
-    #[instrument(level = "warn", skip_all)]
+    #[instrument(level = "warn", skip_all, name = "generate_proof")]
     pub fn generate_proof(&self, pvk: Vec<u8>) -> Vec<Vec<u8>> {
         let gc = start_timer!(|| "start proof generation");
         let mut rng = rand::rngs::StdRng::from_entropy();
@@ -184,6 +184,7 @@ impl Client {
         for i in 0..self.c0s.len() / NUM_DIMENSION as usize {
             proof_bytes.extend(proofs[i].iter());
         }
+        warn!("data prepared");
         let result_data = {
             let mut ctx = context::current();
             ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
@@ -198,10 +199,12 @@ impl Client {
                     proof_bytes,
                 )
                 .await;
+            warn!("data uploaded,receving ms proof");
             self.inner.get_ms_proof(ctx, round, self.rsa_pk.clone())
         };
 
         let ms_proof = result_data.await.unwrap().to_proof();
+        warn!("ms proof received");
         end_timer!(gc3);
         // TODO verify the proof by checking x.leaf for mc, ms
         //{
@@ -293,7 +296,7 @@ impl Client {
     // this N should be known from the board
     // s has to be at least 1
     #[instrument(level = "warn", skip_all)]
-    pub async fn verify(&self, n: u32, s: u32) {
+    pub async fn verify(&self, round: u32, n: u32, s: u32) {
         let gc = start_timer!(|| "verify");
 
         assert!(s >= 1, "s should be at least 1");
@@ -308,11 +311,16 @@ impl Client {
         let result = {
             let mut ctx = context::current();
             ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
-            self.inner.verify(ctx, vinit, non_leafs)
+            self.inner.verify(ctx, round, vinit, non_leafs)
         }
         .await
         .unwrap();
         end_timer!(gc1);
+
+        // if not able to retrieve the proof
+        if result.len() == 0 {
+            return;
+        }
 
         // verify all the leafs
 
@@ -448,34 +456,35 @@ async fn main() -> anyhow::Result<()> {
     let mut transport = tarpc::serde_transport::tcp::connect(server_addr, Json::default);
     #[cfg(not(feature = "json"))]
     let mut transport = tarpc::serde_transport::tcp::connect(server_addr, Bincode::default);
-    let mut pvk_transport = tarpc::serde_transport::tcp::connect(server_addr, Bincode::default);
+    //let mut pvk_transport = tarpc::serde_transport::tcp::connect(server_addr, Bincode::default);
     transport.config_mut().max_frame_length(usize::MAX);
-    pvk_transport.config_mut().max_frame_length(usize::MAX);
+    //pvk_transport.config_mut().max_frame_length(usize::MAX);
 
     let inner_client =
         ServerServiceClient::new(client::Config::default(), transport.await?).spawn();
-    let pvk_client =
-        ServerServiceClient::new(client::Config::default(), pvk_transport.await?).spawn();
+    //let pvk_client =
+    //    ServerServiceClient::new(client::Config::default(), pvk_transport.await?).spawn();
     let mut client = Client::new(inner_client);
 
     for i in 0..nr_round {
         // begin uploading
         let sr = start_timer!(|| "one round");
         let train = start_timer!(|| "train model");
-        let pvk = {
-            let mut ctx = context::current();
-            ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
-            pvk_client.retrieve_proving_key(ctx, i)
-        };
+        //let pvk = {
+        //    let mut ctx = context::current();
+        //    ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
+        //    pvk_client.retrieve_proving_key(ctx, i)
+        //};
         let data = client.train_model(i).await;
         end_timer!(train);
 
         let rs = start_timer!(|| "upload data");
-        let result = client.upload(i, data, pvk.await.unwrap()).await;
+        //let result = client.upload(i, data, pvk.await.unwrap()).await;
+        let result = client.upload(i, data, vec![0u8; 1]).await;
         end_timer!(rs);
 
         let vr = start_timer!(|| "verify the data");
-        client.verify(nr_real + nr_sim, 5).await;
+        //client.verify(i, nr_real + nr_sim, 5).await;
         end_timer!(vr);
         end_timer!(sr);
     }

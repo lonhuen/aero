@@ -129,12 +129,13 @@ impl ServerService for InnerServer {
     async fn verify(
         self,
         _: context::Context,
+        round: u32,
         vinit: u32,
         non_leaf_id: Vec<u32>,
     ) -> Vec<(SummationEntry, MerkleProof)> {
         self.pool
             .as_ref()
-            .install(|| self.server.verify(vinit, non_leaf_id))
+            .install(|| self.server.verify(round, vinit, non_leaf_id))
     }
 
     //type RetrieveModelFut = Ready<Vec<u8>>;
