@@ -484,7 +484,7 @@ async fn main() -> anyhow::Result<()> {
         end_timer!(rs);
 
         let vr = start_timer!(|| "verify the data");
-        //client.verify(i, nr_real + nr_sim, 5).await;
+        client.verify(i, nr_real + nr_sim, 5).await;
         end_timer!(vr);
         end_timer!(sr);
     }

@@ -7,7 +7,7 @@ use rayon::iter::repeatn;
 use rayon::prelude::*;
 use std::ops::Add;
 use tarpc::serde::{Deserialize, Serialize};
-use tracing::error;
+use tracing::{error, warn};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CommitEntry {
@@ -156,6 +156,12 @@ fn add_two_vec(a: Option<&Vec<i128>>, b: Option<&Vec<i128>>) -> Vec<i128> {
         .zip(longer.par_iter())
         .map(|(x, y)| x + y)
         .collect()
+    //shorter
+    //    .iter()
+    //    //.chain(repeatn(&0i128, longer.len() - shorter.len()))
+    //    .zip(longer.iter())
+    //    .map(|(x, y)| x + y)
+    //    .collect()
 }
 
 impl Add for SummationNonLeaf {

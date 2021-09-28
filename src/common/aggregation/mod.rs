@@ -178,10 +178,10 @@ impl MsTree {
             let mut right = self.summation_array.len();
             while left + 1 < right {
                 let c = match (&self.summation_array[left], &self.summation_array[left + 1]) {
-                    (SummationEntry::NonLeaf(left), SummationEntry::NonLeaf(right)) => left + right,
-                    (SummationEntry::NonLeaf(left), SummationEntry::Leaf(right)) => left + right,
-                    (SummationEntry::Leaf(left), SummationEntry::NonLeaf(right)) => right + left,
-                    (SummationEntry::Leaf(left), SummationEntry::Leaf(right)) => left + right,
+                    (SummationEntry::NonLeaf(l), SummationEntry::NonLeaf(r)) => l + r,
+                    (SummationEntry::NonLeaf(l), SummationEntry::Leaf(r)) => l + r,
+                    (SummationEntry::Leaf(l), SummationEntry::NonLeaf(r)) => l + r,
+                    (SummationEntry::Leaf(l), SummationEntry::Leaf(r)) => l + r,
                     _ => {
                         panic!("gen_tree: Not a leaf or nonleaf node");
                     }

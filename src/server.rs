@@ -90,9 +90,12 @@ impl ServerService for InnerServer {
         rsa_pk: Vec<u8>,
         commitment: [u8; 32],
     ) {
-        self.pool
-            .as_ref()
-            .install(|| self.server.aggregate_commit(round, rsa_pk, commitment))
+        //self.pool
+        //    .as_ref()
+        //    .install(|| self.server.aggregate_commit(round, rsa_pk, commitment))
+        std::thread::spawn(move || self.server.aggregate_commit(round, rsa_pk, commitment))
+            .join()
+            .unwrap()
     }
 
     async fn aggregate_data(
@@ -104,25 +107,35 @@ impl ServerService for InnerServer {
         nonce: [u8; 16],
         proofs: Vec<u8>,
     ) {
-        self.pool.as_ref().install(|| {
+        std::thread::spawn(move || {
             self.server
                 .aggregate_data(round, rsa_pk, cts, nonce, proofs)
-        });
+        })
+        .join()
+        .unwrap()
+        //self.pool.as_ref().install(|| {
+        //});
     }
 
     //type GetMcProofFut = Ready<MerkleProof>;
     // TODO for now assume only 1 round
     async fn get_mc_proof(self, _: context::Context, round: u32, rsa_pk: Vec<u8>) -> MerkleProof {
-        self.pool
-            .as_ref()
-            .install(|| self.server.get_mc_proof(round, rsa_pk))
+        std::thread::spawn(move || self.server.get_mc_proof(round, rsa_pk))
+            .join()
+            .unwrap()
+        //self.pool
+        //    .as_ref()
+        //    .install(|| self.server.get_mc_proof(round, rsa_pk))
     }
 
     //type GetMsProofFut = Ready<MerkleProof>;
     async fn get_ms_proof(self, _: context::Context, round: u32, rsa_pk: Vec<u8>) -> MerkleProof {
-        self.pool
-            .as_ref()
-            .install(|| self.server.get_ms_proof(round, rsa_pk))
+        //self.pool
+        //    .as_ref()
+        //    .install(|| self.server.get_ms_proof(round, rsa_pk))
+        std::thread::spawn(move || self.server.get_ms_proof(round, rsa_pk))
+            .join()
+            .unwrap()
     }
 
     //type VerifyFut = Ready<Vec<(SummationEntry, MerkleProof)>>;
@@ -133,23 +146,32 @@ impl ServerService for InnerServer {
         vinit: u32,
         non_leaf_id: Vec<u32>,
     ) -> Vec<(SummationEntry, MerkleProof)> {
-        self.pool
-            .as_ref()
-            .install(|| self.server.verify(round, vinit, non_leaf_id))
+        //self.pool
+        //    .as_ref()
+        //    .install(|| self.server.verify(round, vinit, non_leaf_id))
+        std::thread::spawn(move || self.server.verify(round, vinit, non_leaf_id))
+            .join()
+            .unwrap()
     }
 
     //type RetrieveModelFut = Ready<Vec<u8>>;
     async fn retrieve_model(self, _: context::Context, round: u32) -> Vec<u8> {
-        self.pool
-            .as_ref()
-            .install(|| self.server.retrieve_model(round))
+        std::thread::spawn(move || self.server.retrieve_model(round))
+            .join()
+            .unwrap()
+        //self.pool
+        //    .as_ref()
+        //    .install(|| self.server.retrieve_model(round))
     }
 
     //type RetrieveProvingKeyFut = Ready<Vec<u8>>;
     async fn retrieve_proving_key(self, _: context::Context, round: u32) -> Vec<u8> {
-        self.pool
-            .as_ref()
-            .install(|| self.server.retrieve_proving_key(round))
+        std::thread::spawn(move || self.server.retrieve_proving_key(round))
+            .join()
+            .unwrap()
+        //self.pool
+        //    .as_ref()
+        //    .install(|| self.server.retrieve_proving_key(round))
     }
 }
 #[tokio::main]
@@ -187,7 +209,7 @@ async fn main() -> anyhow::Result<()> {
     //let prover_ref = Arc::new(pvk);
     //let verifier_ref = Arc::new(verifier);
 
-    let pool = Arc::new(ThreadPoolBuilder::new().num_threads(8).build().unwrap());
+    let pool = Arc::new(ThreadPoolBuilder::new().build().unwrap());
     let server = Server::setup(nr_real, nr_sim, nr_sybil, nr_parameter, &pool);
 
     #[cfg(feature = "json")]
