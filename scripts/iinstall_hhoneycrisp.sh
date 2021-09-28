@@ -15,6 +15,7 @@ apt-get update && apt-get install -y \
   wget \
   yasm
 cd 
+
 #frigate install supporting mpir library
 wget http://mpir.org/mpir-3.0.0.tar.bz2
 tar -xvf mpir-3.0.0.tar.bz2
@@ -27,10 +28,10 @@ cp .libs/* /usr/lib64/
 # install openssl from source because apparently apt's version is not good
 # enough
 cd
-wget https://www.openssl.org/source/openssl-1.1.0h.tar.gz
-tar -xvf openssl-1.1.0h.tar.gz
-rm openssl-1.1.0h.tar.gz
-cd openssl-1.1.0h
+wget https://www.openssl.org/source/openssl-1.1.1l.tar.gz
+tar -xvf openssl-1.1.1l.tar.gz
+rm openssl-1.1.1l.tar.gz
+cd openssl-1.1.1l
 ./config
 make
 make install
@@ -41,6 +42,7 @@ cd
 git clone https://github.com/KULeuven-COSIC/SCALE-MAMBA.git
 cd SCALE-MAMBA
 git checkout -b v1.2 3722a85
+
 cp /home/ubuntu/quail/lib/honeycrisp/config/CONFIG.mine .
 
 # Custom IO
