@@ -168,6 +168,7 @@ impl MsTree {
         } else {
             // first from the leafs to the tree first
             // TODO check the rsa_pk appears in Mc
+            let gc = start_timer!(|| "gen tree of ms");
             warn!("start gen tree");
             self.summation_array.sort_by(|a, b| {
                 a.get_leaf_rsa_pk()
@@ -193,7 +194,6 @@ impl MsTree {
                 right += 1;
             }
             warn!("finish adding leafs");
-            let gc = start_timer!(|| "gen tree of ms");
 
             self.ms = Some(MerkleTree::from_iter(
                 self.summation_array

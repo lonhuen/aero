@@ -29,7 +29,7 @@ use tracing_subscriber::filter::LevelFilter;
 mod rlwe;
 use rlwe::PublicKey;
 
-const DEADLINE_TIME: u64 = 600;
+const DEADLINE_TIME: u64 = 6000;
 const NUM_DIMENSION: u32 = 4096;
 pub struct Client {
     inner: ServerServiceClient,

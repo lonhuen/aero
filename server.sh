@@ -1,2 +1,4 @@
-#scp -i ./data/aws01.pem ./config.ini ubuntu@172.31.47.222:quail/
-cargo run --bin server --release
+python3 modify_script.py > run_server.sh
+chmod +x run_server.sh
+./run_server.sh
+rm run_server.sh
