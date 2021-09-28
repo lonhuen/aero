@@ -1,3 +1,4 @@
+# this is from honeycrisp https://github.com/danxinnoble/honeycrisp
 sudo su
 apt-get update && apt-get install -y \
   bzip2 \
@@ -14,9 +15,8 @@ apt-get update && apt-get install -y \
   vim \
   wget \
   yasm
-cd 
-
 #frigate install supporting mpir library
+cd 
 wget http://mpir.org/mpir-3.0.0.tar.bz2
 tar -xvf mpir-3.0.0.tar.bz2
 rm mpir-3.0.0.tar.bz2
@@ -37,41 +37,50 @@ make
 make install
 ldconfig 
 
-# download SCALE-MAMBA
 cd
+mkdir -p ~/source
+cp -r /home/ubuntu/quail/lib/honeycrisp/source/* ~/source
+mkdir -p ~/config
+cp -r /home/ubuntu/quail/lib/honeycrisp/config/* ~/config
+mkdir -p ~/SMtweaks
+cp -r /home/ubuntu/quail/lib/honeycrisp/SMtweaks/* ~/SMtweaks
+mkdir -p ~/test
+cp -r /home/ubuntu/quail/lib/honeycrisp/test/* ~/test
+
+# download SCALE-MAMBA
+cd 
 git clone https://github.com/KULeuven-COSIC/SCALE-MAMBA.git
 cd SCALE-MAMBA
 git checkout -b v1.2 3722a85
-
-cp /home/ubuntu/quail/lib/honeycrisp/config/CONFIG.mine .
+mv /root/config/CONFIG.mine .
 
 # Custom IO
-cp /home/ubuntu/quail/lib/honeycrisp/source/Player.cpp ./src/
-cp /home/ubuntu/quail/lib/honeycrisp/source/IO.h ./src/Input_Output/
-cp /home/ubuntu/quail/lib/honeycrisp/source/Input_Output_File.cpp ./src/Input_Output/
-cp /home/ubuntu/quail/lib/honeycrisp/source/Input_Output_File.h ./src/Input_Output/
+mv /root/source/Player.cpp ./src/
+mv /root/source/IO.h ./src/Input_Output/
+mv /root/source/Input_Output_File.cpp ./src/Input_Output/
+mv /root/source/Input_Output_File.h ./src/Input_Output/
 
-cp /home/ubuntu/quail/lib/honeycrisp/config/config.h ./src/config.h
+mv /root/config/config.h ./src/config.h
 
 # Allow for custom Shamir evaluation points
-cp /home/ubuntu/quail/lib/honeycrisp/SMtweaks/MSP.cpp ./src/LSSS/
-cp /home/ubuntu/quail/lib/honeycrisp/SMtweaks/MSP.h ./src/LSSS/
-cp /home/ubuntu/quail/lib/honeycrisp/SMtweaks/ShareData.cpp ./src/LSSS/
-cp /home/ubuntu/quail/lib/honeycrisp/SMtweaks/ShareData.h ./src/LSSS/
-cp /home/ubuntu/quail/lib/honeycrisp/SMtweaks/Setup.cpp ./src/
+mv /root/SMtweaks/MSP.cpp ./src/LSSS/
+mv /root/SMtweaks/MSP.h ./src/LSSS/
+mv /root/SMtweaks/ShareData.cpp ./src/LSSS/
+mv /root/SMtweaks/ShareData.h ./src/LSSS/
+mv /root/SMtweaks/Setup.cpp ./src/
 
-cp /home/ubuntu/quail/lib/honeycrisp/source/benchmark.sh .
+mv /root/source/benchmark.sh .
 
 # Scripts to allow changes to sharing scheme
-cp /home/ubuntu/quail/lib/honeycrisp/config/publicin.txt .
-cp /home/ubuntu/quail/lib/honeycrisp/config/genSetupOptions.sh .
-cp /home/ubuntu/quail/lib/honeycrisp/config/chooseSubset.py .
-cp /home/ubuntu/quail/lib/honeycrisp/config/modifyEvalPoints.sh .
-cp /home/ubuntu/quail/lib/honeycrisp/config/renameShares.sh .
-cp /home/ubuntu/quail/lib/honeycrisp/test/testReconstruct.sh .
-#cp /home/ubuntu/quail/lib/honeycrisp/test/test0.sh .
-#cp /home/ubuntu/quail/lib/honeycrisp/test/testd.sh .
-cp /home/ubuntu/quail/lib/honeycrisp/test/incr.sh .
+mv /root/config/publicin.txt .
+mv /root/config/genSetupOptions.sh .
+mv /root/config/chooseSubset.py .
+mv /root/config/modifyEvalPoints.sh .
+mv /root/config/renameShares.sh .
+mv /root/test/testReconstruct.sh .
+#mv /root/test/test0.sh .
+#mv /root/test/testd.sh .
+mv /root/test/incr.sh .
 
 make progs
 
@@ -96,24 +105,24 @@ do
 done
 
 # Set up SCALE-MAMBA
-cd ~/SCALE-MAMBA
+cd /root/SCALE-MAMBA
 ./genSetupOptions.sh 4 1 | ./Setup.x  # By default set-up with 4 players
 
 # copy examples to correct locations
-cd ~/SCALE-MAMBA
+cd /root/SCALE-MAMBA
 for EX in ring ring_test lwe lwe_test decrypt keygen
 do
   mkdir Programs/$EX
-  cp /home/ubuntu/quail/lib/honeycrisp/source/$EX.mpc Programs/$EX/
+  cp /root/source/$EX.mpc Programs/$EX/
 done 
 
 for EX in input_shares output_shares
 do
   mkdir Programs/$EX
-  cp /home/ubuntu/quail/lib/honeycrisp/test/$EX.mpc Programs/$EX
+  cp /root/test/$EX.mpc Programs/$EX
 done
 
-cd /home/ubuntu/quail/lib/honeycrisp/config
+cd /root/config
 for x in chooseSubset.py renameShare.sh genSetupMSP.sh
 do 
 	mkdir config/
@@ -123,10 +132,10 @@ done
 # add simple syntax highlighting
 cd
 mkdir -p .vim/syntax
-cp config/mamba.vim .vim/syntax
+mv config/mamba.vim .vim/syntax
 mkdir .vim/ftdetect
 cd .vim/ftdetect
 echo "au BufNewFile,BufRead *.wir set filetype=mamba" > mamba.vim
 
 # Compile necessary files
-cd ~/SCALE-MAMBA
+cd /root/SCALE-MAMBA
