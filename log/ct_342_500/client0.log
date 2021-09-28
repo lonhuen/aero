@@ -1,0 +1,624 @@
+[2mSep 27 16:58:25.490[0m [33m WARN[0m [1mAtom Client[0m: client: new
+Start:   clients
+··Start:   one round
+····Start:   train model
+[2mSep 27 16:58:25.804[0m [33m WARN[0m [1mAtom Client[0m:[1mtrain_model[0m: client: new
+······Start:   retrieve the model
+······End:     retrieve the model ..................................................606.432µs
+[2mSep 27 16:58:26.808[0m [33m WARN[0m [1mAtom Client[0m:[1mtrain_model[0m: client: close time.busy=1.00s time.idle=586µs
+····End:     train model ...........................................................1.4s
+····Start:   upload data
+[2mSep 27 16:58:26.808[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: new
+······Start:   encrypt the gradients
+[2mSep 27 16:58:28.865[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mencrypt[0m: client: new
+········Start:   new public key
+········End:     new public key ....................................................331.567ms
+[2mSep 27 16:58:30.329[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mencrypt[0m: client: close time.busy=1.46s time.idle=88.4µs
+······End:     encrypt the gradients ...............................................3.524s
+······Start:   upload the mc+proof generation
+[2mSep 27 16:58:30.334[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mgenerate_proof[0m: client: new
+········Start:   start proof generation
+········End:     start proof generation ............................................8.253s
+[2mSep 27 16:58:38.589[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mgenerate_proof[0m: client: close time.busy=8.25s time.idle=68.1µs
+······End:     upload the mc+proof generation ......................................8.256s
+······Start:   upload the data
+[2mSep 27 16:58:38.590[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: data prepared
+[2mSep 27 16:58:38.826[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: data uploaded,receving ms proof
+[2mSep 27 16:58:38.826[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: ms proof received
+······End:     upload the data .....................................................237.77ms
+[2mSep 27 16:58:38.826[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: close time.busy=11.8s time.idle=236ms
+····End:     upload data ...........................................................12.18s
+····Start:   verify the data
+[2mSep 27 16:58:38.826[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client: new
+······Start:   verify
+········Start:   receive verify
+········End:     receive verify ....................................................262.211ms
+········Start:   verify the proofs
+[2mSep 27 16:58:39.107[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:58:39.107[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:58:39.108[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:58:39.108[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:58:39.109[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:58:39.109[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:58:39.109[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:58:39.109[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:58:39.110[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:58:39.110[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:58:39.110[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:58:39.110[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:58:39.111[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:58:39.111[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:58:39.111[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:58:39.111[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:58:39.112[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:58:39.112[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:58:39.112[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:58:39.112[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:58:39.112[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:58:39.112[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:58:39.113[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:58:39.113[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+········End:     verify the proofs .................................................24.583ms
+[2mSep 27 16:58:39.116[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client: close time.busy=27.7ms time.idle=262ms
+······End:     verify the data .....................................................289.981ms
+····End:     one round .............................................................13.312s
+····Start:   one round
+······Start:   train model
+[2mSep 27 16:58:39.117[0m [33m WARN[0m [1mAtom Client[0m:[1mtrain_model[0m: client: new
+········Start:   retrieve the model
+········End:     retrieve the model ................................................9.731s
+[2mSep 27 16:58:49.849[0m [33m WARN[0m [1mAtom Client[0m:[1mtrain_model[0m: client: close time.busy=1.00s time.idle=9.73s
+······End:     train model .........................................................10.732s
+······Start:   upload data
+[2mSep 27 16:58:49.849[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: new
+········Start:   encrypt the gradients
+[2mSep 27 16:58:51.806[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mencrypt[0m: client: new
+··········Start:   new public key
+··········End:     new public key ..................................................321.69ms
+[2mSep 27 16:58:53.218[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mencrypt[0m: client: close time.busy=1.41s time.idle=48.1µs
+········End:     encrypt the gradients .............................................3.372s
+········Start:   upload the mc+proof generation
+[2mSep 27 16:58:53.223[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mgenerate_proof[0m: client: new
+··········Start:   start proof generation
+··········End:     start proof generation ..........................................8.251s
+[2mSep 27 16:59:01.474[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mgenerate_proof[0m: client: close time.busy=8.25s time.idle=63.3µs
+········End:     upload the mc+proof generation ....................................8.253s
+········Start:   upload the data
+[2mSep 27 16:59:01.475[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: data prepared
+[2mSep 27 16:59:01.769[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: data uploaded,receving ms proof
+[2mSep 27 16:59:01.769[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: ms proof received
+········End:     upload the data ...................................................294.614ms
+[2mSep 27 16:59:01.769[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: close time.busy=11.6s time.idle=293ms
+······End:     upload data .........................................................11.920s
+······Start:   verify the data
+[2mSep 27 16:59:01.769[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client: new
+········Start:   verify
+··········Start:   receive verify
+··········End:     receive verify ..................................................271.726ms
+··········Start:   verify the proofs
+[2mSep 27 16:59:02.063[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:02.064[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:02.064[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:02.064[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:02.065[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:02.065[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:02.065[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:02.065[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:02.067[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:02.067[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:02.067[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:02.067[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:02.069[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:02.069[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:02.070[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:02.070[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:02.072[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:02.072[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:02.073[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:02.073[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:02.075[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:02.075[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:02.076[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:02.076[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+··········End:     verify the proofs ...............................................35.940ms
+[2mSep 27 16:59:02.082[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client: close time.busy=40.6ms time.idle=272ms
+········End:     verify the data ...................................................312.410ms
+······End:     one round ...........................................................22.964s
+······Start:   one round
+········Start:   train model
+[2mSep 27 16:59:02.082[0m [33m WARN[0m [1mAtom Client[0m:[1mtrain_model[0m: client: new
+··········Start:   retrieve the model
+··········End:     retrieve the model ..............................................9.707s
+[2mSep 27 16:59:12.792[0m [33m WARN[0m [1mAtom Client[0m:[1mtrain_model[0m: client: close time.busy=1.00s time.idle=9.71s
+········End:     train model .......................................................10.710s
+········Start:   upload data
+[2mSep 27 16:59:12.792[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: new
+··········Start:   encrypt the gradients
+[2mSep 27 16:59:14.736[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mencrypt[0m: client: new
+············Start:   new public key
+············End:     new public key ................................................301.857ms
+[2mSep 27 16:59:16.094[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mencrypt[0m: client: close time.busy=1.36s time.idle=47.8µs
+··········End:     encrypt the gradients ...........................................3.305s
+··········Start:   upload the mc+proof generation
+[2mSep 27 16:59:16.099[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mgenerate_proof[0m: client: new
+············Start:   start proof generation
+············End:     start proof generation ........................................8.251s
+[2mSep 27 16:59:24.351[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mgenerate_proof[0m: client: close time.busy=8.25s time.idle=35.1µs
+··········End:     upload the mc+proof generation ..................................8.254s
+··········Start:   upload the data
+[2mSep 27 16:59:24.353[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: data prepared
+[2mSep 27 16:59:24.359[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: data uploaded,receving ms proof
+[2mSep 27 16:59:24.580[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: ms proof received
+··········End:     upload the data .................................................227.572ms
+[2mSep 27 16:59:24.580[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: close time.busy=11.6s time.idle=227ms
+········End:     upload data .......................................................11.787s
+········Start:   verify the data
+[2mSep 27 16:59:24.580[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client: new
+··········Start:   verify
+············Start:   receive verify
+············End:     receive verify ................................................180.901ms
+············Start:   verify the proofs
+[2mSep 27 16:59:24.781[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:24.781[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:24.781[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:24.781[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:24.782[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:24.782[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:24.783[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:24.783[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:24.784[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:24.784[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:24.785[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:24.785[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:24.786[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:24.786[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:24.786[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:24.787[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:24.787[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:24.787[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:24.788[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:24.788[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:24.788[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:24.789[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:24.789[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:24.789[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+············End:     verify the proofs .............................................28.576ms
+[2mSep 27 16:59:24.791[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client: close time.busy=30.3ms time.idle=181ms
+··········End:     verify the data .................................................211.234ms
+········End:     one round .........................................................22.708s
+········Start:   one round
+··········Start:   train model
+[2mSep 27 16:59:24.791[0m [33m WARN[0m [1mAtom Client[0m:[1mtrain_model[0m: client: new
+············Start:   retrieve the model
+············End:     retrieve the model ............................................9.810s
+[2mSep 27 16:59:35.605[0m [33m WARN[0m [1mAtom Client[0m:[1mtrain_model[0m: client: close time.busy=1.00s time.idle=9.81s
+··········End:     train model .....................................................10.813s
+··········Start:   upload data
+[2mSep 27 16:59:35.605[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: new
+············Start:   encrypt the gradients
+[2mSep 27 16:59:37.562[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mencrypt[0m: client: new
+··············Start:   new public key
+··············End:     new public key ..............................................314.680ms
+[2mSep 27 16:59:38.966[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mencrypt[0m: client: close time.busy=1.40s time.idle=32.6µs
+············End:     encrypt the gradients .........................................3.365s
+············Start:   upload the mc+proof generation
+[2mSep 27 16:59:38.970[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mgenerate_proof[0m: client: new
+··············Start:   start proof generation
+··············End:     start proof generation ......................................8.254s
+[2mSep 27 16:59:47.225[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mgenerate_proof[0m: client: close time.busy=8.25s time.idle=46.5µs
+············End:     upload the mc+proof generation ................................8.255s
+············Start:   upload the data
+[2mSep 27 16:59:47.226[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: data prepared
+[2mSep 27 16:59:47.233[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: data uploaded,receving ms proof
+[2mSep 27 16:59:47.485[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: ms proof received
+············End:     upload the data ...............................................259.258ms
+[2mSep 27 16:59:47.485[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: close time.busy=11.6s time.idle=257ms
+··········End:     upload data .....................................................11.879s
+··········Start:   verify the data
+[2mSep 27 16:59:47.485[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client: new
+············Start:   verify
+··············Start:   receive verify
+··············End:     receive verify ..............................................191.629ms
+··············Start:   verify the proofs
+[2mSep 27 16:59:47.696[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:47.696[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:47.696[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:47.696[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:47.697[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:47.697[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:47.697[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:47.697[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:47.698[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:47.698[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:47.698[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:47.698[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:47.699[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:47.699[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:47.699[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:47.699[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:47.700[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:47.700[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:47.700[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:47.700[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:47.701[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:47.701[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 16:59:47.701[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 16:59:47.701[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+··············End:     verify the proofs ...........................................25.474ms
+[2mSep 27 16:59:47.704[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client: close time.busy=27.4ms time.idle=192ms
+············End:     verify the data ...............................................219.125ms
+··········End:     one round .......................................................22.912s
+··········Start:   one round
+············Start:   train model
+[2mSep 27 16:59:47.704[0m [33m WARN[0m [1mAtom Client[0m:[1mtrain_model[0m: client: new
+··············Start:   retrieve the model
+··············End:     retrieve the model ..........................................9.797s
+[2mSep 27 16:59:58.507[0m [33m WARN[0m [1mAtom Client[0m:[1mtrain_model[0m: client: close time.busy=1.00s time.idle=9.80s
+············End:     train model ...................................................10.802s
+············Start:   upload data
+[2mSep 27 16:59:58.507[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: new
+··············Start:   encrypt the gradients
+[2mSep 27 17:00:00.460[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mencrypt[0m: client: new
+················Start:   new public key
+················End:     new public key ............................................312.576ms
+[2mSep 27 17:00:01.909[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mencrypt[0m: client: close time.busy=1.45s time.idle=32.1µs
+··············End:     encrypt the gradients .......................................3.417s
+··············Start:   upload the mc+proof generation
+[2mSep 27 17:00:01.925[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mgenerate_proof[0m: client: new
+················Start:   start proof generation
+················End:     start proof generation ....................................8.250s
+[2mSep 27 17:00:10.175[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mgenerate_proof[0m: client: close time.busy=8.25s time.idle=60.1µs
+··············End:     upload the mc+proof generation ..............................8.250s
+··············Start:   upload the data
+[2mSep 27 17:00:10.176[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: data prepared
+[2mSep 27 17:00:10.182[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: data uploaded,receving ms proof
+[2mSep 27 17:00:10.463[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: ms proof received
+··············End:     upload the data .............................................287.968ms
+[2mSep 27 17:00:10.464[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: close time.busy=11.7s time.idle=286ms
+············End:     upload data ...................................................11.956s
+············Start:   verify the data
+[2mSep 27 17:00:10.464[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client: new
+··············Start:   verify
+················Start:   receive verify
+················End:     receive verify ............................................246.653ms
+················Start:   verify the proofs
+[2mSep 27 17:00:10.728[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:10.728[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:10.728[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:10.728[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:10.729[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:10.729[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:10.729[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:10.729[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:10.729[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:10.729[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:10.730[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:10.730[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:10.730[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:10.730[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:10.730[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:10.730[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:10.731[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:10.731[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:10.731[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:10.731[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:10.731[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:10.731[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:10.731[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:10.732[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+················End:     verify the proofs .........................................21.802ms
+[2mSep 27 17:00:10.734[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client: close time.busy=23.4ms time.idle=247ms
+··············End:     verify the data .............................................270.149ms
+············End:     one round .....................................................23.29s
+············Start:   one round
+··············Start:   train model
+[2mSep 27 17:00:10.734[0m [33m WARN[0m [1mAtom Client[0m:[1mtrain_model[0m: client: new
+················Start:   retrieve the model
+················End:     retrieve the model ........................................9.752s
+[2mSep 27 17:00:21.487[0m [33m WARN[0m [1mAtom Client[0m:[1mtrain_model[0m: client: close time.busy=1.00s time.idle=9.75s
+··············End:     train model .................................................10.752s
+··············Start:   upload data
+[2mSep 27 17:00:21.487[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: new
+················Start:   encrypt the gradients
+[2mSep 27 17:00:23.473[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mencrypt[0m: client: new
+··················Start:   new public key
+··················End:     new public key ..........................................308.678ms
+[2mSep 27 17:00:24.917[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mencrypt[0m: client: close time.busy=1.44s time.idle=47.2µs
+················End:     encrypt the gradients .....................................3.433s
+················Start:   upload the mc+proof generation
+[2mSep 27 17:00:24.921[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mgenerate_proof[0m: client: new
+··················Start:   start proof generation
+··················End:     start proof generation ..................................8.253s
+[2mSep 27 17:00:33.175[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mgenerate_proof[0m: client: close time.busy=8.25s time.idle=62.7µs
+················End:     upload the mc+proof generation ............................8.254s
+················Start:   upload the data
+[2mSep 27 17:00:33.177[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: data prepared
+[2mSep 27 17:00:33.453[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: data uploaded,receving ms proof
+[2mSep 27 17:00:33.454[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: ms proof received
+················End:     upload the data ...........................................277.915ms
+[2mSep 27 17:00:33.454[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: close time.busy=11.7s time.idle=276ms
+··············End:     upload data .................................................11.966s
+··············Start:   verify the data
+[2mSep 27 17:00:33.454[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client: new
+················Start:   verify
+··················Start:   receive verify
+··················End:     receive verify ..........................................265.343ms
+··················Start:   verify the proofs
+[2mSep 27 17:00:33.735[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:33.735[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:33.736[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:33.736[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:33.737[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:33.737[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:33.737[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:33.737[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:33.737[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:33.737[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:33.738[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:33.738[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:33.738[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:33.738[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:33.739[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:33.739[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:33.739[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:33.739[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:33.739[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:33.739[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:33.740[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:33.740[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:33.740[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:33.740[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+··················End:     verify the proofs .......................................21.232ms
+[2mSep 27 17:00:33.742[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client: close time.busy=22.6ms time.idle=265ms
+················End:     verify the data ...........................................287.995ms
+··············End:     one round ...................................................23.7s
+··············Start:   one round
+················Start:   train model
+[2mSep 27 17:00:33.742[0m [33m WARN[0m [1mAtom Client[0m:[1mtrain_model[0m: client: new
+··················Start:   retrieve the model
+··················End:     retrieve the model ......................................9.737s
+[2mSep 27 17:00:44.483[0m [33m WARN[0m [1mAtom Client[0m:[1mtrain_model[0m: client: close time.busy=1.00s time.idle=9.74s
+················End:     train model ...............................................10.741s
+················Start:   upload data
+[2mSep 27 17:00:44.483[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: new
+··················Start:   encrypt the gradients
+[2mSep 27 17:00:46.727[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mencrypt[0m: client: new
+····················Start:   new public key
+····················End:     new public key ........................................413.272ms
+[2mSep 27 17:00:48.270[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mencrypt[0m: client: close time.busy=1.54s time.idle=30.6µs
+··················End:     encrypt the gradients ...................................3.791s
+··················Start:   upload the mc+proof generation
+[2mSep 27 17:00:48.275[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mgenerate_proof[0m: client: new
+····················Start:   start proof generation
+····················End:     start proof generation ................................8.250s
+[2mSep 27 17:00:56.527[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mgenerate_proof[0m: client: close time.busy=8.25s time.idle=59.9µs
+··················End:     upload the mc+proof generation ..........................8.252s
+··················Start:   upload the data
+[2mSep 27 17:00:56.528[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: data prepared
+[2mSep 27 17:00:56.535[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: data uploaded,receving ms proof
+[2mSep 27 17:00:56.760[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: ms proof received
+··················End:     upload the data .........................................233.207ms
+[2mSep 27 17:00:56.761[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: close time.busy=12.0s time.idle=231ms
+················End:     upload data ...............................................12.276s
+················Start:   verify the data
+[2mSep 27 17:00:56.761[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client: new
+··················Start:   verify
+····················Start:   receive verify
+····················End:     receive verify ........................................184.848ms
+····················Start:   verify the proofs
+[2mSep 27 17:00:56.962[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:56.962[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:56.963[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:56.963[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:56.964[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:56.964[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:56.964[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:56.964[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:56.964[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:56.964[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:56.965[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:56.965[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:56.965[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:56.965[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:56.965[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:56.965[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:56.966[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:56.966[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:56.966[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:56.966[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:56.966[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:56.967[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:00:56.967[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:00:56.967[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+····················End:     verify the proofs .....................................21.732ms
+[2mSep 27 17:00:56.969[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client: close time.busy=23.2ms time.idle=185ms
+··················End:     verify the data .........................................208.160ms
+················End:     one round .................................................23.226s
+················Start:   one round
+··················Start:   train model
+[2mSep 27 17:00:56.969[0m [33m WARN[0m [1mAtom Client[0m:[1mtrain_model[0m: client: new
+····················Start:   retrieve the model
+····················End:     retrieve the model ....................................9.809s
+[2mSep 27 17:01:07.780[0m [33m WARN[0m [1mAtom Client[0m:[1mtrain_model[0m: client: close time.busy=1.00s time.idle=9.81s
+··················End:     train model .............................................10.811s
+··················Start:   upload data
+[2mSep 27 17:01:07.780[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: new
+····················Start:   encrypt the gradients
+[2mSep 27 17:01:09.734[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mencrypt[0m: client: new
+······················Start:   new public key
+······················End:     new public key ......................................323.644ms
+[2mSep 27 17:01:11.147[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mencrypt[0m: client: close time.busy=1.41s time.idle=48.6µs
+····················End:     encrypt the gradients .................................3.369s
+····················Start:   upload the mc+proof generation
+[2mSep 27 17:01:11.151[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mgenerate_proof[0m: client: new
+······················Start:   start proof generation
+······················End:     start proof generation ..............................8.254s
+[2mSep 27 17:01:19.407[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mgenerate_proof[0m: client: close time.busy=8.26s time.idle=59.3µs
+····················End:     upload the mc+proof generation ........................8.256s
+····················Start:   upload the data
+[2mSep 27 17:01:19.408[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: data prepared
+[2mSep 27 17:01:19.413[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: data uploaded,receving ms proof
+[2mSep 27 17:01:19.719[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: ms proof received
+····················End:     upload the data .......................................311.344ms
+[2mSep 27 17:01:19.719[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: close time.busy=11.6s time.idle=310ms
+··················End:     upload data .............................................11.938s
+··················Start:   verify the data
+[2mSep 27 17:01:19.719[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client: new
+····················Start:   verify
+······················Start:   receive verify
+······················End:     receive verify ......................................90.567ms
+······················Start:   verify the proofs
+[2mSep 27 17:01:19.825[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:01:19.825[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:01:19.826[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:01:19.826[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:01:19.827[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:01:19.827[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:01:19.827[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:01:19.827[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:01:19.828[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:01:19.828[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:01:19.828[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:01:19.828[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:01:19.829[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:01:19.829[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:01:19.829[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:01:19.829[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:01:19.830[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:01:19.830[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:01:19.830[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:01:19.830[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:01:19.831[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:01:19.831[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:01:19.831[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:01:19.831[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+······················End:     verify the proofs ...................................22.0ms
+[2mSep 27 17:01:19.833[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client: close time.busy=23.4ms time.idle=90.6ms
+····················End:     verify the data .......................................114.39ms
+··················End:     one round ...............................................22.863s
+··················Start:   one round
+····················Start:   train model
+[2mSep 27 17:01:19.833[0m [33m WARN[0m [1mAtom Client[0m:[1mtrain_model[0m: client: new
+······················Start:   retrieve the model
+······················End:     retrieve the model ..................................9.906s
+[2mSep 27 17:01:30.741[0m [33m WARN[0m [1mAtom Client[0m:[1mtrain_model[0m: client: close time.busy=1.00s time.idle=9.91s
+····················End:     train model ...........................................10.908s
+····················Start:   upload data
+[2mSep 27 17:01:30.742[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: new
+······················Start:   encrypt the gradients
+[2mSep 27 17:01:32.689[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mencrypt[0m: client: new
+························Start:   new public key
+························End:     new public key ....................................302.794ms
+[2mSep 27 17:01:34.047[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mencrypt[0m: client: close time.busy=1.36s time.idle=71.7µs
+······················End:     encrypt the gradients ...............................3.308s
+······················Start:   upload the mc+proof generation
+[2mSep 27 17:01:34.052[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mgenerate_proof[0m: client: new
+························Start:   start proof generation
+························End:     start proof generation ............................8.252s
+[2mSep 27 17:01:42.305[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mgenerate_proof[0m: client: close time.busy=8.25s time.idle=60.3µs
+······················End:     upload the mc+proof generation ......................8.254s
+······················Start:   upload the data
+[2mSep 27 17:01:42.306[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: data prepared
+[2mSep 27 17:01:42.312[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: data uploaded,receving ms proof
+[2mSep 27 17:01:42.564[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: ms proof received
+······················End:     upload the data .....................................258.821ms
+[2mSep 27 17:01:42.564[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: close time.busy=11.6s time.idle=258ms
+····················End:     upload data ...........................................11.822s
+····················Start:   verify the data
+[2mSep 27 17:01:42.564[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client: new
+······················Start:   verify
+························Start:   receive verify
+························End:     receive verify ....................................98.894ms
+························Start:   verify the proofs
+[2mSep 27 17:01:42.679[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:01:42.679[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:01:42.680[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:01:42.680[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:01:42.681[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:01:42.681[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:01:42.681[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:01:42.681[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:01:42.682[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:01:42.682[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:01:42.682[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:01:42.682[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:01:42.683[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:01:42.683[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:01:42.683[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:01:42.683[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:01:42.684[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:01:42.684[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:01:42.684[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:01:42.684[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:01:42.685[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:01:42.685[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:01:42.685[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:01:42.686[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+························End:     verify the proofs .................................23.363ms
+[2mSep 27 17:01:42.689[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client: close time.busy=25.9ms time.idle=98.9ms
+······················End:     verify the data .....................................124.910ms
+····················End:     one round .............................................22.855s
+····················Start:   one round
+······················Start:   train model
+[2mSep 27 17:01:42.689[0m [33m WARN[0m [1mAtom Client[0m:[1mtrain_model[0m: client: new
+························Start:   retrieve the model
+························End:     retrieve the model ................................9.895s
+[2mSep 27 17:01:53.589[0m [33m WARN[0m [1mAtom Client[0m:[1mtrain_model[0m: client: close time.busy=1.00s time.idle=9.90s
+······················End:     train model .........................................10.899s
+······················Start:   upload data
+[2mSep 27 17:01:53.589[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: new
+························Start:   encrypt the gradients
+[2mSep 27 17:01:55.539[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mencrypt[0m: client: new
+··························Start:   new public key
+··························End:     new public key ..................................328.929ms
+[2mSep 27 17:01:56.926[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mencrypt[0m: client: close time.busy=1.39s time.idle=46.5µs
+························End:     encrypt the gradients .............................3.341s
+························Start:   upload the mc+proof generation
+[2mSep 27 17:01:56.931[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mgenerate_proof[0m: client: new
+··························Start:   start proof generation
+··························End:     start proof generation ..........................8.254s
+[2mSep 27 17:02:05.186[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mgenerate_proof[0m: client: close time.busy=8.25s time.idle=40.6µs
+························End:     upload the mc+proof generation ....................8.256s
+························Start:   upload the data
+[2mSep 27 17:02:05.188[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: data prepared
+[2mSep 27 17:02:05.195[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: data uploaded,receving ms proof
+[2mSep 27 17:02:05.439[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: ms proof received
+························End:     upload the data ...................................252.211ms
+[2mSep 27 17:02:05.439[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: close time.busy=11.6s time.idle=249ms
+······················End:     upload data .........................................11.850s
+······················Start:   verify the data
+[2mSep 27 17:02:05.439[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client: new
+························Start:   verify
+··························Start:   receive verify
+··························End:     receive verify ..................................263.829ms
+··························Start:   verify the proofs
+[2mSep 27 17:02:05.719[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:02:05.719[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:02:05.719[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:02:05.719[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:02:05.720[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:02:05.720[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:02:05.720[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:02:05.720[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:02:05.720[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:02:05.720[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:02:05.720[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:02:05.721[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:02:05.721[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:02:05.721[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:02:05.721[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:02:05.721[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:02:05.722[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:02:05.722[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:02:05.722[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:02:05.722[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:02:05.722[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:02:05.722[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+[2mSep 27 17:02:05.723[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: longer len 40960, shorter len 40960
+[2mSep 27 17:02:05.723[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client::common::aggregation::node: # of threads 12
+··························End:     verify the proofs ...............................20.88ms
+[2mSep 27 17:02:05.725[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client: close time.busy=21.7ms time.idle=264ms
+························End:     verify the data ...................................285.602ms
+······················End:     one round ...........................................23.35s
+····················End:     clients ...............................................220.228s
+[2mSep 27 17:02:05.727[0m [33m WARN[0m [1mAtom Client[0m: client: close time.busy=220s time.idle=444µs

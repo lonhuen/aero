@@ -41,7 +41,7 @@ impl McTree {
         }
     }
 
-    #[instrument(level = "warn", skip_all)]
+    #[instrument(skip_all)]
     pub fn gen_tree(&mut self) -> bool {
         if self.commit_array.len() < self.nr_real as usize {
             warn!(
@@ -64,7 +64,7 @@ impl McTree {
         }
     }
 
-    #[instrument(level = "warn", skip_all)]
+    #[instrument(skip_all)]
     pub fn gen_tree_timout(&mut self) -> usize {
         self.commit_array
             .sort_by(|a, b| a.rsa_pk.partial_cmp(&b.rsa_pk).unwrap());
@@ -156,7 +156,7 @@ impl MsTree {
         ret
     }
 
-    #[instrument(level = "warn", skip_all)]
+    #[instrument(skip_all)]
     pub fn gen_tree(&mut self) -> bool {
         if self.summation_array.len() < self.nr_real as usize {
             warn!(
@@ -168,11 +168,13 @@ impl MsTree {
         } else {
             // first from the leafs to the tree first
             // TODO check the rsa_pk appears in Mc
+            warn!("start gen tree");
             self.summation_array.sort_by(|a, b| {
                 a.get_leaf_rsa_pk()
                     .partial_cmp(b.get_leaf_rsa_pk())
                     .unwrap()
             });
+            warn!("finish sort");
             // get the non-leaf nodes
             let mut left = 0;
             let mut right = self.summation_array.len();
@@ -190,6 +192,7 @@ impl MsTree {
                 left += 2;
                 right += 1;
             }
+            warn!("finish adding leafs");
             let gc = start_timer!(|| "gen tree of ms");
 
             self.ms = Some(MerkleTree::from_iter(
@@ -214,7 +217,7 @@ impl MsTree {
         }
     }
 
-    #[instrument(level = "warn", skip_all)]
+    #[instrument(skip_all)]
     pub fn gen_tree_timeout(&mut self) -> usize {
         // first from the leafs to the tree first
         let ret = self.summation_array.len();
