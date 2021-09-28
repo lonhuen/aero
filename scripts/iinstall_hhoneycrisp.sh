@@ -1,5 +1,8 @@
 # this is from honeycrisp https://github.com/danxinnoble/honeycrisp
-sudo su
+if [ "$EUID" -ne 0 ]
+	  then echo "Please run as root"
+		    exit
+fi
 apt-get update && apt-get install -y \
   bzip2 \
   doxygen \
