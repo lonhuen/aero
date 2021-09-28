@@ -1,4 +1,4 @@
-use std::env;
+use opentelemetry::sdk::export::trace::stdout;
 use tracing_subscriber::filter::LevelFilter;
 use tracing_subscriber::{fmt::format::FmtSpan, prelude::*};
 
@@ -7,10 +7,11 @@ pub fn init_tracing(
     agent_endpoint: &str,
     filter: LevelFilter,
 ) -> anyhow::Result<()> {
-    let tracer = opentelemetry_jaeger::new_pipeline()
-        .with_agent_endpoint(agent_endpoint)
-        .with_service_name(service_name)
-        .install_batch(opentelemetry::runtime::Tokio)?;
+    //let tracer = opentelemetry_jaeger::new_pipeline()
+    //    .with_agent_endpoint(agent_endpoint)
+    //    .with_service_name(service_name)
+    //    .install_batch(opentelemetry::runtime::Tokio)?;
+    let tracer = stdout::new_pipeline().install_simple();
 
     tracing_subscriber::registry()
         .with(tracing_subscriber::EnvFilter::from_default_env().add_directive(filter.into()))
