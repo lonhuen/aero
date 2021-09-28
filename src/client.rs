@@ -29,7 +29,7 @@ use tracing_subscriber::filter::LevelFilter;
 mod rlwe;
 use rlwe::PublicKey;
 
-const DEADLINE_TIME: u64 = 600;
+const DEADLINE_TIME: u64 = 6000;
 const NUM_DIMENSION: u32 = 4096;
 pub struct Client {
     inner: ServerServiceClient,
@@ -78,7 +78,7 @@ impl Client {
         self.d1s.clear();
     }
 
-    #[instrument(level = "warn", skip_all, name = "encrypt")]
+    #[instrument(skip_all, name = "encrypt")]
     pub fn encrypt(&mut self, xs: Vec<u8>, pk0: &Vec<i128>, pk1: &Vec<i128>) {
         let gc = start_timer!(|| "new public key");
         let rlwe_pk = Arc::new(PublicKey::new(pk0, pk1));
@@ -97,7 +97,7 @@ impl Client {
             self.c1s.extend(ct.c_1);
         }
     }
-    #[instrument(level = "warn", skip_all, name = "generate_proof")]
+    #[instrument(skip_all, name = "generate_proof")]
     pub fn generate_proof(&self, pvk: Vec<u8>) -> Vec<Vec<u8>> {
         let gc = start_timer!(|| "start proof generation");
         let mut rng = rand::rngs::StdRng::from_entropy();
@@ -118,7 +118,7 @@ impl Client {
     }
 
     // the whole aggregation phase (except the encryption)
-    #[instrument(level = "warn", skip_all)]
+    #[instrument(skip_all)]
     pub async fn upload(&mut self, round: u32, xs: Vec<u8>, pvk: Vec<u8>) -> bool {
         // set the deadline of the context
         let gc1 = start_timer!(|| "encrypt the gradients");
@@ -295,7 +295,7 @@ impl Client {
 
     // this N should be known from the board
     // s has to be at least 1
-    #[instrument(level = "warn", skip_all)]
+    #[instrument(skip_all)]
     pub async fn verify(&self, round: u32, n: u32, s: u32) {
         let gc = start_timer!(|| "verify");
 
@@ -412,7 +412,7 @@ impl Client {
         end_timer!(gc2);
     }
 
-    #[instrument(level = "warn", skip_all)]
+    #[instrument(skip_all)]
     pub async fn train_model(&mut self, round: u32) -> Vec<u8> {
         let rm = start_timer!(|| "retrieve the model");
         let gradient = {

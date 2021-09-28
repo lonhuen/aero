@@ -103,7 +103,7 @@ impl Server {
         }
     }
 
-    #[instrument(level = "warn", skip_all)]
+    #[instrument(skip_all)]
     pub fn aggregate_commit(&self, round: u32, rsa_pk: Vec<u8>, commitment: [u8; 32]) {
         // wait for enough commitments
         // TODO to fix: should check if duplicate commitments come
@@ -134,7 +134,7 @@ impl Server {
         drop(state);
     }
 
-    #[instrument(level = "warn", skip_all)]
+    #[instrument(skip_all)]
     pub fn aggregate_data(
         &self,
         round: u32,

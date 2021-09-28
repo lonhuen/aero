@@ -1,0 +1,80 @@
+[2mSep 28 03:13:52.089[0m [33m WARN[0m [1mAtom Client[0m: client: new
+Start:   clients
+··Start:   one round
+····Start:   train model
+[2mSep 28 03:13:52.295[0m [33m WARN[0m [1mAtom Client[0m:[1mtrain_model[0m: client: new
+······Start:   retrieve the model
+······End:     retrieve the model ..................................................412.387ms
+[2mSep 28 03:13:53.708[0m [33m WARN[0m [1mAtom Client[0m:[1mtrain_model[0m: client: close time.busy=1.00s time.idle=412ms
+····End:     train model ...........................................................1.412s
+····Start:   upload data
+[2mSep 28 03:13:53.708[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: new
+······Start:   encrypt the gradients
+[2mSep 28 03:13:56.033[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mencrypt[0m: client: new
+········Start:   new public key
+········End:     new public key ....................................................330.184ms
+[2mSep 28 03:14:23.266[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mencrypt[0m: client: close time.busy=27.2s time.idle=63.6µs
+······End:     encrypt the gradients ...............................................29.694s
+······Start:   upload the mc+proof generation
+[2mSep 28 03:14:23.403[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mgenerate_proof[0m: client: new
+········Start:   start proof generation
+········End:     start proof generation ............................................282.150s
+[2mSep 28 03:19:05.553[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mgenerate_proof[0m: client: close time.busy=282s time.idle=36.9µs
+······End:     upload the mc+proof generation ......................................282.151s
+······Start:   upload the data
+[2mSep 28 03:19:05.581[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: data prepared
+[2mSep 28 03:19:53.774[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: data uploaded,receving ms proof
+[2mSep 28 03:20:09.798[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: ms proof received
+······End:     upload the data .....................................................64.244s
+[2mSep 28 03:20:09.798[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: close time.busy=312s time.idle=64.1s
+····End:     upload data ...........................................................376.90s
+····Start:   verify the data
+[2mSep 28 03:20:09.798[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client: new
+······Start:   verify
+········Start:   receive verify
+········End:     receive verify ....................................................868.497s
+········Start:   verify the proofs
+········End:     verify the proofs .................................................1.182s
+[2mSep 28 03:34:39.523[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client: close time.busy=1.23s time.idle=868s
+······End:     verify the data .....................................................869.724s
+····End:     one round .............................................................1247.227s
+····Start:   one round
+······Start:   train model
+[2mSep 28 03:34:39.523[0m [33m WARN[0m [1mAtom Client[0m:[1mtrain_model[0m: client: new
+········Start:   retrieve the model
+········End:     retrieve the model ................................................1.466s
+[2mSep 28 03:34:41.990[0m [33m WARN[0m [1mAtom Client[0m:[1mtrain_model[0m: client: close time.busy=1.00s time.idle=1.47s
+······End:     train model .........................................................2.467s
+······Start:   upload data
+[2mSep 28 03:34:41.990[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: new
+········Start:   encrypt the gradients
+[2mSep 28 03:34:44.308[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mencrypt[0m: client: new
+··········Start:   new public key
+··········End:     new public key ..................................................342.579ms
+[2mSep 28 03:35:32.004[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mencrypt[0m: client: close time.busy=47.7s time.idle=54.0µs
+········End:     encrypt the gradients .............................................50.172s
+········Start:   upload the mc+proof generation
+[2mSep 28 03:35:32.163[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mgenerate_proof[0m: client: new
+··········Start:   start proof generation
+··········End:     start proof generation ..........................................282.150s
+[2mSep 28 03:40:14.313[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m:[1mgenerate_proof[0m: client: close time.busy=282s time.idle=38.6µs
+········End:     upload the mc+proof generation ....................................282.151s
+········Start:   upload the data
+[2mSep 28 03:40:14.342[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: data prepared
+[2mSep 28 03:41:02.498[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: data uploaded,receving ms proof
+[2mSep 28 03:41:17.568[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: ms proof received
+········End:     upload the data ...................................................63.254s
+······End:     upload data .........................................................395.578s
+······Start:   verify the data
+[2mSep 28 03:41:17.569[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client: new
+········Start:   verify
+··········Start:   receive verify
+[2mSep 28 03:41:17.569[0m [33m WARN[0m [1mAtom Client[0m:[1mupload[0m: client: close time.busy=332s time.idle=63.2s
+··········End:     receive verify ..................................................869.11s
+··········Start:   verify the proofs
+··········End:     verify the proofs ...............................................950.290ms
+[2mSep 28 03:55:47.573[0m [33m WARN[0m [1mAtom Client[0m:[1mverify[0m: client: close time.busy=994ms time.idle=869s
+········End:     verify the data ...................................................870.4s
+······End:     one round ...........................................................1268.50s
+····End:     clients ...............................................................2515.483s
+[2mSep 28 03:55:47.579[0m [33m WARN[0m [1mAtom Client[0m: client: close time.busy=2515s time.idle=86.1µs
