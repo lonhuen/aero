@@ -1,61 +1,21 @@
+#!/bin/bash
 # this is from honeycrisp https://github.com/danxinnoble/honeycrisp
-if [ "$EUID" -ne 0 ]
-	  then echo "Please run as root"
-		    exit
-fi
+[[ $UID = 0 ]] || exec sudo $0 "$@"
 
 cd
+# update the gensetup.sh 
+cp /home/ubuntu/quail/lib/honeycrisp/config/genSetupOptions.sh /root/SCALE-MAMBA/genSetupOptions.sh
+# update the incr.sh 
+cp /home/ubuntu/quail/lib/honeycrisp/test/incr.sh /root/SCALE-MAMBA/incr.sh
+# update all the source files
+rm -r -f ~/source
 mkdir -p ~/source
 cp -r /home/ubuntu/quail/lib/honeycrisp/source/* ~/source
-mkdir -p ~/config
-cp -r /home/ubuntu/quail/lib/honeycrisp/config/* ~/config
-mkdir -p ~/SMtweaks
-cp -r /home/ubuntu/quail/lib/honeycrisp/SMtweaks/* ~/SMtweaks
-mkdir -p ~/test
-cp -r /home/ubuntu/quail/lib/honeycrisp/test/* ~/test
 
 cd ~/SCALE-MAMBA
-git checkout -b v1.2 3722a85
-mv /root/config/CONFIG.mine .
-
-# Custom IO
-mv /root/source/Player.cpp ./src/
-mv /root/source/IO.h ./src/Input_Output/
-mv /root/source/Input_Output_File.cpp ./src/Input_Output/
-mv /root/source/Input_Output_File.h ./src/Input_Output/
-
-mv /root/config/config.h ./src/config.h
-
-# Allow for custom Shamir evaluation points
-mv /root/SMtweaks/MSP.cpp ./src/LSSS/
-mv /root/SMtweaks/MSP.h ./src/LSSS/
-mv /root/SMtweaks/ShareData.cpp ./src/LSSS/
-mv /root/SMtweaks/ShareData.h ./src/LSSS/
-mv /root/SMtweaks/Setup.cpp ./src/
-
-mv /root/source/benchmark.sh .
-
-# Scripts to allow changes to sharing scheme
-mv /root/config/publicin.txt .
-mv /root/config/genSetupOptions.sh .
-mv /root/config/chooseSubset.py .
-mv /root/config/modifyEvalPoints.sh .
-mv /root/config/renameShares.sh .
-mv /root/test/testReconstruct.sh .
-#mv /root/test/test0.sh .
-#mv /root/test/testd.sh .
-mv /root/test/incr.sh .
 
 make progs
 
-## set up certificate authority
-#SUBJ="/CN=www.example.com"
-#cd Cert-Store
-#
-#openssl genrsa -out RootCA.key 4096
-#openssl req -new -x509 -days 1826 -key RootCA.key \
-#           -subj $SUBJ -out RootCA.crt
-#
 ## make 40 certificates. More can be added as necessary
 #mkdir csr
 #for ID in {0..39}
@@ -67,29 +27,11 @@ make progs
 #    -CA RootCA.crt -CAkey RootCA.key \
 #    -in csr/Player$ID.csr -out Player$ID.crt 
 #done
-#
-## Set up SCALE-MAMBA
-#cd /root/SCALE-MAMBA
-#./genSetupOptions.sh 4 1 | ./Setup.x  # By default set-up with 4 players
 
-# copy examples to correct locations
 cd /root/SCALE-MAMBA
 for EX in ring ring_test lwe lwe_test decrypt keygen
 do
+  rm -r -f Programs/$EX
   mkdir Programs/$EX
   cp /root/source/$EX.mpc Programs/$EX/
 done 
-
-for EX in input_shares output_shares
-do
-  mkdir Programs/$EX
-  cp /root/test/$EX.mpc Programs/$EX
-done
-
-#cd /root/config
-#for x in chooseSubset.py renameShare.sh genSetupMSP.sh
-#do 
-#	mkdir config/
-#	cp $x config/$x
-#done
-

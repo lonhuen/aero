@@ -49,6 +49,7 @@ mkdir -p ~/SMtweaks
 cp -r /home/ubuntu/quail/lib/honeycrisp/SMtweaks/* ~/SMtweaks
 mkdir -p ~/test
 cp -r /home/ubuntu/quail/lib/honeycrisp/test/* ~/test
+cp -r /home/ubuntu/quail/lib/honeycrisp/Cert-Store ~/SCALE-MAMBA/
 
 # download SCALE-MAMBA
 cd 
@@ -88,28 +89,28 @@ mv /root/test/incr.sh .
 make progs
 
 # set up certificate authority
-SUBJ="/CN=www.example.com"
-cd Cert-Store
-
-openssl genrsa -out RootCA.key 4096
-openssl req -new -x509 -days 1826 -key RootCA.key \
-           -subj $SUBJ -out RootCA.crt
+#SUBJ="/CN=www.example.com"
+#cd Cert-Store
+#
+#openssl genrsa -out RootCA.key 4096
+#openssl req -new -x509 -days 1826 -key RootCA.key \
+#           -subj $SUBJ -out RootCA.crt
 
 # make 40 certificates. More can be added as necessary
-mkdir csr
-for ID in {0..39}
-do
-  SUBJ="/CN=player$ID@example.com"
-  openssl genrsa -out Player$ID.key 2048
-  openssl req -new -key Player$ID.key -subj $SUBJ -out csr/Player$ID.csr
-  openssl x509 -req -days 1000 -set_serial 101$ID \
-    -CA RootCA.crt -CAkey RootCA.key \
-    -in csr/Player$ID.csr -out Player$ID.crt 
-done
+#$mkdir csr
+#$for ID in {0..39}
+#$do
+#$  SUBJ="/CN=player$ID@example.com"
+#$  openssl genrsa -out Player$ID.key 2048
+#$  openssl req -new -key Player$ID.key -subj $SUBJ -out csr/Player$ID.csr
+#$  openssl x509 -req -days 1000 -set_serial 101$ID \
+#$    -CA RootCA.crt -CAkey RootCA.key \
+#$    -in csr/Player$ID.csr -out Player$ID.crt 
+#$done
 
 # Set up SCALE-MAMBA
-cd /root/SCALE-MAMBA
-./genSetupOptions.sh 4 1 | ./Setup.x  # By default set-up with 4 players
+#cd /root/SCALE-MAMBA
+#./genSetupOptions.sh 4 1 | ./Setup.x  # By default set-up with 4 players
 
 # copy examples to correct locations
 cd /root/SCALE-MAMBA
