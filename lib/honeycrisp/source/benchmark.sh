@@ -4,9 +4,9 @@ PROG_NAME=$1
 N_PLAYERS=$2
 N_IO=$3
 
-echo 'Compiling' $PROG_NAME
-reqs=$(./compile.py $PROG_NAME | grep "Program requires:")
-./compile.py Programs/decrypt # hack to compile decrypt for later
+#echo 'Compiling' $PROG_NAME
+#reqs=$(./compile.py $PROG_NAME | grep "Program requires:")
+#./compile.py Programs/decrypt # hack to compile decrypt for later
 
 echo $reqs
 

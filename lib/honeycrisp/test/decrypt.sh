@@ -36,22 +36,3 @@ for i in `seq 8192`
 do 
   echo "1" >> publicin.txt
 done
-
-echo 'Measuring the runtime and communication cost of decrypt'
-
-### TODO scp the Data directoy also the publicin.txt to all the peer machines
-### TODO scp the keygen.mpc to all the peer machines
-### TODO pssh to each peer to run the player.x
-for (( i = 0; i <= $(($N_PLAYERS - 2)); i++ ))
-do
-	(cat publicin.txt | ./Player.x $i Programs/decrypt > /dev/null 2> /dev/null) &
-done
-
-COMM_T0=$(cat /proc/net/dev | grep -o lo..\[0-9\]* | grep -o \[0-9\]*)
-#COMM_T0=$(cat /proc/net/dev | grep -o eth0..\[0-9]\* | grep -o \[0-9\]*)
-time (cat publicin.txt | ./Player.x  $((N_PLAYERS - 1)) Programs/decrypt > /dev/null 2> /dev/null)
-
-
-#COMM_T1=$(cat /proc/net/dev | grep -o eth0..\[0-9]\* | grep -o \[0-9\]*)
-COMM_T1=$(cat /proc/net/dev | grep -o lo..\[0-9]\* | grep -o \[0-9\]*)
-echo 'Communication Cost (bytes):' $((COMM_T1 - COMM_T0))
