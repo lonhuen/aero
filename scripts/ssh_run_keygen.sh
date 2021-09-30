@@ -22,7 +22,8 @@ do
 	ip=${linearray[0]}
 	if [[ $ip = *[!\ ]* ]]; then
 	# ssh to ip to run the content
-	(ssh -i ${QUAIL}/data/aws01.pem ubuntu@${ip} "${QUAIL}/scripts/run_keygen.sh $count") &
+	scp -i ${QUAIL}/data/aws01.pem ${QUAIL}/scripts/committee.txt ubuntu@${ip}:${QUAIL}/scripts/committee.txt
+	(ssh -i ${QUAIL}/data/aws01.pem ubuntu@${ip} "${QUAIL}/scripts/run_keygen.sh $count" 2>&1 | tee ssh$ip.log)&
 	fi
 done < ${QUAIL}/scripts/committee.txt
 

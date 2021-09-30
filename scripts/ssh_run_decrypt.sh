@@ -22,6 +22,7 @@ do
 	ip=${linearray[0]}
 	if [[ $ip = *[!\ ]* ]]; then
 	# ssh to ip to run the content
+	#scp -i ${QUAIL}/data/aws01.pem ${QUAIL}/scripts/committee.txt ubuntu@${ip}:${QUAIL}/scripts/committee.txt
 	(ssh -i ${QUAIL}/data/aws01.pem ubuntu@${ip} "${QUAIL}/scripts/run_decrypt.sh $count") &
 	fi
 done < ${QUAIL}/scripts/committee.txt

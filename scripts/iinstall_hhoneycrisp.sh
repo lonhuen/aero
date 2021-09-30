@@ -49,7 +49,6 @@ mkdir -p ~/SMtweaks
 cp -r /home/ubuntu/quail/lib/honeycrisp/SMtweaks/* ~/SMtweaks
 mkdir -p ~/test
 cp -r /home/ubuntu/quail/lib/honeycrisp/test/* ~/test
-cp -r /home/ubuntu/quail/lib/honeycrisp/Cert-Store ~/SCALE-MAMBA/
 
 # download SCALE-MAMBA
 cd 
@@ -57,6 +56,8 @@ git clone https://github.com/KULeuven-COSIC/SCALE-MAMBA.git
 cd SCALE-MAMBA
 git checkout -b v1.2 3722a85
 mv /root/config/CONFIG.mine .
+
+cp -r /home/ubuntu/quail/lib/honeycrisp/Cert-Store ~/SCALE-MAMBA/
 
 # Custom IO
 mv /root/source/Player.cpp ./src/
@@ -126,12 +127,12 @@ do
   cp /root/test/$EX.mpc Programs/$EX
 done
 
-cd /root/config
-for x in chooseSubset.py renameShare.sh genSetupMSP.sh
-do 
-	mkdir config/
-	cp $x config/$x
-done
+#cd /root/config
+#for x in chooseSubset.py renameShare.sh genSetupMSP.sh
+#do 
+#	mkdir config/
+#	cp $x config/$x
+#done
 
 # add simple syntax highlighting
 cd
