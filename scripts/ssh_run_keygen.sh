@@ -22,10 +22,19 @@ do
 	ip=${linearray[0]}
 	if [[ $ip = *[!\ ]* ]]; then
 	# ssh to ip to run the content
-	scp -i ${QUAIL}/data/aws01.pem ${QUAIL}/scripts/committee.txt ubuntu@${ip}:${QUAIL}/scripts/committee.txt
-	(ssh -i ${QUAIL}/data/aws01.pem ubuntu@${ip} "${QUAIL}/scripts/run_keygen.sh $count" 2>&1 | tee ssh$ip.log)&
+	scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${QUAIL}/data/aws01.pem ${QUAIL}/scripts/committee.txt ubuntu@${ip}:${QUAIL}/scripts/committee.txt
+	fi
+done < ${QUAIL}/scripts/committee.txt
+
+while read smryline
+do
+	linearray=($(awk -F, '{$1=$1} 1' <<<"${smryline}"))
+	ip=${linearray[0]}
+	if [[ $ip = *[!\ ]* ]]; then
+	# ssh to ip to run the content
+	(ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${QUAIL}/data/aws01.pem ubuntu@${ip} "${QUAIL}/scripts/run_keygen.sh $count" 2>&1 | tee ssh$ip.log)&
 	fi
 done < ${QUAIL}/scripts/committee.txt
 
 wait
-
+	
