@@ -41,33 +41,39 @@ if [[ $N_SQUARES == '' ]]
 then
   N_SQUARES=1
 fi
-
-echo 
 echo 'Measuring the runtime and communication cost of keygen' 
 
-#COMM_T0=$(cat /proc/net/dev | grep -o lo..\[0-9\]* | grep -o \[0-9\]*)
+
+start=$(cat /proc/net/dev | grep "eth0")
+in_bytes=$(echo $start | awk -v OFS=, '/eth0:/ { print $2 }')
+out_bytes=$(echo $start | awk -v OFS=, '/eth0:/ { print $10 }')
+COMM_T0=$(cat /proc/net/dev | grep -o lo..\[0-9\]* | grep -o \[0-9\]*)
+
 ip4=$(/sbin/ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1)
 
 cat ${QUAIL}/scripts/committee.txt | while read smryline
 do
 linearray=($(awk -F, '{$1=$1} 1' <<<"${smryline}"))
-len=${#linearray[@]}
-len=$((len-1))
 if [ "${ip4}" = "${linearray[0]}" ]; then
+	len=${#linearray[@]}
+	last=$((len-1))
+	len=$((last-1))
 	for i in ${linearray[@]:1:$len}; do
+		#./Player.x $i Programs/keygen 2>&1 | tee ${QUAIL}/scripts/run$i.log &
 		./Player.x $i Programs/keygen >/dev/null 2> /dev/null &
         done
+	#time(./Player.x -max ${N_TRIPLES},${N_SQUARES},${N_BITS} -maxI ${N_IO} ${linearray[${len}]} Programs/keygen >/dev/null 2> /dev/null)
+	#time(./Player.x ${linearray[$last]} Programs/keygen)
+	time(./Player.x ${linearray[$last]} Programs/keygen >/dev/null 2> /dev/null)
 fi
 done
-time(./Player.x -max ${N_TRIPLES},${N_SQUARES},${N_BITS} -maxI ${N_IO} ${linearray[${len}]} Programs/keygen >/dev/null 2> /dev/null)
-echo "Done"
 
-#for (( i = 0; i <= $(($N_PLAYERS - 2)); i++ ))
-#do
-#  ./Player.x -max ${N_TRIPLES},${N_SQUARES},${N_BITS} -maxI ${N_IO} $i Programs/keygen > /dev/null 2> /dev/null &
-#done
-#
-#time (./Player.x -max ${N_TRIPLES},${N_SQUARES},${N_BITS} -maxI ${N_IO} $(($N_PLAYERS - 1)) Programs/keygen > /dev/null 2> /dev/null ) 
-#
-#COMM_T1=$(cat /proc/net/dev | grep -o lo..\[0-9]\* | grep -o \[0-9\]*)
-#echo 'Communication Cost (bytes):' $((COMM_T1 - COMM_T0))
+end=$(cat /proc/net/dev | grep "eth0")
+in_bytes_end=$(echo $end| awk -v OFS=, '/eth0:/ { print $2 }')
+out_bytes_end=$(echo $end | awk -v OFS=, '/eth0:/ { print $10 }')
+echo "recv bytes from eth0" $((in_bytes_end - in_bytes)) 
+echo "sent bytes from eth0" $((out_bytes_end - out_bytes)) 
+
+COMM_T1=$(cat /proc/net/dev | grep -o lo..\[0-9]\* | grep -o \[0-9\]*)
+echo 'Communication Cost (bytes) from lo:' $((COMM_T1 - COMM_T0))
+
