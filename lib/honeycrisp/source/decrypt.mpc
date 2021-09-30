@@ -7,7 +7,6 @@ execfile('/root/SCALE-MAMBA/Programs/lwe/lwe.mpc')
 # Number of committee members (full protocol has k+1 users)
 k = 19
 
-l = 1
 nBitsN = 13
 N_ = 1 # Half-width of binomial distribution
 lgM = 31
@@ -22,6 +21,8 @@ lwe = LWE(r, N_, lgM, l)
 
 # Length of messages
 N = 4096
+
+l = 4096
 
 def encrypt(a, b, n):
 	[u, v] = lwe.enc(a,b,n)

@@ -21,11 +21,22 @@ do
 	linearray=($(awk -F, '{$1=$1} 1' <<<"${smryline}"))
 	ip=${linearray[0]}
 	if [[ $ip = *[!\ ]* ]]; then
+	scp -i ${QUAIL}/data/aws01.pem ${QUAIL}/lib/honeycrisp/source/decrypt.mpc ubuntu@${ip}:${QUAIL}/lib/honeycrisp/source/decrypt.mpc
+	#/home/ubuntu/quail/lib/honeycrisp/source/decrypt.mpc
+	fi
+done < ${QUAIL}/scripts/committee.txt
+
+while read smryline
+do
+	linearray=($(awk -F, '{$1=$1} 1' <<<"${smryline}"))
+	ip=${linearray[0]}
+	if [[ $ip = *[!\ ]* ]]; then
 	# ssh to ip to run the content
 	#scp -i ${QUAIL}/data/aws01.pem ${QUAIL}/scripts/committee.txt ubuntu@${ip}:${QUAIL}/scripts/committee.txt
 	(ssh -i ${QUAIL}/data/aws01.pem ubuntu@${ip} "${QUAIL}/scripts/run_decrypt.sh $count") &
 	fi
 done < ${QUAIL}/scripts/committee.txt
+
 
 wait
 
