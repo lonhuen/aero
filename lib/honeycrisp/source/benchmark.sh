@@ -6,7 +6,7 @@ N_IO=$3
 
 echo 'Compiling' $PROG_NAME
 reqs=$(./compile.py $PROG_NAME | grep "Program requires:")
-./compile.py Programs/decrypt # hack to compile decrypt for later
+#./compile.py Programs/decrypt # hack to compile decrypt for later
 
 echo $reqs
 
@@ -42,4 +42,4 @@ done
 time (./Player.x -max ${N_TRIPLES},${N_SQUARES},${N_BITS} -maxI ${N_IO} $(($N_PLAYERS - 1)) $PROG_NAME > /dev/null 2> /dev/null ) 
 
 COMM_T1=$(cat /proc/net/dev | grep -o lo..\[0-9]\* | grep -o \[0-9\]*)
-echo 'Communication Cost (bytes):' $(($COMM_T1 - $COMM_T0))
+echo 'Communication Cost (bytes):' $((COMM_T1 - COMM_T0))

@@ -7,13 +7,13 @@ echo 3
 echo RootCA
 
 echo $N_PLAYERS
-for (( i = 0; i < $((N_PLAYERS-1)); i++ ))
+for (( i = 0; i < $N_PLAYERS; i++ ))
 do
   echo 127.0.0.1
   echo Player$i.crt
 done
-echo 172.31.47.222
-echo Player$((N_PLAYERS-1)).crt
+#echo 172.31.47.222
+#echo Player$((N_PLAYERS-1)).crt
 
 echo N
 echo N

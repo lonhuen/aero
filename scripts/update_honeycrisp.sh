@@ -7,6 +7,8 @@ cd
 cp /home/ubuntu/quail/lib/honeycrisp/config/genSetupOptions.sh /root/SCALE-MAMBA/genSetupOptions.sh
 # update the incr.sh 
 cp /home/ubuntu/quail/lib/honeycrisp/test/incr.sh /root/SCALE-MAMBA/incr.sh
+cp /home/ubuntu/quail/lib/honeycrisp/test/keygen.sh /root/SCALE-MAMBA/keygen.sh
+cp /home/ubuntu/quail/lib/honeycrisp/test/decrypt.sh /root/SCALE-MAMBA/decrypt.sh
 # update all the source files
 rm -r -f ~/source
 mkdir -p ~/source
