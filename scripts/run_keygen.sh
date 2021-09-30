@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [ -z $1 ]; then
+	echo "provide # of instances"
+	exit
+fi
+
+
 QUAIL=/home/ubuntu/quail
 HONEYCRISP=${QUAIL}/lib/honeycrisp
 SCALE_MAMBA=/root/SCALE-MAMBA
@@ -45,14 +51,15 @@ ip4=$(/sbin/ip -o -4 addr list eth0 | awk '{print $4}' | cut -d/ -f1)
 cat ${QUAIL}/scripts/committee.txt | while read smryline
 do
 linearray=($(awk -F, '{$1=$1} 1' <<<"${smryline}"))
+len=${#linearray[@]}
+len=$((len-1))
 if [ "${ip4}" = "${linearray[0]}" ]; then
-        for i in ${linearray[@]:1}; do
-			./Player.x -max ${N_TRIPLES},${N_SQUARES},${N_BITS} -maxI ${N_IO} $i Programs/keygen > /dev/null 2> /dev/null &
+	for i in ${linearray[@]:1:$len}; do
+		./Player.x $i Programs/keygen >/dev/null 2> /dev/null &
         done
 fi
 done
-
-wait
+time(./Player.x -max ${N_TRIPLES},${N_SQUARES},${N_BITS} -maxI ${N_IO} ${linearray[${len}]} Programs/keygen >/dev/null 2> /dev/null)
 echo "Done"
 
 #for (( i = 0; i <= $(($N_PLAYERS - 2)); i++ ))
