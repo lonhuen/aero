@@ -1,7 +1,10 @@
 import configparser
 import json
 config = configparser.ConfigParser()
-config.read('config.ini')
+with open('config.ini', 'r') as f:
+        config_string = '[Atom]\n' + f.read()
+        config.read_string(config_string)
+#config.read('config.ini')
 # print(config["Atom"]["real_worker_addr"])
 #l = json.loads(config["Atom"]["real_worker_addr"])
 # print(l[0])
@@ -28,7 +31,7 @@ for w in real_addr:
     print('ssh -i ./data/aws01.pem ubuntu@{} "bash ~/quail/scripts/network.sh" &'.format(w,))
 
 # start the server
-print("cargo run - -bin server - -release &")
+print("cargo run --bin server --release &")
 
 # config the network
 for w in real_addr:
