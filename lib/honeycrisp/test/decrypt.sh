@@ -9,7 +9,10 @@ j=$1
 
 N_1=$((j+1))
 N_2=$((j+1))
-THRESHOLD=1
+THRESHOLD=$2
+if [ -z $2 ]; then
+	THRESHOLD=1
+fi
 
 #don't change servers for now
 #python chooseSubset.py ${N_1} ${N_2} > ./Data/subset.txt

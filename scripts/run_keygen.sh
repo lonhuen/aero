@@ -16,7 +16,7 @@ SCALE_MAMBA=/root/SCALE-MAMBA
 bash ${QUAIL}/scripts/update_honeycrisp.sh
 
 cd ${SCALE_MAMBA}
-bash ${SCALE_MAMBA}/keygen.sh $1
+bash ${SCALE_MAMBA}/keygen.sh "$@"
 
 reqs=$(./compile.py Programs/keygen | grep "Program requires:")
 #./compile.py Programs/decrypt # hack to compile decrypt for later

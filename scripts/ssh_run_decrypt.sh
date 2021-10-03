@@ -1,7 +1,6 @@
 #!/bin/bash
 
 QUAIL=/home/ubuntu/quail/
-chmod 400 ${QUAIL}/data/aws01.pem
 count=0
 while read smryline
 do
@@ -14,6 +13,7 @@ do
 	fi
 done < ${QUAIL}/scripts/committee.txt
 
+THRESHOLD=$((count*2/5))
 count=$((count-1))
 
 while read smryline
@@ -21,7 +21,7 @@ do
 	linearray=($(awk -F, '{$1=$1} 1' <<<"${smryline}"))
 	ip=${linearray[0]}
 	if [[ $ip = *[!\ ]* ]]; then
-	scp -i ${QUAIL}/data/aws01.pem ${QUAIL}/lib/honeycrisp/source/decrypt.mpc ubuntu@${ip}:${QUAIL}/lib/honeycrisp/source/decrypt.mpc
+	scp ${QUAIL}/lib/honeycrisp/source/decrypt.mpc -i ${QUAIL}/data/aws01.pem ubuntu@${ip}:${QUAIL}/lib/honeycrisp/source/decrypt.mpc
 	#/home/ubuntu/quail/lib/honeycrisp/source/decrypt.mpc
 	fi
 done < ${QUAIL}/scripts/committee.txt
@@ -32,8 +32,8 @@ do
 	ip=${linearray[0]}
 	if [[ $ip = *[!\ ]* ]]; then
 	# ssh to ip to run the content
-	#scp -i ${QUAIL}/data/aws01.pem ${QUAIL}/scripts/committee.txt ubuntu@${ip}:${QUAIL}/scripts/committee.txt
-	(ssh -i ${QUAIL}/data/aws01.pem ubuntu@${ip} "${QUAIL}/scripts/run_decrypt.sh $count") &
+	#scp ${QUAIL}/scripts/committee.txt ubuntu@${ip}:${QUAIL}/scripts/committee.txt
+	(ssh ubuntu@${ip} -i ${QUAIL}/data/aws01.pem "${QUAIL}/scripts/run_decrypt.sh $count $THRESHOLD") &
 	fi
 done < ${QUAIL}/scripts/committee.txt
 
