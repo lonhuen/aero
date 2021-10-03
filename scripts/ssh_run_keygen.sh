@@ -14,7 +14,8 @@ do
 	fi
 done < ${QUAIL}/scripts/committee.txt
 
-THRESHOLD=$((count*2/5))
+#THRESHOLD=$((count*2/5))
+THRESHOLD=2
 echo $THRESHOLD
 count=$((count-1))
 

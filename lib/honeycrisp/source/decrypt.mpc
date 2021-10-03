@@ -8,7 +8,6 @@ execfile('/root/SCALE-MAMBA/Programs/lwe/lwe.mpc')
 k = 19
 
 l = 4096
-
 nBitsN = 13
 N_ = 1 # Half-width of binomial distribution
 lgM = 31
@@ -23,7 +22,6 @@ lwe = LWE(r, N_, lgM, l)
 
 # Length of messages
 N = 4096
-
 
 def encrypt(a, b, n):
 	[u, v] = lwe.enc(a,b,n)
@@ -57,12 +55,12 @@ def copy(i):
 	input_shares(0, *tmp)
 	s[i] = tmp[0]
 
-## Decrypts by using shares of secret key, noises, and compares to threshold.
-#z = decrypt(enc_u, enc_v, s)[0] + sint.get_random_bit()
-## Need to add appropriate noise to all elements
-#
-## Returns message if sufficiently far from delta, otherwise returns null.
-#if (mpc_math.abs_fx(z - T) < delta):
-#	print_ln("0")
-#else:
-#	print_ln("Text is %s", z.reveal_to[k]);
+# Decrypts by using shares of secret key, noises, and compares to threshold.
+z = decrypt(enc_u, enc_v, s)[0] + sint.get_random_bit()
+# Need to add appropriate noise to all elements
+
+# Returns message if sufficiently far from delta, otherwise returns null.
+if (mpc_math.abs_fx(z - T) < delta):
+	print_ln("0")
+else:
+	print_ln("Text is %s", z.reveal_to[k]);

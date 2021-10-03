@@ -13,7 +13,8 @@ do
 	fi
 done < ${QUAIL}/scripts/committee.txt
 
-THRESHOLD=$((count*2/5))
+#THRESHOLD=$((count*2/5))
+THRESHOLD=2
 count=$((count-1))
 
 while read smryline
@@ -21,7 +22,7 @@ do
 	linearray=($(awk -F, '{$1=$1} 1' <<<"${smryline}"))
 	ip=${linearray[0]}
 	if [[ $ip = *[!\ ]* ]]; then
-	scp ${QUAIL}/lib/honeycrisp/source/decrypt.mpc -i ${QUAIL}/data/aws01.pem ubuntu@${ip}:${QUAIL}/lib/honeycrisp/source/decrypt.mpc
+	scp -i ${QUAIL}/data/aws01.pem ${QUAIL}/lib/honeycrisp/source/decrypt.mpc ubuntu@${ip}:${QUAIL}/lib/honeycrisp/source/decrypt.mpc
 	#/home/ubuntu/quail/lib/honeycrisp/source/decrypt.mpc
 	fi
 done < ${QUAIL}/scripts/committee.txt
