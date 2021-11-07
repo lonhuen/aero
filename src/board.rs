@@ -43,23 +43,23 @@ use cupcake::integer_arith::scalar::Scalar;
 use cupcake::integer_arith::ArithUtils;
 use cupcake::polyarith::lazy_ntt::{lazy_inverse_ntt_u64, lazy_ntt_u64};
 use cupcake::rqpoly::RqPolyContext;
-use quail::rlwe::context::{self, Context};
+//use quail::rlwe::context::{self, Context};
 use ring_algorithm::chinese_remainder_theorem;
 use threshold_secret_sharing as tss;
 
 fn main() {
-    let context = Context::init_default();
+    // let context = Context::init_default();
 
-    //let mut a: Vec<u64> = vec![1u64; 4096];
-    //let mut aa = Vec::new();
-    //aa.push(a);
-    //context.lazy_ntt_inplace(&mut aa);
-    //context.lazy_inverse_ntt_inplace(&mut aa);
-    //println!("{:?}", aa[0]);
+    // //let mut a: Vec<u64> = vec![1u64; 4096];
+    // //let mut aa = Vec::new();
+    // //aa.push(a);
+    // //context.lazy_ntt_inplace(&mut aa);
+    // //context.lazy_inverse_ntt_inplace(&mut aa);
+    // //println!("{:?}", aa[0]);
 
-    let mut a: Vec<i128> = vec![1i128; 4096];
-    let mut acrt = context.crt_encode_vec(&a);
-    context.lazy_ntt_inplace(&mut acrt);
+    // let mut a: Vec<i128> = vec![1i128; 4096];
+    // let mut acrt = context.crt_encode_vec(&a);
+    // context.lazy_ntt_inplace(&mut acrt);
 
     //let mut b: Vec<i128> = vec![1i128; 4096];
     ////b[0] = 1;
