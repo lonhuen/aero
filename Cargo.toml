@@ -24,7 +24,6 @@ blake3 = "1.0.0"
 cancellable-timer = "0.1.0"
 
 Cupcake = {version="0.2.1",features=["bench"]}
-threshold-secret-sharing = "0.2"
 ring-algorithm = "0.4.0"
 
 anyhow = "1.0"

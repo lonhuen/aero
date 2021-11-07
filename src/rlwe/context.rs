@@ -2,10 +2,7 @@ use cupcake::integer_arith::scalar::Scalar;
 use cupcake::integer_arith::ArithUtils;
 use cupcake::polyarith::lazy_ntt::{lazy_inverse_ntt_u64, lazy_ntt_u64};
 use cupcake::rqpoly::RqPolyContext;
-use rand::{thread_rng, Rng, SeedableRng};
-use rand_distr::{Distribution, Normal};
-use ring_algorithm::chinese_remainder_theorem;
-use threshold_secret_sharing as tss;
+use rand::{Rng, SeedableRng};
 
 use super::NUM_DIMENSION;
 
@@ -159,7 +156,7 @@ impl NTTContext {
         }
     }
 
-    pub fn lazy_ntt_inplace(&self, a: &mut Vec<u64>) {
+    pub fn lazy_ntt_inplace(&self, a: &mut [u64]) {
         lazy_ntt_u64(
             a,
             &self.roots_u64,
@@ -170,7 +167,7 @@ impl NTTContext {
             .for_each(|x| *x = Scalar::modulus(&Scalar::from(*x), &self.modulus).rep());
     }
 
-    pub fn lazy_inverse_ntt_inplace(&self, a: &mut Vec<u64>) {
+    pub fn lazy_inverse_ntt_inplace(&self, a: &mut [u64]) {
         lazy_inverse_ntt_u64(
             a,
             &self.invroots_u64,
@@ -191,6 +188,47 @@ impl NTTContext {
     }
 }
 
+/*
+/** Chinese remainder theorem
+
+```
+use ring_algorithm::chinese_remainder_theorem;
+let u = vec![2, 3, 2];
+let m = vec![3, 5, 7];
+let a = chinese_remainder_theorem::<i32>(&u, &m).unwrap();
+for (u, m) in u.iter().zip(m.iter()) {
+    assert_eq!((a - u) % m, 0);
+}
+```
+*/
+pub fn chinese_remainder_theorem<T>(u: &[T], m: &[T]) -> Option<T>
+where
+    T: sealed::Sized + Clone + Eq + num_traits::Zero + num_traits::One + RingNormalize,
+    for<'x> &'x T: EuclideanRingOperation<T>,
+{
+    if u.len() != m.len() {
+        return None;
+    }
+    let mut v = Vec::with_capacity(u.len());
+    for (i, (u_i, m_i)) in u.iter().zip(m.iter()).enumerate() {
+        let coef_i = modulo_inverse::<T>(
+            m[0..i].iter().fold(T::one(), |p, v| &(&p * v) % m_i),
+            m_i.clone(),
+        )?;
+        let t = v
+            .iter()
+            .zip(m.iter())
+            .rev()
+            .fold(T::zero(), |t, (v_j, m_j)| &(&(m_j * &t) + v_j) % m_i);
+        v.push(&(&(u_i - &t) * &coef_i) % m_i);
+    }
+    let mut ret = v.pop().unwrap();
+    for (v_i, m_i) in v.iter().zip(m.iter()).rev() {
+        ret = &(&ret * m_i) + v_i;
+    }
+    Some(ret)
+}
+*/
 #[cfg(test)]
 mod tests {
     use super::*;

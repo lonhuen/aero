@@ -10,6 +10,7 @@ players:
 - 127.0.0.1:38895
 - 127.0.0.1:38896
 aggregator: 127.0.0.1:39999
-# each player generate 4K * 40 / 10 = 16384 bits
-nBits: 16384 
+# each player generate 4K * 40 * 342 / 10 = 16384 bits
+# total # of bits should multiple of 4096 * 40
+nBits: 491520
 threshold: 4

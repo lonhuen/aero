@@ -6,12 +6,11 @@ use quail::rlwe::NUM_DIMENSION;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 mod util;
-use crate::util::{config::ConfigUtils, log::init_tracing};
-use rand::{Rng, SeedableRng};
+use crate::util::config::ConfigUtils;
+use rand::SeedableRng;
+use ring_algorithm::chinese_remainder_theorem;
 use std::env;
-use std::rc::Rc;
 use std::sync::{Arc, Mutex};
-use threshold_secret_sharing as tss;
 
 pub const MODULUS: [u64; 3] = [0xffffee001u64, 0xffffc4001u64, 0x1ffffe0001u64];
 
@@ -153,7 +152,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             handles.push(tokio::spawn(async move {
                 let mut buf = vec![0u8; nr_bytes + 1];
 
-                let n = match socket.read_exact(&mut buf).await {
+                let _ = match socket.read_exact(&mut buf).await {
                     // socket closed
                     Ok(n) if n == 0 => return,
                     Ok(n) => n,
@@ -194,6 +193,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //{
     //    println!("{:?}", mb.lock().unwrap()[0]);
     //}
+    let rb = mb.lock().unwrap();
+    let q = vec![
+        &shamir_context[0].modulus,
+        &shamir_context[1].modulus,
+        &shamir_context[2].modulus,
+    ];
     {
         // generate b*b - b and send this to the aggregator
         // connect to the aggregator to get a random number
@@ -213,13 +218,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
 
         // apply the polynomial identity test
-        let rb = mb.lock().unwrap();
         let mut flag_bits: Vec<Vec<u64>> = vec![vec![0u64; rb[0].len() / NUM_DIMENSION]; 3];
-        let q = vec![
-            &shamir_context[0].modulus,
-            &shamir_context[1].modulus,
-            &shamir_context[2].modulus,
-        ];
         for i in 0..rb[0].len() / NUM_DIMENSION {
             for k in 0..3 {
                 // let bit = Scalar::from(rb[k][i * NUM_DIMENSION]);
@@ -253,32 +252,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // aggregate 40 bits into noise and apply NTT
-    // let mut noise =
-    /*
-        // let mut rr: i128 = 1;
-        // for _ in 0..NUM_DIMENSION {
-        //     r_vec.push(rr);
-        //     rr = (rr * r) % MODULUS;
-        // }
-
-        // bits validation
-        let bits = mb.lock().unwrap();
-        let ret: Vec<i128> = (0..bits.len())
-            .step_by(NUM_DIMENSION)
-            .map(|_x| {
-                //let mut s: i128 = 0;
-                let s: i128 = 0;
-                // for i in 0..NUM_DIMENSION {
-                //     // let delta = bits[i + x] * bits[i + x] - bits[i + x] * shamir(1);
-                //     //s = s + (bits[i + x] * r_vec[i]) % MODULUS;
-                // }
-                s
-            })
-            .collect();
-        let buf = bincode::serialize(&ret).unwrap();
-        stream.write_all(&buf).await?;
-
-        // update the local noise
-    */
+    // assert!(rb[0].len() % 40 == 0);
+    println!("rb len {}", rb[0].len());
+    let mut noise: Vec<Vec<u64>> = Vec::new();
+    for k in 0..3usize {
+        noise.push(
+            (0..rb[0].len())
+                .step_by(40)
+                .map(|x| {
+                    let mut sum: u64 = 0;
+                    for i in x..x + 20usize {
+                        sum += rb[k][i];
+                    }
+                    for i in x + 20..x + 40usize {
+                        sum -= rb[k][i];
+                    }
+                    Scalar::modulus(&Scalar::from(sum), q[k]).rep()
+                })
+                .collect(),
+        );
+    }
+    // for each 4k numbers, run NTT
+    // assert!(noise[0].len() % 40 == 0);
+    for k in (0..noise[0].len()).step_by(NUM_DIMENSION) {
+        ntt_context[0].lazy_ntt_inplace(&mut noise[0][k..k + NUM_DIMENSION]);
+        ntt_context[1].lazy_ntt_inplace(&mut noise[1][k..k + NUM_DIMENSION]);
+        ntt_context[2].lazy_ntt_inplace(&mut noise[2][k..k + NUM_DIMENSION]);
+    }
+    // write into a file
+    // println!("{:?}", noise);
     Ok(())
 }

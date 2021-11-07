@@ -43,30 +43,51 @@ use cupcake::integer_arith::scalar::Scalar;
 use cupcake::integer_arith::ArithUtils;
 use cupcake::polyarith::lazy_ntt::{lazy_inverse_ntt_u64, lazy_ntt_u64};
 use cupcake::rqpoly::RqPolyContext;
+use quail::rlwe::context::MODULUS;
 //use quail::rlwe::context::{self, Context};
+use ark_std::{end_timer, start_timer};
 use ring_algorithm::chinese_remainder_theorem;
-use threshold_secret_sharing as tss;
 
 fn main() {
-    for _ in 0..16384 * 20 {
-        let mut context = ShamirContext::init(0xffffee001u64, 10, 4);
-        let shares = context.share(0);
-        let sshares: Vec<u64> = shares
-            .iter()
-            .map(|x| {
-                let b = Scalar::from(*x);
-                Scalar::sub_mod(
-                    &Scalar::mul_mod(&b, &b, &context.modulus),
-                    &b,
-                    &context.modulus,
-                )
-                .rep()
-            })
-            .collect();
-        context.threshold *= 2;
-        let ret = context.reconstruct(&sshares);
-        assert_eq!(ret, 0u64);
+    let nr_players = 10;
+    let threshold = 2;
+    let shamir_context = vec![
+        ShamirContext::init(MODULUS[0], nr_players, threshold),
+        ShamirContext::init(MODULUS[1], nr_players, threshold),
+        ShamirContext::init(MODULUS[2], nr_players, threshold),
+    ];
+    let gc = start_timer!(|| "remainder");
+    for _ in 0..4096 * 34 {
+        let share = [
+            Scalar::sample_blw(&shamir_context[0].modulus).rep() as i64,
+            Scalar::sample_blw(&shamir_context[1].modulus).rep() as i64,
+            Scalar::sample_blw(&shamir_context[2].modulus).rep() as i64,
+        ];
+        chinese_remainder_theorem(
+            &share,
+            &[MODULUS[0] as i64, MODULUS[1] as i64, MODULUS[2] as i64],
+        );
     }
+    end_timer!(gc);
+    // for _ in 0..16384 * 20 {
+    //     let mut context = ShamirContext::init(0xffffee001u64, 10, 4);
+    //     let shares = context.share(0);
+    //     let sshares: Vec<u64> = shares
+    //         .iter()
+    //         .map(|x| {
+    //             let b = Scalar::from(*x);
+    //             Scalar::sub_mod(
+    //                 &Scalar::mul_mod(&b, &b, &context.modulus),
+    //                 &b,
+    //                 &context.modulus,
+    //             )
+    //             .rep()
+    //         })
+    //         .collect();
+    //     context.threshold *= 2;
+    //     let ret = context.reconstruct(&sshares);
+    //     assert_eq!(ret, 0u64);
+    // }
 
     // let context = Context::init_default();
 
