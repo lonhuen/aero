@@ -2,6 +2,8 @@ from ntt import NTT
 from crt import crt
 from player import Player
 from shamir import Shamir
+from shamir import Q
+from shamir import T
 import random
 
 ntt = NTT()
@@ -14,6 +16,11 @@ inv_root = crt(modulus, [ntt.modInv(
     primitive_root[i], modulus[i]) for i in range(3)])
 inv_N = crt(modulus, [ntt.modInv(N, modulus[i]) for i in range(3)])
 
+share = Shamir(1).get_share()
+print(share)
+new_share = [(share[i] * share[i] - share[i]) % Q for i in range(len(share))]
+x = Shamir.from_share(new_share, T*2)
+print(x.reveal())
 
 # verify ntt(sk) * ntt(v) + ntt(noise)
 # sk = [1 for i in range(N)]
@@ -78,34 +85,35 @@ inv_N = crt(modulus, [ntt.modInv(N, modulus[i]) for i in range(3)])
 
 # verify test b2 - b*1
 
-noise = [random.randint(0, 1) for i in range(N)]
-identity = [1 for i in range(N)]
-noise_shares = [[] for i in range(20)]
-for i in range(N):
-    share = Shamir(noise[i]).get_share()
-    for j in range(20):
-        noise_shares[j].append(share[j])
-
-id_shares = [[] for i in range(20)]
-for i in range(N):
-    share = Shamir(identity[i]).get_share()
-    for j in range(20):
-        id_shares[j].append(share[j])
-
-# local computation
-result_shares = [[0 for j in range(4096)] for i in range(20)]
-for j in range(20):
-    for i in range(4096):
-        result_shares[j][i] = noise_shares[j][i] * \
-            noise_shares[j][i] - noise_shares[j][i] * id_shares[j][i]
-
-result_shamir = []
-for i in range(4096):
-    slot_shamir_share = []
-    for j in range(20):
-        slot_shamir_share.append(result_shares[j][i])
-
-    s = Shamir.from_share(slot_shamir_share, 12).reveal()
-    result_shamir.append(s)
-
-print(result_shamir)
+# noise = [random.randint(0, 1) for i in range(N)]
+# identity = [1 for i in range(N)]
+# noise_shares = [[] for i in range(20)]
+# for i in range(N):
+#     share = Shamir(noise[i]).get_share()
+#     for j in range(20):
+#         noise_shares[j].append(share[j])
+#
+# id_shares = [[] for i in range(20)]
+# for i in range(N):
+#     share = Shamir(identity[i]).get_share()
+#     for j in range(20):
+#         id_shares[j].append(share[j])
+#
+# # local computation
+# result_shares = [[0 for j in range(4096)] for i in range(20)]
+# for j in range(20):
+#     for i in range(4096):
+#         result_shares[j][i] = noise_shares[j][i] * \
+#             noise_shares[j][i] - noise_shares[j][i] * id_shares[j][i]
+#
+# result_shamir = []
+# for i in range(4096):
+#     slot_shamir_share = []
+#     for j in range(20):
+#         slot_shamir_share.append(result_shares[j][i])
+#
+#     s = Shamir.from_share(slot_shamir_share, 12).reveal()
+#     result_shamir.append(s)
+#
+# print(result_shamir)
+#

@@ -48,6 +48,26 @@ use ring_algorithm::chinese_remainder_theorem;
 use threshold_secret_sharing as tss;
 
 fn main() {
+    for _ in 0..16384 * 20 {
+        let mut context = ShamirContext::init(0xffffee001u64, 10, 4);
+        let shares = context.share(0);
+        let sshares: Vec<u64> = shares
+            .iter()
+            .map(|x| {
+                let b = Scalar::from(*x);
+                Scalar::sub_mod(
+                    &Scalar::mul_mod(&b, &b, &context.modulus),
+                    &b,
+                    &context.modulus,
+                )
+                .rep()
+            })
+            .collect();
+        context.threshold *= 2;
+        let ret = context.reconstruct(&sshares);
+        assert_eq!(ret, 0u64);
+    }
+
     // let context = Context::init_default();
 
     // //let mut a: Vec<u64> = vec![1u64; 4096];
