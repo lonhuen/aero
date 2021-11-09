@@ -7,9 +7,12 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 mod util;
 use crate::util::config::ConfigUtils;
-use rand::SeedableRng;
+use bincode::serialize_into;
+use rand::{Rng, SeedableRng};
 use ring_algorithm::chinese_remainder_theorem;
 use std::env;
+use std::fs::File;
+use std::io::BufWriter;
 use std::sync::{Arc, Mutex};
 
 pub const MODULUS: [u64; 3] = [0xffffee001u64, 0xffffc4001u64, 0x1ffffe0001u64];
@@ -99,9 +102,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut rng = rand::rngs::StdRng::from_entropy();
     let random_bits: Vec<u64> = (0..nr_bits)
         .into_iter()
-        //.map(|_| rng.gen_bool(0.5) as u64)
+        .map(|_| rng.gen_bool(0.5) as u64)
         //.map(|_| 1u64)
-        .map(|_| 0u64)
+        //.map(|_| 0u64)
         .collect();
     let mut shares = vec![vec![vec![0u64; random_bits.len()]; nr_players]; 3];
     for i in 0..random_bits.len() {
@@ -253,21 +256,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // aggregate 40 bits into noise and apply NTT
     // assert!(rb[0].len() % 40 == 0);
-    println!("rb len {}", rb[0].len());
     let mut noise: Vec<Vec<u64>> = Vec::new();
     for k in 0..3usize {
         noise.push(
             (0..rb[0].len())
                 .step_by(40)
                 .map(|x| {
-                    let mut sum: u64 = 0;
+                    let mut p_sum: u64 = 0;
                     for i in x..x + 20usize {
-                        sum += rb[k][i];
+                        p_sum += rb[k][i];
                     }
+                    let mut n_sum: u64 = 0;
                     for i in x + 20..x + 40usize {
-                        sum -= rb[k][i];
+                        n_sum += rb[k][i];
                     }
-                    Scalar::modulus(&Scalar::from(sum), q[k]).rep()
+                    Scalar::sub_mod(
+                        &Scalar::modulus(&Scalar::from(p_sum), q[k]),
+                        &Scalar::modulus(&Scalar::from(n_sum), q[k]),
+                        q[k],
+                    )
+                    .rep()
                 })
                 .collect(),
         );
@@ -280,6 +288,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ntt_context[2].lazy_ntt_inplace(&mut noise[2][k..k + NUM_DIMENSION]);
     }
     // write into a file
-    // println!("{:?}", noise);
+    {
+        let file_name = format!("./data/noise{}.txt", id);
+        let mut f = BufWriter::new(File::create(file_name).unwrap());
+        serialize_into(&mut f, &noise).unwrap();
+    }
     Ok(())
 }

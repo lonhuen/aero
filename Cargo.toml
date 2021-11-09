@@ -71,8 +71,16 @@ name = "committee_offline"
 path = "src/committee_offline.rs"
 
 [[bin]]
-name = "aggregator"
+name = "committee_online"
+path = "src/committee_online.rs"
+
+[[bin]]
+name = "aggregator_offline"
 path = "src/aggregator_offline.rs"
+
+[[bin]]
+name = "aggregator_online"
+path = "src/aggregator_online.rs"
 
 [[bin]]
 name = "light_client"

@@ -1,7 +1,9 @@
+APP=$1
+echo $APP
 cargo build --release
-#./target/release/aggregator &
+./target/release/aggregator_$APP > aggregator.log &
 for i in {0..8}; do 
-#  echo $i
-(./target/release/committee_offline $i | tee co$i.log ) &
+(./target/release/committee_$APP $i > co$i.log ) &
 done
-./target/release/committee_offline 9 | tee co9.log
+./target/release/committee_$APP 9 | tee co9.log
+wait
