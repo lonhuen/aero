@@ -1,5 +1,6 @@
 use ark_groth16::verifier;
 use rayon::ThreadPool;
+use std::process::Command;
 
 use crate::common::aggregation::{
     merkle::*,
@@ -282,6 +283,21 @@ impl Server {
                 _ => true,
             })
             .unwrap();
+
+        // TODO retrieve decrypted result first
+        if round != 0 {
+            Command::new("bash")
+                .arg("/home/ubuntu/quail/test.sh")
+                .arg("online")
+                .output()
+                .expect("failed to execute process");
+        }
+        // TODO start random bit generation
+        Command::new("bash")
+            .arg("/home/ubuntu/quail/test.sh")
+            .arg("offline")
+            .output()
+            .expect("failed to execute process");
         let mut rng = rand::rngs::StdRng::from_entropy();
         (0..self.nr_parameter).map(|_| rng.gen::<u8>()).collect()
     }
