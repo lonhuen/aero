@@ -11,7 +11,7 @@ use std::{
 fn encrypt(pk: &PublicKey) {
     // read the key
     //let prover = Prover::new("data/encryption.txt", "data/pk.txt");
-    pk.encrypt([0u8; 4096].to_vec());
+    pk.encrypt(&[0u8; 4096].to_vec());
 }
 
 fn matrix_mut(p: &Vec<i128>, q: &Vec<i128>) -> Vec<i128> {

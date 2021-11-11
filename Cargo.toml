@@ -86,6 +86,10 @@ path = "src/aggregator_online.rs"
 name = "light_client"
 path = "src/light_client.rs"
 
+[[bin]]
+name = "data_generator"
+path = "src/data_generator.rs"
+
 [features]
 default = [ "print-trace","hashfn_blake3","parallel"]
 hashfn_blake3=[]

@@ -99,13 +99,40 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     // read from file
-    let noise: Vec<Vec<u64>> = {
+    let mut noise: Vec<Vec<u64>> = {
         let file_name = format!("./data/noise{}.txt", id);
         let f = BufReader::new(File::open(file_name).unwrap());
         deserialize_from(f).unwrap()
     };
-
+    let sk: Vec<Vec<u64>> = {
+        let file_name = format!("./data/sk_share{}.txt", id);
+        let mut f = BufReader::new(File::open(file_name).unwrap());
+        let share0: Vec<u64> = deserialize_from(&mut f).unwrap();
+        let share1: Vec<u64> = deserialize_from(&mut f).unwrap();
+        let share2: Vec<u64> = deserialize_from(&mut f).unwrap();
+        vec![share0, share1, share2]
+    };
+    let ct: Vec<Vec<u64>> = {
+        let file_name = format!("./data/ciphertext.txt");
+        let mut f = BufReader::new(File::open(file_name).unwrap());
+        deserialize_from(&mut f).unwrap()
+    };
     // local compute and sends shares to the aggregator
+    {
+        for k in 0..3 {
+            for j in (0..noise[0].len()).step_by(NUM_DIMENSION) {
+                let ct_sk = ntt_context[k].coeff_mul_mod(&sk[k], &ct[k]);
+                for i in 0..NUM_DIMENSION {
+                    noise[k][j + i] = Scalar::add_mod(
+                        &Scalar::from(noise[k][j + i]),
+                        &Scalar::from(ct_sk[i]),
+                        &ntt_context[k].modulus,
+                    )
+                    .rep();
+                }
+            }
+        }
+    }
     // send to aggregator
     {
         let mut stream = TcpStream::connect(&aggregator_addr).await?;

@@ -178,13 +178,25 @@ impl NTTContext {
             .for_each(|x| *x = Scalar::mul_mod(&self.ninv, &Scalar::from(*x), &self.modulus).rep());
     }
 
-    pub fn coeff_mul_mod(&self, a: &Vec<u64>, b: &Vec<u64>) -> Vec<u64> {
+    pub fn coeff_mul_mod(&self, a: &[u64], b: &[u64]) -> Vec<u64> {
         a.iter()
             .zip(b.iter())
             .map(|(x, y)| {
                 Scalar::mul_mod(&Scalar::from(*x), &Scalar::from(*y), &self.modulus).rep()
             })
             .collect()
+    }
+
+    pub fn poly_mul(&self, a: &[u64], b: &[u64]) -> Vec<u64> {
+        let mut aa = vec![0u64; NUM_DIMENSION];
+        aa.clone_from_slice(a);
+        let mut bb = vec![0u64; NUM_DIMENSION];
+        bb.clone_from_slice(b);
+        self.lazy_ntt_inplace(&mut aa);
+        self.lazy_ntt_inplace(&mut bb);
+        let mut ntt_c = self.coeff_mul_mod(&aa, &bb);
+        self.lazy_inverse_ntt_inplace(&mut ntt_c);
+        ntt_c
     }
 }
 
