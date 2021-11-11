@@ -14,6 +14,8 @@ use std::env;
 use std::fs::File;
 use std::io::BufWriter;
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
+
 
 pub const MODULUS: [u64; 3] = [0xffffee001u64, 0xffffc4001u64, 0x1ffffe0001u64];
 
@@ -96,6 +98,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         NTTContext::init(MODULUS[1]),
         NTTContext::init(MODULUS[2]),
     ];
+
+    let start = Instant::now();
 
     // first generate enough number of bits
     let gc = start_timer!(|| "generate shamir sharing");
@@ -196,7 +200,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //{
     //    println!("{:?}", mb.lock().unwrap()[0]);
     //}
-    let rb = mb.lock().unwrap();
+    let mut rb = mb.lock().unwrap();
+    {
+        let l = rb[0].len();
+        // truncate bits more than 40 * 4096
+        let to_truncate_len = l % (40 * NUM_DIMENSION);
+        rb[0].truncate(l - to_truncate_len);
+        rb[1].truncate(l - to_truncate_len);
+        rb[2].truncate(l - to_truncate_len);
+    }
     let q = vec![
         &shamir_context[0].modulus,
         &shamir_context[1].modulus,
@@ -287,6 +299,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ntt_context[1].lazy_ntt_inplace(&mut noise[1][k..k + NUM_DIMENSION]);
         ntt_context[2].lazy_ntt_inplace(&mut noise[2][k..k + NUM_DIMENSION]);
     }
+
+    let elapsed_time = start.elapsed();
+    println!("Elapsed time: {:?} seconds", elapsed_time.subsec_nanos() as f64 / 1_000_000_000f64 + elapsed_time.as_secs() as f64);
+
+
     // write into a file
     {
         let file_name = format!("./data/noise{}.txt", id);

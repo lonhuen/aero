@@ -1,4 +1,4 @@
-
+#! /bin/bash
 nr_real=$1
 
 cd ~/quail
@@ -7,7 +7,7 @@ if [ -z $nr_real ]; then
   nr_real=$(grep "^nr_real[:space]=" ./config.ini | awk -F[=] '{print $2}')
 fi
 
-cargo build --release
+#cargo build --release
 start=$(cat /proc/net/dev | grep "eth0")
 in_bytes=$(echo $start | awk -v OFS=, '/eth0:/ { print $2 }')
 out_bytes=$(echo $start | awk -v OFS=, '/eth0:/ { print $10 }')
