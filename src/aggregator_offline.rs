@@ -58,7 +58,7 @@ fn deserialize_shares(buf: &[u8]) -> (Vec<u64>, Vec<u64>, Vec<u64>) {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let config = ConfigUtils::init("committee.yaml");
+    let config = ConfigUtils::init("config.yaml");
     // read the address of players
     let players: Vec<String> = config
         .settings
@@ -68,7 +68,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|x| x.into_str().unwrap())
         .collect();
     let aggregator_addr = config.get("aggregator");
-    let nr_bits: usize = config.get_int("nBits") as usize;
+    // truncated nr_bits / NUM_DIMENSION
+    let nr_bits = config.get_int("nr_parameter") as usize * 40 / NUM_DIMENSION;
 
     let nr_players = players.len();
     let threshold = config.get_int("threshold") as usize;
@@ -101,7 +102,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mbits = mutex_bits.clone();
 
             handles.push(tokio::spawn(async move {
-                let mut buf = vec![0u8; nr_bits * nr_players / NUM_DIMENSION * 15 + 1];
+                let mut buf = vec![0u8; nr_bits * 15 + 1];
 
                 let n = match socket.read_exact(&mut buf).await {
                     // socket closed
@@ -133,7 +134,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //let ret = shamir_context[0].reconstruct(&shares);
     //println!("flag : {}", ret);
     for k in 0..3usize {
-        for i in 0..nr_bits * nr_players / NUM_DIMENSION {
+        for i in 0..nr_bits {
             let mut shares = vec![0u64; nr_players];
             for j in 0..nr_players {
                 shares[j] = rb[k][j][i];

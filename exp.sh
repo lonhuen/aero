@@ -2,7 +2,7 @@
 nr_real=$1
 
 if [ -z $nr_real ]; then
-  nr_real=$(grep "^nr_real[:space]=" ./config.ini | awk -F[=] '{print $2}')
+  nr_real=$(grep "^nr_real[:space]=" ./config.yaml | awk -F[=] '{print $2}')
 fi
 
 for i in `seq 0 $((nr_real-2))`; do

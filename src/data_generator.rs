@@ -19,7 +19,7 @@ use std::sync::{Arc, Mutex};
 pub const MODULUS: [u64; 3] = [0xffffee001u64, 0xffffc4001u64, 0x1ffffe0001u64];
 
 fn main() {
-    let config = ConfigUtils::init("committee.yaml");
+    let config = ConfigUtils::init("config.yaml");
     // read the address of players
     let players: Vec<String> = config
         .settings

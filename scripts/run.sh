@@ -1,6 +1,6 @@
 cargo build --release
 
-nr_real=$(grep "^nr_real" ./config.ini | awk -F[=] '{print $2}')
+nr_real=$(grep "^nr_real" ./config.yaml | awk -F[=] '{print $2}')
 #rm ./client*.log
 cargo run --bin light_client --release 2>&1 1>light_client.log &
 

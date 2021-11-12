@@ -59,7 +59,7 @@ fn deserialize_shares(buf: &[u8]) -> (Vec<u64>, Vec<u64>, Vec<u64>) {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let config = ConfigUtils::init("committee.yaml");
+    let config = ConfigUtils::init("config.yaml");
     // read the address of players
     let players: Vec<String> = config
         .settings
@@ -69,7 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|x| x.into_str().unwrap())
         .collect();
     let aggregator_addr = config.get("aggregator");
-    let nr_bits: usize = config.get_int("nBits") as usize;
+    let nr_bits: usize = config.get_int("nr_parameter") as usize;
 
     let nr_players = players.len();
     let threshold = config.get_int("threshold") as usize;
@@ -102,7 +102,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mbits = mutex_bits.clone();
 
             handles.push(tokio::spawn(async move {
-                let mut buf = vec![0u8; nr_bits * nr_players / 40 * 15 + 1];
+                let mut buf = vec![0u8; nr_bits * 15 + 1];
 
                 let n = match socket.read_exact(&mut buf).await {
                     // socket closed
@@ -131,9 +131,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //shamir_context[0].threshold *= 2;
     //shamir_context[1].threshold *= 2;
     //shamir_context[2].threshold *= 2;
-    let mut ret: Vec<Vec<u64>> = vec![Vec::with_capacity(nr_bits * nr_players / 40); 3];
+    let mut ret: Vec<Vec<u64>> = vec![Vec::with_capacity(nr_bits); 3];
     for k in 0..3usize {
-        for i in 0..nr_bits * nr_players / 40 {
+        for i in 0..nr_bits {
             let mut shares = vec![0u64; nr_players];
             for j in 0..nr_players {
                 shares[j] = rb[k][j][i];
@@ -148,11 +148,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ntt_context[2].lazy_inverse_ntt_inplace(&mut ret[2][k..k + NUM_DIMENSION]);
     }
 
-    let q = vec![
-        shamir_context[0].modulus.rep() as i64,
-        shamir_context[1].modulus.rep() as i64,
-        shamir_context[2].modulus.rep() as i64,
-    ];
+    //let q = vec![
+    //    shamir_context[0].modulus.rep() as i64,
+    //    shamir_context[1].modulus.rep() as i64,
+    //    shamir_context[2].modulus.rep() as i64,
+    //];
 
     for k in 0..ret[0].len() {
         println!("{:?} {:?} {:?}", ret[0][k], ret[1][k], ret[2][k]);

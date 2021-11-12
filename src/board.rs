@@ -33,7 +33,7 @@
 //
 //fn main() {
 //    LogUtils::init("board.log");
-//    ConfigUtils::init("config.ini");
+//    ConfigUtils::init("config.yaml");
 //    println!("hello world!");
 //}
 //

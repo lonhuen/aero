@@ -437,7 +437,7 @@ impl Client {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let config = ConfigUtils::init("config.ini");
+    let config = ConfigUtils::init("config.yaml");
     init_tracing(
         &format!("Atom client {}", std::process::id()),
         config.get_agent_endpoint(),

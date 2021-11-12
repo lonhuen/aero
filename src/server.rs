@@ -188,7 +188,7 @@ impl ServerService for InnerServer {
 }
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let config = ConfigUtils::init("config.ini");
+    let config = ConfigUtils::init("config.yaml");
     init_tracing(
         "Atom Server",
         config.get_agent_endpoint(),

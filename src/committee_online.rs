@@ -69,7 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if args.len() < 2 {
         panic!("provide player id");
     }
-    let config = ConfigUtils::init("committee.yaml");
+    let config = ConfigUtils::init("config.yaml");
     // read the address of players
     let players: Vec<String> = config
         .settings
@@ -79,7 +79,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|x| x.into_str().unwrap())
         .collect();
     let aggregator_addr = config.get("aggregator");
-    let nr_bits: usize = config.get_int("nBits") as usize;
+    //let nr_bits: usize = config.get_int("nBits") as usize;
 
     let id = usize::from_str_radix(&args[1], 10).unwrap();
     let nr_players = players.len();

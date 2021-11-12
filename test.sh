@@ -6,7 +6,7 @@ start=$(cat /proc/net/dev | grep "lo")
 in_bytes=$(echo $start | awk -v OFS=, '/lo:/ { print $2 }')
 out_bytes=$(echo $start | awk -v OFS=, '/lo:/ { print $10 }')
 
-./target/release/aggregator_$APP 2>&1 >> aggregator.log &
+./target/release/aggregator_$APP 2>&1 > aggregator.log &
 for i in {0..26}; do 
 (./target/release/committee_$APP $i 2>&1 > co$i.log ) &
 done

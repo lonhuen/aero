@@ -16,7 +16,6 @@ use std::io::BufWriter;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-
 pub const MODULUS: [u64; 3] = [0xffffee001u64, 0xffffc4001u64, 0x1ffffe0001u64];
 
 fn serialize_shares_into(s0: &Vec<u64>, s1: &Vec<u64>, s2: &Vec<u64>, buf: &mut [u8]) {
@@ -70,7 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     if args.len() < 2 {
         panic!("provide player id");
     }
-    let config = ConfigUtils::init("committee.yaml");
+    let config = ConfigUtils::init("config.yaml");
     // read the address of players
     let players: Vec<String> = config
         .settings
@@ -80,7 +79,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|x| x.into_str().unwrap())
         .collect();
     let aggregator_addr = config.get("aggregator");
-    let nr_bits: usize = config.get_int("nBits") as usize;
+    let (nr_bits, to_truncate_len) = {
+        let nr_parameters = config.get_int("nr_parameter") as usize;
+        let nr_bits = (nr_parameters as f32 * 40_f32 / (players.len() as f32)).ceil() as usize;
+        (nr_bits, nr_bits * players.len() - nr_parameters * 40)
+    };
 
     let id = usize::from_str_radix(&args[1], 10).unwrap();
     let nr_players = players.len();
@@ -201,10 +204,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //    println!("{:?}", mb.lock().unwrap()[0]);
     //}
     let mut rb = mb.lock().unwrap();
-    {
+    if to_truncate_len != 0 {
         let l = rb[0].len();
-        // truncate bits more than 40 * 4096
-        let to_truncate_len = l % (40 * NUM_DIMENSION);
         rb[0].truncate(l - to_truncate_len);
         rb[1].truncate(l - to_truncate_len);
         rb[2].truncate(l - to_truncate_len);
@@ -301,8 +302,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let elapsed_time = start.elapsed();
-    println!("Elapsed time: {:?} seconds", elapsed_time.subsec_nanos() as f64 / 1_000_000_000f64 + elapsed_time.as_secs() as f64);
-
+    println!(
+        "Elapsed time: {:?} seconds",
+        elapsed_time.subsec_nanos() as f64 / 1_000_000_000f64 + elapsed_time.as_secs() as f64
+    );
 
     // write into a file
     {

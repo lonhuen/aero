@@ -4,7 +4,7 @@ nr_real=$1
 cd ~/quail
 
 if [ -z $nr_real ]; then
-  nr_real=$(grep "^nr_real[:space]=" ./config.ini | awk -F[=] '{print $2}')
+  nr_real=$(grep "^nr_real[:space]=" ./config.yaml | awk -F[=] '{print $2}')
 fi
 
 #cargo build --release

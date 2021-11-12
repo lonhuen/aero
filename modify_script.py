@@ -1,10 +1,10 @@
 import configparser
 import json
 config = configparser.ConfigParser()
-with open('config.ini', 'r') as f:
+with open('config.yaml', 'r') as f:
         config_string = '[Atom]\n' + f.read()
         config.read_string(config_string)
-#config.read('config.ini')
+#config.read('config.yaml')
 # print(config["Atom"]["real_worker_addr"])
 #l = json.loads(config["Atom"]["real_worker_addr"])
 # print(l[0])
@@ -22,9 +22,9 @@ nr_sim_per_worker = [int(x) for x in json.loads(
     config["Atom"]["nr_sim_per_worker"])]
 
 for w in real_addr:
-    print("scp -i ./data/aws01.pem config.ini ubuntu@{}:".format(w))
+    print("scp -i ./data/aws01.pem config.yaml ubuntu@{}:".format(w))
 for w in sim_addr:
-    print("scp -i ./data/aws01.pem config.ini ubuntu@{}:".format(w))
+    print("scp -i ./data/aws01.pem config.yaml ubuntu@{}:".format(w))
 
 # configure the network
 for w in real_addr:

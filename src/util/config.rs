@@ -39,13 +39,13 @@ impl ConfigUtils {
 mod tests {
     use super::*;
 
-    // config.ini content
+    // config.yaml content
     // debug = false
     // port = 3223
     // host = "0.0.0.0"
     #[test]
     fn test_config_init() {
-        let config = ConfigUtils::init("config.ini");
+        let config = ConfigUtils::init("config.yaml");
         println!("{}", config.get("port"));
     }
 }

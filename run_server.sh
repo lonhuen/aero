@@ -1,8 +1,8 @@
 cargo run --bin server --release &
-scp -i ./data/aws01.pem config.ini ubuntu@172.31.47.222:/home/ubuntu/quail
-#scp -i ./data/aws01.pem config.ini ubuntu@172.31.47.163:/home/ubuntu/quail
-#scp -i ./data/aws01.pem config.ini ubuntu@172.31.37.209:/home/ubuntu/quail
-#scp -i ./data/aws01.pem config.ini ubuntu@172.31.47.34:/home/ubuntu/quail
+scp -i ./data/aws01.pem config.yaml ubuntu@172.31.47.222:/home/ubuntu/quail
+#scp -i ./data/aws01.pem config.yaml ubuntu@172.31.47.163:/home/ubuntu/quail
+#scp -i ./data/aws01.pem config.yaml ubuntu@172.31.37.209:/home/ubuntu/quail
+#scp -i ./data/aws01.pem config.yaml ubuntu@172.31.47.34:/home/ubuntu/quail
 
 scp -i ./data/aws01.pem scripts/exp.sh ubuntu@172.31.47.222:/home/ubuntu/quail/scripts/
 #scp -i ./data/aws01.pem scripts/exp.sh ubuntu@172.31.47.163:/home/ubuntu/quail/scripts/
