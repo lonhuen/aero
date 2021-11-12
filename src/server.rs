@@ -129,7 +129,12 @@ impl ServerService for InnerServer {
     }
 
     //type GetMsProofFut = Ready<MerkleProof>;
-    async fn get_ms_proof(self, _: context::Context, round: u32, rsa_pk: Vec<u8>) -> MerkleProof {
+    async fn get_ms_proof(
+        self,
+        _: context::Context,
+        round: u32,
+        rsa_pk: Vec<u8>,
+    ) -> Vec<MerkleProof> {
         //self.pool
         //    .as_ref()
         //    .install(|| self.server.get_ms_proof(round, rsa_pk))
@@ -145,11 +150,12 @@ impl ServerService for InnerServer {
         round: u32,
         vinit: u32,
         non_leaf_id: Vec<u32>,
+        ct_id: Vec<usize>,
     ) -> Vec<(SummationEntry, MerkleProof)> {
         //self.pool
         //    .as_ref()
         //    .install(|| self.server.verify(round, vinit, non_leaf_id))
-        std::thread::spawn(move || self.server.verify(round, vinit, non_leaf_id))
+        std::thread::spawn(move || self.server.verify(round, vinit, non_leaf_id, ct_id))
             .join()
             .unwrap()
     }

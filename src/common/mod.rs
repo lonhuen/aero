@@ -20,7 +20,7 @@ pub fn summation_array_size(n: u32) -> u32 {
     s + 1
 }
 
-pub fn i128vec_to_le_bytes(v: &Vec<i128>) -> Vec<u8> {
+pub fn i128vec_to_le_bytes(v: &[i128]) -> Vec<u8> {
     let ret: Vec<u8> = v.iter().flat_map(|x| i128::to_le_bytes(*x)).collect();
     ret
 }

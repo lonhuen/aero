@@ -2,7 +2,7 @@ mod common;
 mod util;
 mod zksnark;
 use crate::common::aggregation::{
-    merkle::HashAlgorithm,
+    merkle::{HashAlgorithm, MerkleProof},
     node::{SummationEntry, SummationLeaf, SummationNonLeaf},
 };
 use crate::common::server_service::ServerServiceClient;
@@ -203,7 +203,7 @@ impl Client {
             self.inner.get_ms_proof(ctx, round, self.rsa_pk.clone())
         };
 
-        let ms_proof = result_data.await.unwrap().to_proof();
+        let ms_proof: Vec<MerkleProof> = result_data.await.unwrap();
         warn!("ms proof received");
         end_timer!(gc3);
         // TODO verify the proof by checking x.leaf for mc, ms
@@ -216,7 +216,8 @@ impl Client {
         //    let mut x = HashAlgorithm::new();
         //    warn!("hash {:?}", x.leaf(h));
         //}
-        ms_proof.validate::<HashAlgorithm>() && mc_proof.validate::<HashAlgorithm>()
+        ms_proof[0].clone().to_proof().validate::<HashAlgorithm>()
+            && mc_proof.validate::<HashAlgorithm>()
     }
 
     #[cfg(not(feature = "hashfn_blake3"))]
@@ -311,11 +312,14 @@ impl Client {
         let result = {
             let mut ctx = context::current();
             ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
-            self.inner.verify(ctx, round, vinit, non_leafs)
+            self.inner
+                .verify(ctx, round, vinit, non_leafs, vec![0usize, 1usize, 2usize])
         }
         .await
         .unwrap();
         end_timer!(gc1);
+
+        println!("leaf len {}", result.len());
 
         // if not able to retrieve the proof
         if result.len() == 0 {
@@ -324,6 +328,7 @@ impl Client {
 
         // verify all the leafs
 
+        /*
         let gc2 = start_timer!(|| "verify the proofs");
         for i in 0..s + 1 {
             let mc_node = &result[2 * i as usize];
@@ -335,7 +340,7 @@ impl Client {
             );
             if let SummationEntry::Leaf(s) = &ms_node.0 {
                 if s.c0.is_some() {
-                    let h = s.hash();
+                    let h = s.hash(0, 4096);
                     if let SummationEntry::Commit(cm) = &mc_node.0 {
                         //TODO fix this
                         // assert_eq!(h, cm.hash);
@@ -408,8 +413,8 @@ impl Client {
             }
             i += 3;
         }
-
         end_timer!(gc2);
+        */
     }
 
     #[instrument(skip_all)]

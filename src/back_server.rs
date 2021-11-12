@@ -229,15 +229,15 @@ impl Server {
     }
 
     //type GetMsProofFut = Ready<MerkleProof>;
-    pub fn get_ms_proof(&self, round: u32, rsa_pk: Vec<u8>) -> MerkleProof {
+    pub fn get_ms_proof(&self, round: u32, rsa_pk: Vec<u8>) -> Vec<MerkleProof> {
         let (lock, cvar) = &*self.cond;
         let mut state = lock.lock().unwrap();
         // if never possible to get the lock, return
         if !Self::is_waitable(&*state, (STAGE::Verify, round)) {
-            return MerkleProof {
+            return vec![MerkleProof {
                 lemma: Vec::new(),
                 path: Vec::new(),
-            };
+            }];
         }
         // otherwise wait till the state
         state = cvar
@@ -257,6 +257,7 @@ impl Server {
         round: u32,
         vinit: u32,
         non_leaf_id: Vec<u32>,
+        ct_id: Vec<usize>,
     ) -> Vec<(SummationEntry, MerkleProof)> {
         let (lock, _cvar) = &*self.cond;
         let state = lock.lock().unwrap();
@@ -272,20 +273,24 @@ impl Server {
         //first all the leafs
         let mut ret: Vec<(SummationEntry, MerkleProof)> = Vec::new();
         for i in 0..5 + 1 {
-            let node = ms.get_leaf_node(i + vinit);
-            if let SummationEntry::Leaf(_) = node {
+            let node: Vec<SummationEntry> = ms.get_leaf_node(i + vinit, &ct_id);
+            if let SummationEntry::Leaf(_) = node[0] {
                 let mc_proof: MerkleProof = mc.get_proof_by_id(i + vinit).into();
-                let ms_proof: MerkleProof = ms.get_proof_by_id(i + vinit).into();
+                let ms_proof: Vec<MerkleProof> = ms.get_proof_by_id(i + vinit, &ct_id).into();
                 ret.push((SummationEntry::Commit(mc.get_node(i + vinit)), mc_proof));
-                ret.push((node, ms_proof));
+                ret.extend(
+                    node.iter()
+                        .zip(ms_proof.iter())
+                        .map(|(x, y)| (x.clone(), y.clone())),
+                );
             } else {
                 warn!("Atom: verify not a leaf node");
             }
         }
-        for i in non_leaf_id {
-            let ms_proof: MerkleProof = ms.get_proof_by_id(i).into();
-            ret.push((ms.get_nonleaf_node(i), ms_proof));
-        }
+        // for i in non_leaf_id {
+        //     let ms_proof: MerkleProof = ms.get_proof_by_id(i, &ct_id).into();
+        //     ret.push((ms.get_nonleaf_node(i), ms_proof));
+        // }
         ret
     }
 

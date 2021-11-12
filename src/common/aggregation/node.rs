@@ -57,6 +57,14 @@ impl SummationLeaf {
             r: None,
         }
     }
+    pub fn new_leaf_in_range(&self, x: usize, y: usize) -> Self {
+        SummationLeaf {
+            rsa_pk: self.rsa_pk.clone(),
+            c0: Some(self.c0.as_ref().unwrap().clone()[x..y].to_vec()),
+            c1: Some(self.c1.as_ref().unwrap().clone()[x..y].to_vec()),
+            r: self.r,
+        }
+    }
     pub fn from_ct(rsa_pk: Vec<u8>, cts: Vec<i128>, r: [u8; 16]) -> Self {
         let mut c0: Vec<i128> = Vec::with_capacity(cts.len() / 2);
         c0.extend(&cts[0..cts.len() / 2]);
@@ -89,14 +97,14 @@ impl SummationLeaf {
         h
     }
     #[cfg(feature = "hashfn_blake3")]
-    pub fn hash(&self) -> [u8; 32] {
+    pub fn hash(&self, x: usize, y: usize) -> [u8; 32] {
         let mut hasher = blake3::Hasher::new();
         hasher.update(&self.rsa_pk);
         if let Some(c0) = self.c0.as_ref() {
-            hasher.update(&i128vec_to_le_bytes(c0));
+            hasher.update(&i128vec_to_le_bytes(&c0[x..y]));
         }
         if let Some(c1) = self.c1.as_ref() {
-            hasher.update(&i128vec_to_le_bytes(c1));
+            hasher.update(&i128vec_to_le_bytes(&c1[x..y]));
         }
         if let Some(r) = self.r.as_ref() {
             hasher.update(r);
@@ -130,10 +138,10 @@ impl SummationNonLeaf {
         h
     }
     #[cfg(feature = "hashfn_blake3")]
-    pub fn hash(&self) -> [u8; 32] {
+    pub fn hash(&self, x: usize, y: usize) -> [u8; 32] {
         let mut hasher = blake3::Hasher::new();
-        let c0_bytes = i128vec_to_le_bytes(&self.c0);
-        let c1_bytes = i128vec_to_le_bytes(&self.c1);
+        let c0_bytes = i128vec_to_le_bytes(&self.c0[x..y]);
+        let c1_bytes = i128vec_to_le_bytes(&self.c1[x..y]);
         hasher.update(&c0_bytes);
         hasher.update(&c1_bytes);
         hasher.finalize().into()
@@ -264,6 +272,14 @@ impl SummationEntry {
     pub fn get_leaf_rsa_pk(&self) -> &Vec<u8> {
         if let SummationEntry::Leaf(l) = self {
             &l.rsa_pk
+        } else {
+            panic!("get_leaf_rsa_pk@SummationEntry: not a leaf");
+        }
+    }
+
+    pub fn new_leaf_in_range(&self, x: usize, y: usize) -> SummationEntry {
+        if let SummationEntry::Leaf(l) = self {
+            SummationEntry::Leaf(l.new_leaf_in_range(x, y))
         } else {
             panic!("get_leaf_rsa_pk@SummationEntry: not a leaf");
         }
