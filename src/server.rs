@@ -157,7 +157,7 @@ impl ServerService for InnerServer {
         vinit: u32,
         non_leaf_id: Vec<u32>,
         ct_id: Vec<usize>,
-    ) -> Vec<(SummationEntry, MerkleProof)> {
+    ) -> Vec<Vec<(SummationEntry, MerkleProof)>> {
         //self.pool
         //    .as_ref()
         //    .install(|| self.server.verify(round, vinit, non_leaf_id))

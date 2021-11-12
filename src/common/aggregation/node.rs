@@ -109,7 +109,7 @@ impl SummationLeaf {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct SummationNonLeaf {
     pub c0: i128,
     pub c1: i128,
@@ -206,27 +206,6 @@ impl<'a, 'b> Add<&'b SummationNonLeaf> for &'a SummationNonLeaf {
 //     }
 // }
 //
-// impl PartialEq for SummationNonLeaf {
-//     fn eq(&self, other: &Self) -> bool {
-//         if (self.c0.len() != other.c0.len()) || (self.c1.len() != other.c1.len()) {
-//             false
-//         } else {
-//             let a = self
-//                 .c0
-//                 .par_iter()
-//                 .zip(other.c0.par_iter())
-//                 .map(|(x, y)| x == y)
-//                 .reduce(|| true, |x, y| x && y);
-//             let b = self
-//                 .c1
-//                 .par_iter()
-//                 .zip(other.c1.par_iter())
-//                 .map(|(x, y)| x == y)
-//                 .reduce(|| true, |x, y| x && y);
-//             a && b
-//         }
-//     }
-// }
 //
 // impl From<SummationLeaf> for SummationNonLeaf {
 //     fn from(leaf: SummationLeaf) -> SummationNonLeaf {

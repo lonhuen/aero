@@ -286,7 +286,7 @@ impl Server {
         vinit: u32,
         non_leaf_id: Vec<u32>,
         ct_id: Vec<usize>,
-    ) -> Vec<(SummationEntry, MerkleProof)> {
+    ) -> Vec<Vec<(SummationEntry, MerkleProof)>> {
         let (lock, _cvar) = &*self.cond;
         let state = lock.lock().unwrap();
 
@@ -299,8 +299,9 @@ impl Server {
         let mc = self.mc.as_ref().read().unwrap();
         drop(state);
         //first all the leafs
-        let mut ret: Vec<(SummationEntry, MerkleProof)> = Vec::new();
+        let mut ret: Vec<Vec<(SummationEntry, MerkleProof)>> = Vec::new();
         for k in ct_id {
+            let mut t: Vec<(SummationEntry, MerkleProof)> = Vec::new();
             if k >= mc.len() {
                 warn!("K larger than Mc len");
                 continue;
@@ -310,16 +311,17 @@ impl Server {
                 if let SummationEntry::Leaf(_) = node {
                     let mc_proof: MerkleProof = mc[k].get_proof_by_id(i + vinit).into();
                     let ms_proof: MerkleProof = ms[k].get_proof_by_id(i + vinit).into();
-                    ret.push((SummationEntry::Commit(mc[k].get_node(i + vinit)), mc_proof));
-                    ret.push((node, ms_proof));
+                    t.push((SummationEntry::Commit(mc[k].get_node(i + vinit)), mc_proof));
+                    t.push((node, ms_proof));
                 } else {
                     warn!("Atom: verify not a leaf node");
                 }
             }
             for i in &non_leaf_id {
                 let ms_proof: MerkleProof = ms[k].get_proof_by_id(*i).into();
-                ret.push((ms[k].get_nonleaf_node(*i), ms_proof));
+                t.push((ms[k].get_nonleaf_node(*i), ms_proof));
             }
+            ret.push(t);
         }
         ret
     }

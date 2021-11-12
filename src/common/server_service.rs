@@ -24,7 +24,7 @@ pub trait ServerService {
         vinit: u32,
         non_leaf_id: Vec<u32>,
         ct_id: Vec<usize>,
-    ) -> Vec<(SummationEntry, MerkleProof)>;
+    ) -> Vec<Vec<(SummationEntry, MerkleProof)>>;
 
     async fn retrieve_model(round: u32) -> Vec<u8>;
     async fn retrieve_proving_key(round: u32) -> Vec<u8>;

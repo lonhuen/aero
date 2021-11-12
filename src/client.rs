@@ -307,112 +307,113 @@ impl Client {
         let non_leafs: Vec<u32> = Self::get_random_non_leafs(n, s, vinit);
 
         let gc1 = start_timer!(|| "receive verify");
-        let result = {
+        let ct_id = vec![0usize, 1usize, 2usize];
+        let ret = {
             let mut ctx = context::current();
             ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
             self.inner
-                .verify(ctx, round, vinit, non_leafs, vec![0usize, 1usize, 2usize])
+                .verify(ctx, round, vinit, non_leafs, ct_id.clone())
         }
         .await
         .unwrap();
         end_timer!(gc1);
 
-        println!("leaf len {}", result.len());
-
         // if not able to retrieve the proof
-        if result.len() == 0 {
+        if ret.len() == 0 {
             return;
         }
 
-        // verify all the leafs
+        println!("leaf len {} * {}", ret.len(), ret[0].len());
 
-        /*
+        // verify all the leafs
         let gc2 = start_timer!(|| "verify the proofs");
-        for i in 0..s + 1 {
-            let mc_node = &result[2 * i as usize];
-            let ms_node = &result[(2 * i + 1) as usize];
-            // Commit_i appears in Mc
-            assert!(
-                mc_node.1.clone().to_proof().validate::<HashAlgorithm>(),
-                "wrong merkle proofs"
-            );
-            if let SummationEntry::Leaf(s) = &ms_node.0 {
-                if s.c0.is_some() {
-                    let h = s.hash(0, 4096);
+        for result in &ret {
+            for i in 0..s + 1 {
+                let mc_node = &result[2 * i as usize];
+                let ms_node = &result[(2 * i + 1) as usize];
+                // Commit_i appears in Mc
+                assert!(
+                    mc_node.1.clone().to_proof().validate::<HashAlgorithm>(),
+                    "wrong merkle proofs"
+                );
+                if let SummationEntry::Leaf(s) = &ms_node.0 {
+                    let h = s.hash();
                     if let SummationEntry::Commit(cm) = &mc_node.0 {
                         //TODO fix this
                         // assert_eq!(h, cm.hash);
                     } else {
                         error!("Atom: Verify not commit entry!");
                     }
+                } else {
+                    error!("Atom: Verify not leaf nodes entry!");
                 }
-            } else {
-                error!("Atom: Verify not leaf nodes entry!");
             }
-        }
 
-        // offset by the commit and leafs
-        let mut i = (s + 1 + s + 1) as usize;
-        let mut idx = vinit;
-        //let mut ii = 0 as usize;
-        while idx <= vinit + s {
-            let ii = idx % n;
-            if (ii & 0x1 == 0) && (ii + 1 <= vinit + s) {
-                // TODO check these nodes by ref to the leaf nodes
+            // offset by the commit and leafs
+            let mut i = (s + 1 + s + 1) as usize;
+            let mut idx = vinit;
+            //let mut ii = 0 as usize;
+            while idx <= vinit + s {
+                let ii = idx % n;
+                if (ii & 0x1 == 0) && (ii + 1 <= vinit + s) {
+                    // TODO check these nodes by ref to the leaf nodes
+                    let parent = &result[i];
+                    let left = &result[2 * (idx - vinit) as usize + 1];
+                    let right = &result[2 * (idx - vinit + 1) as usize + 1];
+                    // check the proofs
+                    assert!(parent.1.clone().to_proof().validate::<HashAlgorithm>());
+
+                    let c = match (&left.0, &right.0) {
+                        // TODO add random pt here
+                        (SummationEntry::Leaf(a), SummationEntry::Leaf(b)) => {
+                            &a.evaluate_at(0) + &b.evaluate_at(0)
+                        }
+                        //(SummationEntry::Leaf(a), SummationEntry::NonLeaf(b)) => a + b,
+                        //(SummationEntry::NonLeaf(a), SummationEntry::Leaf(b)) => a + b,
+                        //(SummationEntry::NonLeaf(a), SummationEntry::NonLeaf(b)) => a + b,
+                        _ => {
+                            panic!("Not leaf nodes in verifying summation");
+                        }
+                    };
+
+                    if let SummationEntry::NonLeaf(a) = &parent.0 {
+                        assert_eq!(&c, a);
+                    } else {
+                        //error!("Parent not a nonleaf node when leaf");
+                    }
+                    i = i + 1;
+                    idx += 2;
+                } else {
+                    idx += 1;
+                }
+            }
+            while i < result.len() {
                 let parent = &result[i];
-                let left = &result[2 * (idx - vinit) as usize + 1];
-                let right = &result[2 * (idx - vinit + 1) as usize + 1];
+                let left = &result[i + 1];
+                let right = &result[i + 2];
                 // check the proofs
                 assert!(parent.1.clone().to_proof().validate::<HashAlgorithm>());
-
+                assert!(left.1.clone().to_proof().validate::<HashAlgorithm>());
+                assert!(right.1.clone().to_proof().validate::<HashAlgorithm>());
+                // possibly leaf + non_leaf when the # of leafs is odd
                 let c = match (&left.0, &right.0) {
-                    (SummationEntry::Leaf(a), SummationEntry::Leaf(b)) => a + b,
-                    //(SummationEntry::Leaf(a), SummationEntry::NonLeaf(b)) => a + b,
+                    (SummationEntry::NonLeaf(a), SummationEntry::NonLeaf(b)) => a + b,
+                    (SummationEntry::Leaf(a), SummationEntry::NonLeaf(b)) => &a.evaluate_at(0) + b,
+                    //(SummationEntry::Leaf(a), SummationEntry::Leaf(b)) => a + b,
                     //(SummationEntry::NonLeaf(a), SummationEntry::Leaf(b)) => a + b,
-                    //(SummationEntry::NonLeaf(a), SummationEntry::NonLeaf(b)) => a + b,
                     _ => {
                         panic!("Not leaf nodes in verifying summation");
                     }
                 };
-
                 if let SummationEntry::NonLeaf(a) = &parent.0 {
                     assert_eq!(&c, a);
                 } else {
-                    //error!("Parent not a nonleaf node when leaf");
+                    //error!("Parent not a nonleaf node when nonleaf");
                 }
-                i = i + 1;
-                idx += 2;
-            } else {
-                idx += 1;
+                i += 3;
             }
-        }
-        while i < result.len() {
-            let parent = &result[i];
-            let left = &result[i + 1];
-            let right = &result[i + 2];
-            // check the proofs
-            assert!(parent.1.clone().to_proof().validate::<HashAlgorithm>());
-            assert!(left.1.clone().to_proof().validate::<HashAlgorithm>());
-            assert!(right.1.clone().to_proof().validate::<HashAlgorithm>());
-            // possibly leaf + non_leaf when the # of leafs is odd
-            let c = match (&left.0, &right.0) {
-                (SummationEntry::NonLeaf(a), SummationEntry::NonLeaf(b)) => a + b,
-                (SummationEntry::Leaf(a), SummationEntry::NonLeaf(b)) => a + b,
-                //(SummationEntry::Leaf(a), SummationEntry::Leaf(b)) => a + b,
-                //(SummationEntry::NonLeaf(a), SummationEntry::Leaf(b)) => a + b,
-                _ => {
-                    panic!("Not leaf nodes in verifying summation");
-                }
-            };
-            if let SummationEntry::NonLeaf(a) = &parent.0 {
-                assert_eq!(&c, a);
-            } else {
-                //error!("Parent not a nonleaf node when nonleaf");
-            }
-            i += 3;
         }
         end_timer!(gc2);
-        */
     }
 
     #[instrument(skip_all)]
