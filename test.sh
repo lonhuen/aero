@@ -10,7 +10,7 @@ out_bytes=$(echo $start | awk -v OFS=, '/lo:/ { print $10 }')
 for i in {0..26}; do 
 (./target/release/committee_$APP $i 2>&1 > co$i.log ) &
 done
-./target/release/committee_$APP 27 | tee co27.log
+time(./target/release/committee_$APP 27) | tee co27.log
 wait
 
 end=$(cat /proc/net/dev | grep "lo")
