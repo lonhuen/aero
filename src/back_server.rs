@@ -8,7 +8,10 @@ use crate::common::aggregation::{
     McTree, MsTree,
 };
 use cancellable_timer::{Canceller, Timer};
-use quail::zksnark::{Prover, Verifier};
+use quail::{
+    rlwe::NUM_DIMENSION,
+    zksnark::{Prover, Verifier},
+};
 use rand::{Rng, SeedableRng};
 use std::{
     convert::Into,
@@ -32,9 +35,9 @@ pub enum STAGE {
 pub type STATE = (STAGE, u32);
 #[derive(Clone)]
 pub struct Server {
-    mc: Arc<RwLock<McTree>>,
+    mc: Arc<RwLock<Vec<McTree>>>,
     cond: Arc<(Mutex<STATE>, Condvar)>,
-    ms: Arc<RwLock<MsTree>>,
+    ms: Arc<RwLock<Vec<MsTree>>>,
     nr_parameter: u32,
     pool: Arc<ThreadPool>,
     //pvk: Arc<Vec<u8>>,
@@ -50,9 +53,15 @@ impl Server {
         nr_parameter: u32,
         pool: &Arc<ThreadPool>,
     ) -> Self {
-        let mc = McTree::new(nr_real + nr_sim, nr_sybil);
-        let ms = MsTree::new(nr_real + nr_sim, nr_sybil);
-
+        let nr_ct = (nr_parameter / 4096) as usize;
+        let mc = (0..nr_ct)
+            .into_iter()
+            .map(|_| McTree::new(nr_real + nr_sim, nr_sybil))
+            .collect();
+        let ms = (0..nr_ct)
+            .into_iter()
+            .map(|_| MsTree::new(nr_real + nr_sim, nr_sybil))
+            .collect();
         //// get rid of prover
         //let (pvk, verifier) = {
         //    let prover = Prover::setup("./data/encryption.txt");
@@ -112,7 +121,7 @@ impl Server {
     }
 
     #[instrument(skip_all)]
-    pub fn aggregate_commit(&self, round: u32, rsa_pk: Vec<u8>, commitment: [u8; 32]) {
+    pub fn aggregate_commit(&self, round: u32, rsa_pk: Vec<u8>, commitment: Vec<[u8; 32]>) {
         // wait for enough commitments
         // TODO to fix: should check if duplicate commitments come
         // TODO maybe wait for some time rather than some # of commitments
@@ -125,12 +134,19 @@ impl Server {
         }
 
         let mut mc = self.mc.as_ref().write().unwrap();
-        let flag = {
-            mc.insert_node(CommitEntry {
-                rsa_pk,
-                hash: commitment,
+        for i in 0..commitment.len() {
+            mc[i].insert_node(CommitEntry {
+                rsa_pk: rsa_pk.clone(),
+                hash: commitment[i],
             });
-            mc.gen_tree()
+        }
+        // TODO ideally all gen_tree should return true; maybe check this for robutness
+        let flag = {
+            let mut flag = false;
+            for i in 0..commitment.len() {
+                flag = mc[i].gen_tree()
+            }
+            flag
         };
         // if we've got enough elements, move to next stage
         if flag {
@@ -147,9 +163,10 @@ impl Server {
         &self,
         round: u32,
         rsa_pk: Vec<u8>,
-        cts: Vec<i128>,
-        nonce: [u8; 16],
-        proofs: Vec<u8>,
+        c0: Vec<Vec<i128>>,
+        c1: Vec<Vec<i128>>,
+        nonce: Vec<[u8; 16]>,
+        proofs: Vec<Vec<u8>>,
     ) {
         let (lock, cvar) = &*self.cond;
         let mut state = lock.lock().unwrap();
@@ -160,10 +177,21 @@ impl Server {
         }
         let mut ms = self.ms.as_ref().write().unwrap();
 
-        let flag = {
-            ms.insert_node(SummationLeaf::from_ct(rsa_pk, cts, nonce));
-            ms.gen_tree()
-        };
+        // TODO ideally all gen_tree should return true; maybe check this for robutness
+        let mut flag = false;
+        for i in 0..nonce.len() {
+            flag = {
+                ms[i].insert_node(SummationLeaf::from_ct(
+                    rsa_pk.clone(),
+                    c0[i].clone(),
+                    c1[i].clone(),
+                    nonce[i],
+                    proofs[i].clone(),
+                ));
+                ms[i].gen_tree()
+            };
+        }
+
         // TODO also verify the proof
         if flag {
             //let _ = self.canceller.as_ref().read().unwrap().cancel();
@@ -171,8 +199,8 @@ impl Server {
             warn!("Server move to stage {:?}", *state);
             cvar.notify_all();
             let cond = self.cond.clone();
-            let mc = self.ms.clone();
-            let ms = self.mc.clone();
+            let mc = self.mc.clone();
+            let ms = self.ms.clone();
             let canceller = Timer::after(Duration::from_secs(10), move |_| {
                 let (lock, cvar) = &*cond.clone();
                 let mut state = lock.lock().unwrap();
@@ -193,8 +221,8 @@ impl Server {
                         .expect("failed to execute process");
                     *state = (STAGE::Commit, state.1 + 1);
                     //println!("Server move to stage {:?}", *state);
-                    ms.write().unwrap().clear();
-                    mc.write().unwrap().clear();
+                    mc.write().unwrap().iter_mut().for_each(|t| t.clear());
+                    ms.write().unwrap().iter_mut().for_each(|t| t.clear());
                     warn!("Server move to stage {:?}", *state);
                     cvar.notify_all();
                 }
@@ -206,15 +234,15 @@ impl Server {
     }
 
     //type GetMcProofFut = Ready<MerkleProof>;
-    pub fn get_mc_proof(&self, round: u32, rsa_pk: Vec<u8>) -> MerkleProof {
+    pub fn get_mc_proof(&self, round: u32, rsa_pk: Vec<u8>) -> Vec<MerkleProof> {
         let (lock, cvar) = &*self.cond;
         let mut state = lock.lock().unwrap();
         // if never possible to get the lock, return
         if !Self::is_waitable(&*state, (STAGE::Data, round)) {
-            return MerkleProof {
+            return vec![MerkleProof {
                 lemma: Vec::new(),
                 path: Vec::new(),
-            };
+            }];
         }
         // otherwise wait till the state
         state = cvar
@@ -225,7 +253,7 @@ impl Server {
             .unwrap();
         let mc = self.mc.as_ref().read().unwrap();
         drop(state);
-        mc.get_proof(&rsa_pk)
+        mc.iter().map(|x| x.get_proof(&rsa_pk)).collect()
     }
 
     //type GetMsProofFut = Ready<MerkleProof>;
@@ -248,7 +276,7 @@ impl Server {
             .unwrap();
         let ms = self.ms.as_ref().read().unwrap();
         drop(state);
-        ms.get_proof(&rsa_pk)
+        ms.iter().map(|x| x.get_proof(&rsa_pk)).collect()
     }
 
     //type VerifyFut = Ready<Vec<(SummationEntry, MerkleProof)>>;
@@ -272,25 +300,27 @@ impl Server {
         drop(state);
         //first all the leafs
         let mut ret: Vec<(SummationEntry, MerkleProof)> = Vec::new();
-        for i in 0..5 + 1 {
-            let node: Vec<SummationEntry> = ms.get_leaf_node(i + vinit, &ct_id);
-            if let SummationEntry::Leaf(_) = node[0] {
-                let mc_proof: MerkleProof = mc.get_proof_by_id(i + vinit).into();
-                let ms_proof: Vec<MerkleProof> = ms.get_proof_by_id(i + vinit, &ct_id).into();
-                ret.push((SummationEntry::Commit(mc.get_node(i + vinit)), mc_proof));
-                ret.extend(
-                    node.iter()
-                        .zip(ms_proof.iter())
-                        .map(|(x, y)| (x.clone(), y.clone())),
-                );
-            } else {
-                warn!("Atom: verify not a leaf node");
+        for k in ct_id {
+            if k >= mc.len() {
+                warn!("K larger than Mc len");
+                continue;
+            }
+            for i in 0..5 + 1 {
+                let node: SummationEntry = ms[k].get_leaf_node(i as u32 + vinit);
+                if let SummationEntry::Leaf(_) = node {
+                    let mc_proof: MerkleProof = mc[k].get_proof_by_id(i + vinit).into();
+                    let ms_proof: MerkleProof = ms[k].get_proof_by_id(i + vinit).into();
+                    ret.push((SummationEntry::Commit(mc[k].get_node(i + vinit)), mc_proof));
+                    ret.push((node, ms_proof));
+                } else {
+                    warn!("Atom: verify not a leaf node");
+                }
+            }
+            for i in &non_leaf_id {
+                let ms_proof: MerkleProof = ms[k].get_proof_by_id(*i).into();
+                ret.push((ms[k].get_nonleaf_node(*i), ms_proof));
             }
         }
-        // for i in non_leaf_id {
-        //     let ms_proof: MerkleProof = ms.get_proof_by_id(i, &ct_id).into();
-        //     ret.push((ms.get_nonleaf_node(i), ms_proof));
-        // }
         ret
     }
 

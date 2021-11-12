@@ -88,7 +88,7 @@ impl ServerService for InnerServer {
         _: context::Context,
         round: u32,
         rsa_pk: Vec<u8>,
-        commitment: [u8; 32],
+        commitment: Vec<[u8; 32]>,
     ) {
         //self.pool
         //    .as_ref()
@@ -103,13 +103,14 @@ impl ServerService for InnerServer {
         _: context::Context,
         round: u32,
         rsa_pk: Vec<u8>,
-        cts: Vec<i128>,
-        nonce: [u8; 16],
-        proofs: Vec<u8>,
+        c0: Vec<Vec<i128>>,
+        c1: Vec<Vec<i128>>,
+        nonce: Vec<[u8; 16]>,
+        proofs: Vec<Vec<u8>>,
     ) {
         std::thread::spawn(move || {
             self.server
-                .aggregate_data(round, rsa_pk, cts, nonce, proofs)
+                .aggregate_data(round, rsa_pk, c0, c1, nonce, proofs)
         })
         .join()
         .unwrap()
@@ -119,7 +120,12 @@ impl ServerService for InnerServer {
 
     //type GetMcProofFut = Ready<MerkleProof>;
     // TODO for now assume only 1 round
-    async fn get_mc_proof(self, _: context::Context, round: u32, rsa_pk: Vec<u8>) -> MerkleProof {
+    async fn get_mc_proof(
+        self,
+        _: context::Context,
+        round: u32,
+        rsa_pk: Vec<u8>,
+    ) -> Vec<MerkleProof> {
         std::thread::spawn(move || self.server.get_mc_proof(round, rsa_pk))
             .join()
             .unwrap()

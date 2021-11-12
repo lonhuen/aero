@@ -109,10 +109,11 @@ impl McTree {
 // since Vector is in heap, the sort won't move the actual data. just the pointer will be moved.
 pub struct MsTree {
     pub nr_real: u32,
-    pub nr_sybil: u32,
+    //pub nr_sybil: u32,
     pub nr_non_leaf: u32,
+    pub random_pt: i128,
     pub summation_array: Vec<SummationEntry>,
-    pub ms: Vec<MerkleTree>,
+    pub ms: Option<MerkleTree>,
 }
 impl MsTree {
     pub fn new(nr_real: u32, nr_sybil: u32) -> Self {
@@ -120,33 +121,23 @@ impl MsTree {
         MsTree {
             nr_real,
             nr_non_leaf,
-            nr_sybil,
+            //nr_sybil,
             summation_array: Vec::with_capacity(nr_real as usize),
-            ms: Vec::new(),
+            ms: None,
+            // TODO get this from the committee
+            random_pt: 1i128,
         }
     }
 
-    pub fn get_leaf_node(&self, id: u32, ct_id: &Vec<usize>) -> Vec<SummationEntry> {
+    pub fn get_leaf_node(&self, id: u32) -> SummationEntry {
         if id >= self.nr_real {
             warn!(
                 "Atom: Ms get leaf node {} more than nr_real {}",
                 id, self.nr_real
             );
-            //vec![self.summation_array[(id % self.nr_real) as usize].clone()]
-            ct_id
-                .iter()
-                .map(|x| {
-                    self.summation_array[(id % self.nr_real) as usize]
-                        .new_leaf_in_range(x * 4096, (x + 1) * 4096)
-                })
-                .collect()
+            self.summation_array[(id % self.nr_real) as usize].clone()
         } else {
-            ct_id
-                .iter()
-                .map(|x| {
-                    self.summation_array[id as usize].new_leaf_in_range(x * 4096, (x + 1) * 4096)
-                })
-                .collect()
+            self.summation_array[id as usize].clone()
         }
     }
 
@@ -195,9 +186,15 @@ impl MsTree {
             while left + 1 < right {
                 let c = match (&self.summation_array[left], &self.summation_array[left + 1]) {
                     (SummationEntry::NonLeaf(l), SummationEntry::NonLeaf(r)) => l + r,
-                    (SummationEntry::NonLeaf(l), SummationEntry::Leaf(r)) => l + r,
-                    (SummationEntry::Leaf(l), SummationEntry::NonLeaf(r)) => l + r,
-                    (SummationEntry::Leaf(l), SummationEntry::Leaf(r)) => l + r,
+                    (SummationEntry::NonLeaf(l), SummationEntry::Leaf(r)) => {
+                        l + &r.evaluate_at(self.random_pt)
+                    }
+                    (SummationEntry::Leaf(l), SummationEntry::NonLeaf(r)) => {
+                        &l.evaluate_at(self.random_pt) + r
+                    }
+                    (SummationEntry::Leaf(l), SummationEntry::Leaf(r)) => {
+                        l.evaluate_at(self.random_pt) + r.evaluate_at(self.random_pt)
+                    }
                     _ => {
                         panic!("gen_tree: Not a leaf or nonleaf node");
                     }
@@ -209,26 +206,24 @@ impl MsTree {
             warn!("finish adding leafs");
 
             let root = self.get_root();
-            let nr_parameters = root.c0.len();
-            for i in (0..nr_parameters).step_by(4096) {
-                self.ms.push(MerkleTree::from_iter(
-                    self.summation_array
-                        .par_iter()
-                        .map(|x| match x {
-                            SummationEntry::Leaf(y) => y.hash(i, i + 4096),
-                            SummationEntry::NonLeaf(y) => y.hash(i, i + 4096),
-                            // just to make compiler happy
-                            // never reach here
-                            _ => {
-                                error!("commitment in summation array");
-                                [0u8; 32]
-                            }
-                        })
-                        // TODO maybe more precise about the # of sybils here
-                        .chain((0..(2 * self.nr_sybil)).into_par_iter().map(|_| [0u8; 32]))
-                        .collect::<Vec<[u8; 32]>>(),
-                ));
-            }
+            let nr_parameters = 4096;
+            self.ms = Some(MerkleTree::from_iter(
+                self.summation_array
+                    .par_iter()
+                    .map(|x| match x {
+                        SummationEntry::Leaf(y) => y.hash(),
+                        SummationEntry::NonLeaf(y) => y.hash(),
+                        // just to make compiler happy
+                        // never reach here
+                        _ => {
+                            error!("commitment in summation array");
+                            [0u8; 32]
+                        }
+                    })
+                    // TODO maybe more precise about the # of sybils here
+                    // .chain((0..(2 * self.nr_sybil)).into_par_iter().map(|_| [0u8; 32]))
+                    .collect::<Vec<[u8; 32]>>(),
+            ));
             end_timer!(gc);
             true
         }
@@ -289,21 +284,18 @@ impl MsTree {
         ret
     }
     */
-    pub fn get_proof(&self, rsa_pk: &Vec<u8>) -> Vec<MerkleProof> {
-        if self.ms.is_empty() {
+    pub fn get_proof(&self, rsa_pk: &Vec<u8>) -> MerkleProof {
+        if self.ms.is_none() {
             warn!("get_proof@MsTree called while None Ms tree");
         }
         let id = self.summation_array[0..self.nr_real as usize]
             .binary_search_by(|probe| probe.get_leaf_rsa_pk().cmp(rsa_pk))
             .unwrap();
-        self.ms.iter().map(|x| x.gen_proof(id).into()).collect()
+        self.ms.as_ref().unwrap().gen_proof(id).into()
     }
 
-    pub fn get_proof_by_id(&self, id: u32, ct_id: &Vec<usize>) -> Vec<MerkleProof> {
-        ct_id
-            .iter()
-            .map(|x| self.ms[*x].gen_proof(id as usize).into())
-            .collect()
+    pub fn get_proof_by_id(&self, id: u32) -> MerkleProof {
+        self.ms.as_ref().unwrap().gen_proof(id as usize).into()
     }
 
     pub fn insert_node(&mut self, node: SummationLeaf) {
@@ -315,6 +307,6 @@ impl MsTree {
 
     pub fn clear(&mut self) {
         self.summation_array.clear();
-        self.ms.clear();
+        self.ms = None;
     }
 }

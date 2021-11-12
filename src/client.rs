@@ -35,14 +35,14 @@ pub struct Client {
     inner: ServerServiceClient,
     rsa_pk: Vec<u8>,
     _rsa_vk: RsaPrivateKey,
-    c0s: Vec<i128>,
-    c1s: Vec<i128>,
-    rs: Vec<i128>,
-    e0s: Vec<i128>,
-    e1s: Vec<i128>,
-    d0s: Vec<i32>,
-    d1s: Vec<i32>,
-    nonce: [u8; 16],
+    c0s: Vec<Vec<i128>>,
+    c1s: Vec<Vec<i128>>,
+    rs: Vec<Vec<i128>>,
+    e0s: Vec<Vec<i128>>,
+    e1s: Vec<Vec<i128>>,
+    d0s: Vec<Vec<i32>>,
+    d1s: Vec<Vec<i32>>,
+    nonce: Vec<[u8; 16]>,
 }
 
 impl Client {
@@ -64,7 +64,7 @@ impl Client {
             e1s: Vec::new(),
             d0s: Vec::new(),
             d1s: Vec::new(),
-            nonce: [0u8; 16],
+            nonce: Vec::new(),
         }
     }
     #[inline(always)]
@@ -88,26 +88,25 @@ impl Client {
             let (r, e0, e1, d0, d1, ct) = rlwe_pk
                 .as_ref()
                 .encrypt(&xs[i * NUM_DIMENSION as usize..(i + 1) * NUM_DIMENSION as usize]);
-            self.rs.extend(r);
-            self.e0s.extend(e0);
-            self.e1s.extend(e1);
-            self.d0s.extend(d0);
-            self.d1s.extend(d1);
-            self.c0s.extend(ct.c_0);
-            self.c1s.extend(ct.c_1);
+            self.rs.push(r);
+            self.e0s.push(e0);
+            self.e1s.push(e1);
+            self.d0s.push(d0);
+            self.d1s.push(d1);
+            self.c0s.push(ct.c_0);
+            self.c1s.push(ct.c_1);
+            // TODO random this nonce
+            self.nonce.push([0u8; 16]);
         }
     }
     #[instrument(skip_all, name = "generate_proof")]
     pub fn generate_proof(&self, pvk: Vec<u8>) -> Vec<Vec<u8>> {
         let gc = start_timer!(|| "start proof generation");
         let mut rng = rand::rngs::StdRng::from_entropy();
-        let mut ret: Vec<Vec<u8>> =
-            Vec::with_capacity(self.c0s.len() / NUM_DIMENSION as usize * 192);
+        let mut ret: Vec<Vec<u8>> = Vec::with_capacity(self.c0s.len());
         // TODO (simulation) here we assume we have 10 threads to do this proof generation
-        thread::sleep(time::Duration::from_millis(
-            (self.c0s.len() as f64 / NUM_DIMENSION as f64) as u64 * 825,
-        ));
-        for _ in 0..self.c0s.len() / NUM_DIMENSION as usize {
+        thread::sleep(time::Duration::from_millis(self.c0s.len() as u64 * 825));
+        for _ in 0..self.c0s.len() {
             ret.push((0..192).map(|_| rng.gen::<u8>()).collect());
         }
         // TODO fix this. we just need encryption keys
@@ -170,20 +169,12 @@ impl Client {
         let proofs = self.generate_proof(pvk);
 
         // wait for the Mc tree
-        let mc_proof = result_commit.await.unwrap().to_proof();
+        let mc_proof = result_commit.await.unwrap();
         end_timer!(gc2);
 
         let gc3 = start_timer!(|| "upload the data");
         // proceed to summation tree
-        let mut cts_bytes: Vec<i128> = Vec::with_capacity(self.c0s.len() * 2);
-        // TODO this might needs to be changed
-        let mut proof_bytes: Vec<u8> = Vec::with_capacity(self.c0s.len() / NUM_DIMENSION as usize);
 
-        cts_bytes.extend(&self.c0s);
-        cts_bytes.extend(&self.c1s);
-        for i in 0..self.c0s.len() / NUM_DIMENSION as usize {
-            proof_bytes.extend(proofs[i].iter());
-        }
         warn!("data prepared");
         let result_data = {
             let mut ctx = context::current();
@@ -194,9 +185,10 @@ impl Client {
                     ctx,
                     round,
                     self.rsa_pk.clone(),
-                    cts_bytes,
-                    self.nonce,
-                    proof_bytes,
+                    self.c0s.clone(),
+                    self.c1s.clone(),
+                    self.nonce.clone(),
+                    proofs,
                 )
                 .await;
             warn!("data uploaded,receving ms proof");
@@ -216,8 +208,9 @@ impl Client {
         //    let mut x = HashAlgorithm::new();
         //    warn!("hash {:?}", x.leaf(h));
         //}
+        // TODO fix this
         ms_proof[0].clone().to_proof().validate::<HashAlgorithm>()
-            && mc_proof.validate::<HashAlgorithm>()
+            && mc_proof[0].clone().to_proof().validate::<HashAlgorithm>()
     }
 
     #[cfg(not(feature = "hashfn_blake3"))]
@@ -234,13 +227,18 @@ impl Client {
         h
     }
     #[cfg(feature = "hashfn_blake3")]
-    fn hash(&mut self) -> [u8; 32] {
-        let mut hasher = blake3::Hasher::new();
-        hasher.update(&self.nonce);
-        hasher.update(&i128vec_to_le_bytes(&self.c0s));
-        hasher.update(&i128vec_to_le_bytes(&self.c1s));
-        hasher.update(&self.rsa_pk);
-        hasher.finalize().into()
+    fn hash(&mut self) -> Vec<[u8; 32]> {
+        (0..self.c0s.len())
+            .into_iter()
+            .map(|i| {
+                let mut hasher = blake3::Hasher::new();
+                hasher.update(&self.nonce[i]);
+                hasher.update(&i128vec_to_le_bytes(&self.c0s[i]));
+                hasher.update(&i128vec_to_le_bytes(&self.c1s[i]));
+                hasher.update(&self.rsa_pk);
+                hasher.finalize().into()
+            })
+            .collect()
     }
 
     //TODO maybe fix when "# of clients < s"

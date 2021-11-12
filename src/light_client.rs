@@ -14,6 +14,7 @@ use ark_std::{end_timer, start_timer};
 extern crate blake3;
 #[cfg(not(feature = "hashfn_blake3"))]
 use crypto::{digest::Digest, sha3::Sha3};
+use quail::common::new_rsa_pub_key;
 use tracing::{error, event, instrument, span, warn, Level};
 
 use rand::{Rng, SeedableRng};
@@ -36,29 +37,31 @@ pub struct LightClient {
     nr_lc: u32,
     // 451 bytes
     rsa_pk: Vec<Vec<u8>>,
-    //c0s: Vec<i128>,
-    //c1s: Vec<i128>,
-    cts: Vec<i128>,
+    c0s: Vec<Vec<i128>>,
+    c1s: Vec<Vec<i128>>,
     // 192 bytes per proof
-    proofs: Vec<u8>,
-    nonce: [u8; 16],
+    proofs: Vec<Vec<u8>>,
+    nonce: Vec<[u8; 16]>,
 }
 
 impl LightClient {
     // TODO random this nounce
     pub fn new(inner: ServerServiceClient, nr_lc: u32, nr_parameter: u32) -> Self {
+        let nr_ct: usize = nr_parameter as usize / 4096;
         let mut rng = rand::rngs::StdRng::from_entropy();
-        let cts = (0..nr_parameter * 2).map(|_| rng.gen::<i128>()).collect();
-        let proofs = (0..nr_parameter).map(|_| rng.gen::<u8>()).collect();
+        let c0s = vec![vec![0i128; 4096]; nr_ct];
+        let c1s = vec![vec![0i128; 4096]; nr_ct];
+        let proofs = vec![vec![0u8; 192]; nr_ct];
         let rsa_pk = (0..nr_lc)
             .map(|_| (0..451).map(|_| rng.gen::<u8>()).collect())
             .collect();
-        let nonce = rand::thread_rng().gen::<[u8; 16]>();
+        let nonce = vec![[0u8; 16]; nr_ct];
         Self {
             inner,
             nr_lc,
             rsa_pk: rsa_pk,
-            cts,
+            c0s,
+            c1s,
             proofs,
             nonce,
         }
@@ -82,7 +85,7 @@ impl LightClient {
     pub async fn upload(&self, round: u32) {
         // set the deadline of the context
         // generate commitment to all the CTs
-        let cm = Self::random_hash();
+        let cm = vec![Self::random_hash(); self.c0s.len()];
 
         // upload all the commitment first
         for i in 0..self.nr_lc as usize {
@@ -91,7 +94,7 @@ impl LightClient {
             ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
             let _ = self
                 .inner
-                .aggregate_commit(ctx, round, self.rsa_pk[i].clone(), cm)
+                .aggregate_commit(ctx, round, self.rsa_pk[i].clone(), cm.clone())
                 .await;
         }
         // get all the mc_proof
@@ -114,8 +117,9 @@ impl LightClient {
                     ctx,
                     round,
                     self.rsa_pk[i].clone(),
-                    self.cts.clone(),
-                    self.nonce,
+                    self.c0s.clone(),
+                    self.c1s.clone(),
+                    self.nonce.clone(),
                     self.proofs.clone(),
                 )
                 .await;
