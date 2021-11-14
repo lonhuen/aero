@@ -35,7 +35,6 @@ where
     cs.set_optimization_goal(OptimizationGoal::Constraints);
     circuit.generate_constraints(cs.clone())?;
     cs.finalize();
-
     let matrices = cs.to_matrices().unwrap();
     end_timer!(gc);
     // println!("{}", cs.borrow_mut().unwrap().witness_assignment.len());

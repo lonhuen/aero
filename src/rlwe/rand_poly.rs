@@ -8,7 +8,7 @@ use super::NUM_DIMENSION;
 //constexpr double noise_max_deviation = noise_standard_deviation * noise_distribution_width_multiplier;
 
 pub const STDDEV: f64 = 3.2;
-pub const MAXSTDDEV: f64 = 19.2;
+pub const MAXSTDDEV: i128 = 15;
 
 /// sample the offset one from {0,1,2} directly
 pub fn sample_ternary() -> Vec<i128> {
@@ -26,7 +26,7 @@ pub fn sample_gaussian() -> Vec<i128> {
 
     (0..NUM_DIMENSION)
         .map(|_| {
-            let tmp = normal.sample(&mut rng);
+            let tmp = normal.sample(&mut rng) as i128;
             if tmp < -MAXSTDDEV {
                 0 as i128
             } else if tmp > MAXSTDDEV {

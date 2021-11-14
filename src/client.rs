@@ -40,18 +40,20 @@ pub struct Client {
     rs: Vec<Vec<i128>>,
     e0s: Vec<Vec<i128>>,
     e1s: Vec<Vec<i128>>,
-    d0s: Vec<Vec<i32>>,
-    d1s: Vec<Vec<i32>>,
+    d0s: Vec<Vec<i128>>,
+    d1s: Vec<Vec<i128>>,
+    m: Vec<Vec<i128>>,
     nonce: Vec<[u8; 16]>,
+    prover: Prover,
 }
 
 impl Client {
-    // TODO random this nounce
     pub fn new(inner: ServerServiceClient) -> Self {
         let bits = 2048;
         let mut rng = rand::rngs::StdRng::from_entropy();
         let private_key = RsaPrivateKey::new(&mut rng, bits).expect("failed to generate a key");
         let public_key = RsaPublicKey::from(&private_key);
+        let prover = Prover::new("./data/encryption.txt", "./data/proving_key.txt");
         Self {
             inner,
             //prover: prover,
@@ -64,7 +66,9 @@ impl Client {
             e1s: Vec::new(),
             d0s: Vec::new(),
             d1s: Vec::new(),
+            m: Vec::new(),
             nonce: Vec::new(),
+            prover,
         }
     }
     #[inline(always)]
@@ -95,23 +99,30 @@ impl Client {
             self.d1s.push(d1);
             self.c0s.push(ct.c_0);
             self.c1s.push(ct.c_1);
+            let m = xs[i * NUM_DIMENSION as usize..(i + 1) * NUM_DIMENSION as usize]
+                .iter()
+                .map(|x| *x as i128)
+                .collect();
+            self.m.push(m);
             // TODO random this nonce
             self.nonce.push([0u8; 16]);
         }
     }
     #[instrument(skip_all, name = "generate_proof")]
-    pub fn generate_proof(&self, pvk: Vec<u8>) -> Vec<Vec<u8>> {
+    pub fn generate_proof(&self) -> Vec<Vec<u8>> {
         let gc = start_timer!(|| "start proof generation");
-        let mut rng = rand::rngs::StdRng::from_entropy();
-        let mut ret: Vec<Vec<u8>> = Vec::with_capacity(self.c0s.len());
-        // TODO (simulation) here we assume we have 10 threads to do this proof generation
-        thread::sleep(time::Duration::from_millis(self.c0s.len() as u64 * 825));
-        for _ in 0..self.c0s.len() {
-            ret.push((0..192).map(|_| rng.gen::<u8>()).collect());
-        }
-        // TODO fix this. we just need encryption keys
-        // TODO modify the groth16 library to prove in batch
-        // let prover = Prover::new("data/encryption.txt", pvk);
+        // let mut rng = rand::rngs::StdRng::from_entropy();
+        // let mut ret: Vec<Vec<u8>> = Vec::with_capacity(self.c0s.len());
+        // // TODO (simulation) here we assume we have 10 threads to do this proof generation
+        // thread::sleep(time::Duration::from_millis(self.c0s.len() as u64 * 825));
+        // for _ in 0..self.c0s.len() {
+        //     ret.push((0..192).map(|_| rng.gen::<u8>()).collect());
+        // }
+        // // TODO fix this. just pass the required information to the circuit
+        // // TODO modify the groth16 library to prove in batch
+        let ret = self.prover.create_proof_in_bytes(
+            &self.c0s, &self.c1s, &self.rs, &self.e0s, &self.e1s, &self.d0s, &self.d1s, &self.m,
+        );
         end_timer!(gc);
         ret
     }
@@ -121,7 +132,7 @@ impl Client {
     pub async fn upload(&mut self, round: u32, xs: Vec<u8>, pvk: Vec<u8>) -> bool {
         // set the deadline of the context
         let gc1 = start_timer!(|| "encrypt the gradients");
-        // TODO the keys should be retrieved from the committee with signature
+        // TODO the keys should be read while settuping up
         // but now let's assume the keys are already retrieved
         let (pk0, pk1) = {
             let mut pk_0 = [0i128; 4096];
@@ -166,7 +177,7 @@ impl Client {
             self.inner.get_mc_proof(ctx, round, self.rsa_pk.clone())
         };
         // while waiting for the commitment, compute the zkproof
-        let proofs = self.generate_proof(pvk);
+        let proofs = self.generate_proof();
 
         // wait for the Mc tree
         let mc_proof = result_commit.await.unwrap();
@@ -198,7 +209,7 @@ impl Client {
         let ms_proof: Vec<MerkleProof> = result_data.await.unwrap();
         warn!("ms proof received");
         end_timer!(gc3);
-        // TODO verify the proof by checking x.leaf for mc, ms
+        // TODO verify the proof by checking x.leaf for mc, ms maybe
         //{
         //    let mut hasher = Sha3::sha3_256();
         //    hasher.input(&self.rsa_pk);
@@ -208,7 +219,7 @@ impl Client {
         //    let mut x = HashAlgorithm::new();
         //    warn!("hash {:?}", x.leaf(h));
         //}
-        // TODO fix this
+        // TODO check all the proofs
         ms_proof[0].clone().to_proof().validate::<HashAlgorithm>()
             && mc_proof[0].clone().to_proof().validate::<HashAlgorithm>()
     }
@@ -220,7 +231,6 @@ impl Client {
         hasher.input(&self.nonce);
         hasher.input(&i128vec_to_le_bytes(&self.c0s));
         hasher.input(&i128vec_to_le_bytes(&self.c1s));
-        // TODO pem or der? or other ways to convert to [u8]
         hasher.input(&self.rsa_pk);
         let mut h = [0u8; 32];
         hasher.result(&mut h);
@@ -356,7 +366,7 @@ impl Client {
             while idx <= vinit + s {
                 let ii = idx % n;
                 if (ii & 0x1 == 0) && (ii + 1 <= vinit + s) {
-                    // TODO check these nodes by ref to the leaf nodes
+                    // check these nodes by ref to the leaf nodes
                     let parent = &result[i];
                     let left = &result[2 * (idx - vinit) as usize + 1];
                     let right = &result[2 * (idx - vinit + 1) as usize + 1];
@@ -470,28 +480,70 @@ async fn main() -> anyhow::Result<()> {
     //    ServerServiceClient::new(client::Config::default(), pvk_transport.await?).spawn();
     let mut client = Client::new(inner_client);
 
-    for i in 0..nr_round {
-        // begin uploading
-        let sr = start_timer!(|| "one round");
-        let train = start_timer!(|| "train model");
-        //let pvk = {
-        //    let mut ctx = context::current();
-        //    ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
-        //    pvk_client.retrieve_proving_key(ctx, i)
-        //};
-        let data = client.train_model(i).await;
-        end_timer!(train);
+    let xs = vec![0u8; 4096];
+    let (pk0, pk1) = {
+        let mut pk_0 = [0i128; 4096];
+        let mut pk_1 = [0i128; 4096];
+        let file = match File::open("./data/encryption.txt") {
+            Ok(f) => f,
+            Err(_) => panic!(),
+        };
+        let reader = BufReader::new(file);
+        for line in reader.lines() {
+            if let Ok(l) = line {
+                let vec = l.split(" ").collect::<Vec<&str>>();
+                for i in 1..vec.len() {
+                    if l.contains("pk_0") {
+                        if let Ok(x) = i128::from_str_radix(vec[i], 10) {
+                            pk_0[i - 1] = x;
+                        }
+                    } else if l.contains("pk_1") {
+                        if let Ok(x) = i128::from_str_radix(vec[i], 10) {
+                            pk_1[i - 1] = x;
+                        }
+                    }
+                }
+            }
+        }
+        (pk_0.to_vec(), pk_1.to_vec())
+    };
+    let gc = start_timer!(|| "encryption");
+    client.encrypt(xs, &pk0, &pk1);
+    end_timer!(gc);
+    let gc = start_timer!(|| "proof generation");
+    let proof = client.generate_proof();
+    end_timer!(gc);
+    let verifier = Verifier::new("./data/verifying_key.txt");
+    let mut inputs: Vec<_> = client.c0s[0]
+        .iter()
+        .chain(client.c1s[0].iter())
+        .map(|&x| x)
+        .collect::<Vec<_>>();
+    let flag = verifier.verify_proof_from_bytes(&proof[0], &inputs);
+    println!("proof size {}", proof[0].len());
+    println!("flag {}", flag);
+    //for i in 0..nr_round {
+    //    // begin uploading
+    //    let sr = start_timer!(|| "one round");
+    //    let train = start_timer!(|| "train model");
+    //    //let pvk = {
+    //    //    let mut ctx = context::current();
+    //    //    ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
+    //    //    pvk_client.retrieve_proving_key(ctx, i)
+    //    //};
+    //    let data = client.train_model(i).await;
+    //    end_timer!(train);
 
-        let rs = start_timer!(|| "upload data");
-        //let result = client.upload(i, data, pvk.await.unwrap()).await;
-        let result = client.upload(i, data, vec![0u8; 1]).await;
-        end_timer!(rs);
+    //    let rs = start_timer!(|| "upload data");
+    //    //let result = client.upload(i, data, pvk.await.unwrap()).await;
+    //    let result = client.upload(i, data, vec![0u8; 1]).await;
+    //    end_timer!(rs);
 
-        let vr = start_timer!(|| "verify the data");
-        client.verify(i, nr_real + nr_sim, 5).await;
-        end_timer!(vr);
-        end_timer!(sr);
-    }
+    //    let vr = start_timer!(|| "verify the data");
+    //    client.verify(i, nr_real + nr_sim, 5).await;
+    //    end_timer!(vr);
+    //    end_timer!(sr);
+    //}
     end_timer!(start);
     opentelemetry::global::shutdown_tracer_provider();
     Ok(())

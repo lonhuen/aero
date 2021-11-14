@@ -1,17 +1,37 @@
 #![warn(unused)]
-use ark_ff::Fp256;
+use std::{
+    borrow::{Borrow, BorrowMut},
+    fs::File,
+    io::{BufReader, BufWriter},
+};
+
+use ark_ff::{Field, Fp256};
+use ark_relations::r1cs::{
+    ConstraintMatrices, ConstraintSynthesizer, ConstraintSystem, ConstraintSystemRef,
+    OptimizationGoal, Result as R1CSResult,
+};
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
-use ark_std::test_rng;
+use ark_std::UniformRand;
 // For benchmarking
 use ark_bls12_381::{Bls12_381, Fr, FrParameters, Parameters};
 use ark_ec::models::bls12::Bls12;
 use ark_groth16::{
-    create_random_proof, generate_random_parameters, verify_proof, PreparedVerifyingKey, Proof,
-    ProvingKey,
+    create_random_proof, generate_random_parameters, lonhh_create_proof, verify_proof,
+    PreparedVerifyingKey, Proof, ProvingKey, VerifyingKey,
 };
+use ark_std::test_rng;
 mod constraints;
 use crate::zksnark::constraints::Circuit;
 const NUM_DIMENSION: usize = 4096;
+
+pub fn i128_to_field(x: i128) -> Fr {
+    if x < 0 {
+        //-Fp256::<Parameters>::from_random_bytes(&((-x).to_le_bytes())[..]).unwrap()
+        -Fr::from_random_bytes(&((-x).to_le_bytes())[..]).unwrap()
+    } else {
+        Fr::from_random_bytes(&((x).to_le_bytes())[..]).unwrap()
+    }
+}
 
 #[derive(Clone)]
 pub struct Prover {
@@ -25,59 +45,138 @@ impl Prover {
         let rng = &mut test_rng();
 
         let params = generate_random_parameters::<Bls12_381, _, _>(c.clone(), rng).unwrap();
+        // write the proving key
+        {
+            let mut buf = BufWriter::new(File::create("./data/proving_key.txt").unwrap());
+            params.serialize_unchecked(&mut buf).unwrap();
+        }
+        {
+            let mut buf = BufWriter::new(File::create("./data/verifying_key.txt").unwrap());
+            params.vk.serialize_unchecked(&mut buf).unwrap();
+        }
         Self {
             proving_key: params,
             circuit: c,
         }
-        // write the proving key
-        //{
-        //    let mut buf: Vec<u8> = Vec::new();
-        //    params.serialize(&mut buf).unwrap();
-        //    std::fs::write(pk_path, &buf[..]).unwrap();
-        //}
-        //let buf: Vec<u8> = std::fs::read(pk_path).unwrap();
-        //let new_params = ProvingKey::<Bls12<Parameters>>::deserialize(&*buf).unwrap();
-        //println!("params == new_params? {}", params == new_params);
-        // write the verification key
-        //{
-        //    let mut buf: Vec<u8> = Vec::new();
-        //    params.vk.serialize(&mut buf).unwrap();
-        //    std::fs::write(vk_path, &buf[..]).unwrap();
-        //}
     }
-    pub fn new(enc_path: &str, pvk: Vec<u8>) -> Self {
+    pub fn new(enc_path: &str, pvk_path: &str) -> Self {
         let c = Circuit::<Fr>::new(NUM_DIMENSION, enc_path);
 
+        let pvk = BufReader::new(File::open(pvk_path).unwrap());
+
         // read the proving key
-        let params = ProvingKey::<Bls12<Parameters>>::deserialize(&*pvk).unwrap();
+        // ideally we should call deserialize; since this can be done offline, we just call deserialize_unchecked for simplicity here
+        let params = ProvingKey::<Bls12<Parameters>>::deserialize_unchecked(pvk).unwrap();
 
         Self {
             proving_key: params,
             circuit: c,
         }
     }
-    // TODO we might need to set the inputs and witness of the circuit
-    pub fn create_proof(&self) -> Proof<Bls12<Parameters>> {
-        //TODO use OsRng here
+    // // TODO we might need to set the inputs and witness of the circuit
+    // pub fn create_proof(&self) -> Proof<Bls12<Parameters>> {
+    //     //TODO use OsRng here
+    //     let rng = &mut test_rng();
+    //     create_random_proof(self.circuit.clone(), &self.proving_key, rng).unwrap()
+    // }
+    // pub fn get_circuit(&mut self) -> &mut Circuit<Fr> {
+    //     &mut self.circuit
+    // }
+    pub fn create_proof_in_bytes(
+        &self,
+        c0: &Vec<Vec<i128>>,
+        c1: &Vec<Vec<i128>>,
+        r: &Vec<Vec<i128>>,
+        e0: &Vec<Vec<i128>>,
+        e1: &Vec<Vec<i128>>,
+        delta0: &Vec<Vec<i128>>,
+        delta1: &Vec<Vec<i128>>,
+        m: &Vec<Vec<i128>>,
+    ) -> Vec<Vec<u8>> {
+        let cs = ConstraintSystem::new_ref();
+        cs.set_optimization_goal(OptimizationGoal::Constraints);
+        self.circuit
+            .clone()
+            .generate_constraints(cs.clone())
+            .unwrap();
+        cs.finalize();
+        let matrices = cs.to_matrices().unwrap();
         let rng = &mut test_rng();
-        create_random_proof(self.circuit.clone(), &self.proving_key, rng).unwrap()
-    }
-    pub fn get_circuit(&mut self) -> &mut Circuit<Fr> {
-        &mut self.circuit
-    }
-    pub fn create_proof_in_bytes(&self) -> Vec<u8> {
-        let rng = &mut test_rng();
-        let proof = create_random_proof(self.circuit.clone(), &self.proving_key, rng).unwrap();
-        let mut buf: Vec<u8> = Vec::new();
-        proof.serialize(&mut buf).unwrap();
-        buf
+
+        let mut ret = Vec::with_capacity(c0.len());
+        for i in 0..c0.len() {
+            let cs = cs.clone();
+            // update the witness in constraint system
+            //r[i].iter().chain(e0[i].iter()).chain(e1[i].iter)
+            let e0_bit: Vec<i128> = e0[i]
+                .iter()
+                .flat_map(|x| (0..5).map(|l| (x >> l) & 0x1).collect::<Vec<i128>>())
+                .collect();
+            let e1_bit: Vec<i128> = e1[i]
+                .iter()
+                .flat_map(|x| (0..5).map(|l| (x >> l) & 0x1).collect::<Vec<i128>>())
+                .collect();
+            let m_bit: Vec<i128> = m[i]
+                .iter()
+                .flat_map(|x| (0..8).map(|l| (x >> l) & 0x1).collect::<Vec<i128>>())
+                .collect();
+            let delta0_bit: Vec<i128> = delta0[i]
+                .iter()
+                .flat_map(|x| {
+                    (0..13)
+                        .map(|l| ((x + 4096) >> l) & 0x1)
+                        .collect::<Vec<i128>>()
+                })
+                .collect();
+            let delta1_bit: Vec<i128> = delta1[i]
+                .iter()
+                .flat_map(|x| {
+                    (0..13)
+                        .map(|l| ((x + 4096) >> l) & 0x1)
+                        .collect::<Vec<i128>>()
+                })
+                .collect();
+            r[i].iter()
+                .chain(e0[i].iter())
+                .chain(e1[i].iter())
+                .chain(delta0[i].iter())
+                .chain(delta1[i].iter())
+                .chain(m[i].iter())
+                .chain(e0_bit.iter())
+                .chain(e1_bit.iter())
+                .chain(m_bit.iter())
+                .chain(delta0_bit.iter())
+                .chain(delta1_bit.iter())
+                .zip(cs.borrow_mut().unwrap().witness_assignment.iter_mut())
+                .for_each(|(x, y)| *y = i128_to_field(*x));
+            c0[i]
+                .iter()
+                .chain(c1[0].iter())
+                .zip(cs.borrow_mut().unwrap().instance_assignment[1..].iter_mut())
+                .for_each(|(x, y)| *y = i128_to_field(*x));
+            // first r
+            let rr = Fr::rand(rng);
+            let rs = Fr::rand(rng);
+            let proof = lonhh_create_proof::<Bls12<Parameters>, Circuit<Fr>>(
+                cs,
+                &matrices,
+                &self.proving_key,
+                rr,
+                rs,
+            )
+            .unwrap();
+            let mut buf: Vec<u8> = Vec::new();
+            proof.serialize(&mut buf).unwrap();
+            ret.push(buf);
+        }
+        ret
     }
     pub fn deserialize_proof(pf: &Vec<u8>) -> Proof<Bls12<Parameters>> {
         Proof::<Bls12<Parameters>>::deserialize(&**pf).unwrap()
     }
     pub fn serialize_pvk(&self) -> Vec<u8> {
         let mut buf: Vec<u8> = Vec::new();
-        self.proving_key.serialize(&mut buf).unwrap();
+        self.proving_key.serialize_uncompressed(&mut buf).unwrap();
         buf
     }
 }
@@ -86,24 +185,24 @@ pub struct Verifier {
     pub pvk: PreparedVerifyingKey<Bls12<Parameters>>,
 }
 impl Verifier {
-    pub fn new(prover: &Prover) -> Self {
-        //let buf = std::fs::read(vk_path).unwrap();
-        let vk = prover.proving_key.vk.clone();
+    pub fn new(vk_path: &str) -> Self {
+        let pvk = BufReader::new(File::open(vk_path).unwrap());
+
+        // read the proving key
+        // ideally we should call deserialize; since this can be done offline, we just call deserialize_unchecked for simplicity here
+        let vk = VerifyingKey::<Bls12<Parameters>>::deserialize_unchecked(pvk).unwrap();
         Self { pvk: vk.into() }
     }
 
-    pub fn verify_proof_from_bytes(&self, pf: &Vec<u8>, inputs: &[Fp256<FrParameters>]) -> bool {
-        //let proof = Proof::<Bls12<Parameters>>::deserialize(&**pf).unwrap();
+    pub fn verify_proof_from_bytes(&self, pf: &Vec<u8>, inputs: &[i128]) -> bool {
+        let n_inputs: Vec<Fr> = inputs.iter().map(|x| i128_to_field(*x)).collect();
         let proof = Prover::deserialize_proof(pf);
-        verify_proof(&self.pvk, &proof, inputs).unwrap()
+        verify_proof(&self.pvk, &proof, &n_inputs).unwrap()
     }
 
-    pub fn verify_proof(
-        &self,
-        pf: &Proof<Bls12<Parameters>>,
-        inputs: &[Fp256<FrParameters>],
-    ) -> bool {
-        verify_proof(&self.pvk, pf, inputs).unwrap()
+    pub fn verify_proof(&self, pf: &Proof<Bls12<Parameters>>, inputs: &[i128]) -> bool {
+        let n_inputs: Vec<Fr> = inputs.iter().map(|x| i128_to_field(*x)).collect();
+        verify_proof(&self.pvk, &pf, &n_inputs).unwrap()
     }
 }
 /*

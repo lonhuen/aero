@@ -12,7 +12,6 @@ use ark_std::{end_timer, start_timer};
 
 use super::summation_array_size;
 
-//TODO modify the # of real clients and also report back to the clients
 pub struct McTree {
     pub nr_real: u32,
     pub nr_sybil: u32,
@@ -220,7 +219,6 @@ impl MsTree {
                             [0u8; 32]
                         }
                     })
-                    // TODO maybe more precise about the # of sybils here
                     // .chain((0..(2 * self.nr_sybil)).into_par_iter().map(|_| [0u8; 32]))
                     .collect::<Vec<[u8; 32]>>(),
             ));
@@ -229,61 +227,6 @@ impl MsTree {
         }
     }
 
-    /*
-    #[instrument(skip_all)]
-    pub fn gen_tree_timeout(&mut self) -> usize {
-        // first from the leafs to the tree first
-        let ret = self.summation_array.len();
-        // TODO check the rsa_pk appears in Mc
-        self.summation_array.sort_by(|a, b| {
-            a.get_leaf_rsa_pk()
-                .partial_cmp(b.get_leaf_rsa_pk())
-                .unwrap()
-        });
-        // get the non-leaf nodes
-        let mut left = 0;
-        let mut right = self.summation_array.len();
-        while left + 1 < right {
-            let c = match (&self.summation_array[left], &self.summation_array[left + 1]) {
-                (SummationEntry::NonLeaf(left), SummationEntry::NonLeaf(right)) => left + right,
-                (SummationEntry::NonLeaf(left), SummationEntry::Leaf(right)) => left + right,
-                (SummationEntry::Leaf(left), SummationEntry::NonLeaf(right)) => right + left,
-                (SummationEntry::Leaf(left), SummationEntry::Leaf(right)) => left + right,
-                _ => {
-                    panic!("gen_tree: Not a leaf or nonleaf node");
-                }
-            };
-            self.summation_array.push(SummationEntry::NonLeaf(c));
-            left += 2;
-            right += 1;
-        }
-        let gc = start_timer!(|| "gen tree of ms");
-
-        let root = self.get_root();
-        let nr_parameters = root.c0.len();
-        for i in (0..nr_parameters).step_by(4096) {
-            self.ms.push(MerkleTree::from_iter(
-                self.summation_array
-                    .par_iter()
-                    .map(|x| match x {
-                        SummationEntry::Leaf(y) => y.hash(i),
-                        SummationEntry::NonLeaf(y) => y.hash(i),
-                        // just to make compiler happy
-                        // never reach here
-                        _ => {
-                            error!("commitment in summation array");
-                            [0u8; 32]
-                        }
-                    })
-                    // TODO maybe more precise about the # of sybils here
-                    .chain((0..(2 * self.nr_sybil)).into_par_iter().map(|_| [0u8; 32]))
-                    .collect::<Vec<[u8; 32]>>(),
-            ));
-        }
-        end_timer!(gc);
-        ret
-    }
-    */
     pub fn get_proof(&self, rsa_pk: &Vec<u8>) -> MerkleProof {
         if self.ms.is_none() {
             warn!("get_proof@MsTree called while None Ms tree");

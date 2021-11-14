@@ -50,10 +50,6 @@ criterion = "0.3"
 # name = "groth16"
 # harness = false
 
-[[bench]]
-name = "rlwe"
-harness = false
-
 [[bin]]
 name = "client"
 path = "src/client.rs"

@@ -139,6 +139,7 @@ impl SummationNonLeaf {
     }
 }
 
+/*
 fn add_two_vec(a: &Vec<i128>, b: &Vec<i128>) -> Vec<i128> {
     // TODO need modulus here maybe
     let tmp = Vec::<i128>::new();
@@ -162,6 +163,7 @@ fn add_two_vec(a: &Vec<i128>, b: &Vec<i128>) -> Vec<i128> {
     //    .map(|(x, y)| x + y)
     //    .collect()
 }
+*/
 
 impl Add for SummationNonLeaf {
     type Output = SummationNonLeaf;

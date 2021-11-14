@@ -45,7 +45,6 @@ pub struct LightClient {
 }
 
 impl LightClient {
-    // TODO random this nounce
     pub fn new(inner: ServerServiceClient, nr_lc: u32, nr_parameter: u32) -> Self {
         let nr_ct: usize = nr_parameter as usize / 4096;
         let mut rng = rand::rngs::StdRng::from_entropy();

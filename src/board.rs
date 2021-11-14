@@ -1,174 +1,107 @@
-//use ark_ff::BigInteger256;
-
-//mod common;
-//use crate::common::{
-//    aggregation::{merkle::*, CommitEntry, SummationEntry, SummationLeaf},
-//    hash_commitment, new_rsa_pub_key,
-//    server_service::ServerService,
-//};
-//mod util;
-//use common::aggregation::*;
-//use common::board_service::BoardService;
-//use futures::{
-//    future::{self, Ready},
-//    prelude::*,
-//};
-//use tarpc::{
-//    context,
-//    server::{self, Channel, Incoming},
-//    tokio_serde::formats::Json,
-//};
-//use util::config::ConfigUtils;
-//use util::log::LogUtils;
-///// A class for the board, which is responsible for publishing merkle root along with answering merkle proof queries.
-///// Ideally it's not necessary to answer merkle proof queries. but to make the system simpler, let's ask it to answer the queries.
-//pub struct Board {}
-//
-//impl BoardService for Board {
-//    type GetMcProofFut = Ready<MerkleProof>;
-//    type GetMsProofFut = Ready<MerkleProof>;
-//    fn get_mc_proof(self, _: context::Context, leaf_id: u32, round: u32) -> Self::GetMcProofFut {}
-//    fn get_ms_proof(self, _: context::Context, leaf_id: u32, round: u32) -> Self::GetMsProofFut {}
-//}
-//
-//fn main() {
-//    LogUtils::init("board.log");
-//    ConfigUtils::init("config.yaml");
-//    println!("hello world!");
-//}
-//
 mod rlwe;
+mod zksnark;
+use std::borrow::Borrow;
+
 use crate::rlwe::context::*;
+use crate::zksnark::*;
+use ark_groth16::lonhh_create_proof;
 use cupcake::integer_arith::scalar::Scalar;
 use cupcake::integer_arith::ArithUtils;
 use cupcake::polyarith::lazy_ntt::{lazy_inverse_ntt_u64, lazy_ntt_u64};
 use cupcake::rqpoly::RqPolyContext;
 use quail::rlwe::context::MODULUS;
 //use quail::rlwe::context::{self, Context};
+use ark_relations::r1cs::{
+    ConstraintMatrices, ConstraintSynthesizer, ConstraintSystem, ConstraintSystemRef,
+    OptimizationGoal, Result as R1CSResult,
+};
 use ark_std::{end_timer, start_timer};
 use ring_algorithm::chinese_remainder_theorem;
 
 fn main() {
-    let nr_players = 10;
-    let threshold = 2;
-    let shamir_context = vec![
-        ShamirContext::init(MODULUS[0], nr_players, threshold),
-        ShamirContext::init(MODULUS[1], nr_players, threshold),
-        ShamirContext::init(MODULUS[2], nr_players, threshold),
-    ];
-    let gc = start_timer!(|| "remainder");
-    for _ in 0..4096 * 34 {
-        let share = [
-            Scalar::sample_blw(&shamir_context[0].modulus).rep() as i64,
-            Scalar::sample_blw(&shamir_context[1].modulus).rep() as i64,
-            Scalar::sample_blw(&shamir_context[2].modulus).rep() as i64,
-        ];
-        chinese_remainder_theorem(
-            &share,
-            &[MODULUS[0] as i64, MODULUS[1] as i64, MODULUS[2] as i64],
-        );
+    // let e0: Vec<i128> = vec![3i128; 4];
+    // let e0_bit: Vec<i128> = e0
+    //     .iter()
+    //     .flat_map(|x| (0..2).map(|l| (x >> l) & 0x1).collect::<Vec<i128>>())
+    //     .collect();
+    // println!("{:?}", e0_bit);
+
+    {
+        let prover = Prover::setup("./data/encryption.txt");
     }
-    end_timer!(gc);
-    // for _ in 0..16384 * 20 {
-    //     let mut context = ShamirContext::init(0xffffee001u64, 10, 4);
-    //     let shares = context.share(0);
-    //     let sshares: Vec<u64> = shares
-    //         .iter()
-    //         .map(|x| {
-    //             let b = Scalar::from(*x);
-    //             Scalar::sub_mod(
-    //                 &Scalar::mul_mod(&b, &b, &context.modulus),
-    //                 &b,
-    //                 &context.modulus,
-    //             )
-    //             .rep()
-    //         })
-    //         .collect();
-    //     context.threshold *= 2;
-    //     let ret = context.reconstruct(&sshares);
-    //     assert_eq!(ret, 0u64);
+    //let gc = start_timer!(|| "deserialization");
+    //let mut pv = Prover::new("./data/encryption.txt", "./data/proving_key.txt");
+    // let mut ii = 0;
+    // for i in 0..4096 {
+    //     pv.circuit.r[i] = ii;
+    //     ii += 1;
+    // }
+    // for i in 0..4096 {
+    //     pv.circuit.e_0[i] = ii;
+    //     ii += 1;
+    // }
+    // for i in 0..4096 {
+    //     pv.circuit.e_1[i] = ii;
+    //     ii += 1;
+    // }
+    // for i in 0..4096 {
+    //     pv.circuit.delta_0[i] = ii;
+    //     ii += 1;
+    // }
+    // for i in 0..4096 {
+    //     pv.circuit.delta_1[i] = ii;
+    //     ii += 1;
+    // }
+    // for i in 0..4096 {
+    //     pv.circuit.m[i] = ii;
+    //     ii += 1;
+    // }
+    // ii = 0;
+    // for i in 0..4096 {
+    //     pv.circuit.c_0[i] = ii;
+    //     ii += 1;
+    // }
+    // for i in 0..4096 {
+    //     pv.circuit.c_1[i] = ii;
+    //     ii += 1;
+    // }
+    // let cs = ConstraintSystem::new_ref();
+    // cs.set_optimization_goal(OptimizationGoal::Constraints);
+    // pv.circuit.clone().generate_constraints(cs.clone()).unwrap();
+    // cs.finalize();
+    // let matrices = cs.to_matrices().unwrap();
+    // println!(
+    //     "witness len {:?}",
+    //     cs.borrow_mut().unwrap().witness_assignment.len()
+    // );
+    // println!(
+    //     "instance len {:?}",
+    //     cs.borrow_mut().unwrap().instance_assignment.len()
+    // );
+    // println!("witness");
+    // for i in cs.borrow().unwrap().witness_assignment.iter() {
+    //     println!("{}", i);
+    // }
+    // println!("instance");
+    // for i in cs.borrow().unwrap().instance_assignment.iter() {
+    //     println!("{}", i);
     // }
 
-    // let context = Context::init_default();
-
-    // //let mut a: Vec<u64> = vec![1u64; 4096];
-    // //let mut aa = Vec::new();
-    // //aa.push(a);
-    // //context.lazy_ntt_inplace(&mut aa);
-    // //context.lazy_inverse_ntt_inplace(&mut aa);
-    // //println!("{:?}", aa[0]);
-
-    // let mut a: Vec<i128> = vec![1i128; 4096];
-    // let mut acrt = context.crt_encode_vec(&a);
-    // context.lazy_ntt_inplace(&mut acrt);
-
-    //let mut b: Vec<i128> = vec![1i128; 4096];
-    ////b[0] = 1;
-    //let mut bcrt = context.crt_encode_vec(&b);
-    //context.lazy_ntt_inplace(&mut acrt);
-    //context.lazy_ntt_inplace(&mut bcrt);
-    //let mut c_ntt = context.coeffwise_mult(&acrt, &bcrt);
-    //context.lazy_inverse_ntt_inplace(&mut c_ntt);
-    //let c = context.crt_decode_vec(&c_ntt);
-    //println!("{:?}", c);
-
-    //let c = context.crt_decode_vec(&b);
-    //let q = Scalar::new_modulus(0xffffee001u64);
-    //let context = RqPolyContext::new(4096, &q);
-    //let mut a: Vec<u64> = vec![1u64; 4096];
-    ////    let mut b: Vec<u64> = vec![0u64; 4096];
-    ////    b[0] = 1;
-    //let roots_u64: Vec<u64> = context.roots.iter().map(|elm| elm.rep()).collect();
-    //let scaledroots_u64: Vec<u64> = context.scaled_roots.iter().map(|elm| elm.rep()).collect();
-    //let invroots_u64: Vec<u64> = context.invroots.iter().map(|elm| elm.rep()).collect();
-    //let scaled_invroots_u64: Vec<u64> = context
-    //    .scaled_invroots
+    //end_timer!(gc);
+    //let gc = start_timer!(|| "create proofs");
+    //let proof = pv.create_proof_in_bytes();
+    //end_timer!(gc);
+    //let verifier = Verifier::new("./data/verifying_key.txt");
+    //let mut inputs: Vec<_> = pv
+    //    .circuit
+    //    .c_0
+    //    .to_vec()
     //    .iter()
-    //    .map(|elm| elm.rep())
-    //    .collect();
-    ////
-    //let ninv = Scalar::inv_mod(&Scalar::from_u32(4096 as u32, &q), &q);
-    //lazy_ntt_u64(&mut a, &roots_u64, &scaledroots_u64, q.rep());
-    ////    lazy_ntt_u64(&mut b, &roots_u64, &scaledroots_u64, q.rep());
-    ////
-    //let sa: Vec<Scalar> = a
-    //    .iter()
-    //    //.map(|x| Scalar::modulus(&Scalar::from(*x), &q))
-    //    .map(|x| Scalar::from(*x))
-    //    .collect();
-    ////    let sb: Vec<Scalar> = b
-    ////        .iter()
-    ////        .map(|x| Scalar::modulus(&Scalar::from(*x), &q))
-    ////        .collect();
-    ////
-    //let mut sc: Vec<u64> = sa.iter().map(|x| x.rep()).collect();
-    ////        .zip(sb.iter())
-    ////        .map(|(x, y)| Scalar::mul_mod(x, y, &q).rep())
-    ////        .collect();
-    //lazy_inverse_ntt_u64(&mut sc, &invroots_u64, &scaled_invroots_u64, q.rep());
-    //sc.iter_mut().for_each(|x| {
-    //    *x = Scalar::mul_mod(&ninv, &Scalar::modulus(&Scalar::from(*x), &q), &q).rep()
-    //});
-    //println!("{:?}", sc);
-    //    // create instance of the Shamir scheme
-    //    let ref tss = tss::shamir::ShamirSecretSharing {
-    //        threshold: 8,    // privacy threshold
-    //        share_count: 20, // total number of shares to generate
-    //        prime: 41,       // prime field to use
-    //    };
-    //
-    //    let secret = 5;
-    //
-    //    // generate shares for secret
-    //    let all_shares = tss.share(secret);
-    //
-    //    // artificially remove some of the shares
-    //    let number_of_recovered_shared = 10;
-    //    assert!(number_of_recovered_shared >= tss.reconstruct_limit());
-    //    let recovered_indices: Vec<usize> = (0..number_of_recovered_shared).collect();
-    //    let recovered_shares: &[i64] = &all_shares[0..number_of_recovered_shared];
-    //
-    //    // reconstruct using remaining subset of shares
-    //    let reconstructed_secret = tss.reconstruct(&recovered_indices, recovered_shares);
-    //    assert_eq!(reconstructed_secret, secret);
+    //    .chain(pv.circuit.c_1.to_vec().iter())
+    //    //.map(|&x| pv.circuit.i128to_field(x))
+    //    .map(|&x| x)
+    //    .collect::<Vec<_>>();
+    //let gc = start_timer!(|| "verify proofs");
+    //println!("flag {}", verifier.verify_proof_from_bytes(&proof, &inputs));
+    //end_timer!(gc);
 }

@@ -119,7 +119,6 @@ impl ServerService for InnerServer {
     }
 
     //type GetMcProofFut = Ready<MerkleProof>;
-    // TODO for now assume only 1 round
     async fn get_mc_proof(
         self,
         _: context::Context,

@@ -1,6 +1,6 @@
 use ark_groth16::verifier;
 use rayon::ThreadPool;
-use std::process::Command;
+use std::{borrow::BorrowMut, process::Command};
 
 use crate::common::aggregation::{
     merkle::*,
@@ -21,6 +21,7 @@ use std::{
 use tracing::{error, event, instrument, span, warn, Level};
 
 use crate::util::{config::ConfigUtils, log::init_tracing};
+use std::process::Child;
 
 // 2 hours
 const WAITTIME: u64 = 7200;
@@ -43,6 +44,7 @@ pub struct Server {
     //pvk: Arc<Vec<u8>>,
     //verifier: Arc<Verifier>,
     canceller: Arc<RwLock<Canceller>>,
+    child: Arc<Mutex<Child>>,
 }
 
 impl Server {
@@ -79,13 +81,12 @@ impl Server {
         //let timer_cond = cond.clone();
 
         let canceller = Timer::after(Duration::from_secs(WAITTIME), move |_| {}).unwrap();
-        // TODO start random bit generation
         warn!("Atom: Asking committee to generate random bits");
-        Command::new("bash")
+        let child = Command::new("bash")
             .arg("/home/ubuntu/quail/test.sh")
             .arg("offline")
-            .output()
-            .expect("failed to execute process");
+            .spawn()
+            .unwrap();
 
         Self {
             mc: mc_ref,
@@ -96,6 +97,7 @@ impl Server {
             //verifier: verifier.clone(),
             pool: pool.clone(),
             canceller: Arc::new(RwLock::new(canceller)),
+            child: Arc::new(Mutex::new(child)),
         }
     }
     #[inline]
@@ -123,7 +125,7 @@ impl Server {
     #[instrument(skip_all)]
     pub fn aggregate_commit(&self, round: u32, rsa_pk: Vec<u8>, commitment: Vec<[u8; 32]>) {
         // wait for enough commitments
-        // TODO to fix: should check if duplicate commitments come
+        // TODO should check if duplicate commitments exist
         // TODO maybe wait for some time rather than some # of commitments
 
         let (lock, cvar) = &*self.cond;
@@ -192,7 +194,7 @@ impl Server {
             };
         }
 
-        // TODO also verify the proof
+        // TODO also verify the proofs
         if flag {
             //let _ = self.canceller.as_ref().read().unwrap().cancel();
             *state = (STAGE::Verify, state.1);
@@ -201,24 +203,33 @@ impl Server {
             let cond = self.cond.clone();
             let mc = self.mc.clone();
             let ms = self.ms.clone();
+            let child_ref = self.child.clone();
             let canceller = Timer::after(Duration::from_secs(10), move |_| {
                 let (lock, cvar) = &*cond.clone();
                 let mut state = lock.lock().unwrap();
                 if let STAGE::Verify = state.0 {
                     // TODO update the global model
                     warn!("Atom: Asking committee to decrypt");
+                    let mut child = child_ref.lock().unwrap();
+                    child.wait().unwrap();
+                    // decrypt
                     Command::new("bash")
                         .arg("/home/ubuntu/quail/test.sh")
                         .arg("online")
                         .output()
                         .expect("failed to execute process");
-                    // TODO start random bit generation
+                    // start next random bit generation
                     warn!("Atom: Asking committee to generate random bits");
-                    Command::new("bash")
+                    *child = Command::new("bash")
                         .arg("/home/ubuntu/quail/test.sh")
                         .arg("offline")
-                        .output()
-                        .expect("failed to execute process");
+                        .spawn()
+                        .unwrap();
+                    // *child = Command::new("bash")
+                    //     .arg("-c")
+                    //     .arg("sleep 10")
+                    //     .spawn()
+                    //     .unwrap();
                     *state = (STAGE::Commit, state.1 + 1);
                     //println!("Server move to stage {:?}", *state);
                     mc.write().unwrap().iter_mut().for_each(|t| t.clear());

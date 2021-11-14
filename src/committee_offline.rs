@@ -109,22 +109,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut rng = rand::rngs::StdRng::from_entropy();
     let mut shares = vec![vec![vec![0u64; nr_bits]; nr_players]; 3];
     {
-    let random_bits: Vec<u64> = (0..nr_bits)
-        .into_iter()
-        .map(|_| rng.gen_bool(0.5) as u64)
-        //.map(|_| 1u64)
-        //.map(|_| 0u64)
-        .collect();
-    for i in 0..random_bits.len() {
-        let ss0 = shamir_context[0].share(random_bits[i]);
-        let ss1 = shamir_context[1].share(random_bits[i]);
-        let ss2 = shamir_context[2].share(random_bits[i]);
-        for j in 0..nr_players {
-            shares[0][j][i] = ss0[j];
-            shares[1][j][i] = ss1[j];
-            shares[2][j][i] = ss2[j];
+        let random_bits: Vec<u64> = (0..nr_bits)
+            .into_iter()
+            .map(|_| rng.gen_bool(0.5) as u64)
+            //.map(|_| 1u64)
+            //.map(|_| 0u64)
+            .collect();
+        for i in 0..random_bits.len() {
+            let ss0 = shamir_context[0].share(random_bits[i]);
+            let ss1 = shamir_context[1].share(random_bits[i]);
+            let ss2 = shamir_context[2].share(random_bits[i]);
+            for j in 0..nr_players {
+                shares[0][j][i] = ss0[j];
+                shares[1][j][i] = ss1[j];
+                shares[2][j][i] = ss2[j];
+            }
         }
-    }
     }
     end_timer!(gc);
     //let gc = start_timer!(|| "serialization");
@@ -246,8 +246,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 //for j in 0..NUM_DIMENSION {
                 for j in 0..1 {
                     let bit = Scalar::from(rb[k][i * NUM_DIMENSION + j]);
-                    // TODO fix the bug here
-                    //let flag = Scalar::sub_mod(&Scalar::mul_mod(&bit, &bit, q[k]), &bit, q[k]);
                     let flag = Scalar::sub_mod(&Scalar::mul_mod(&bit, &bit, q[k]), &bit, q[k]);
                     sum = Scalar::add_mod(
                         &sum,
