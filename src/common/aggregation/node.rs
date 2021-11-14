@@ -9,6 +9,8 @@ use std::ops::Add;
 use tarpc::serde::{Deserialize, Serialize};
 use tracing::{error, warn};
 
+pub const MODULUS: i128 = 649033470896967801447398927572993i128;
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CommitEntry {
     pub rsa_pk: Vec<u8>,
@@ -101,11 +103,13 @@ impl SummationLeaf {
 
     pub fn evaluate_at(&self, r: i128) -> SummationNonLeaf {
         // TODO implement this
+        // for simplicity, let's assume r is 1 for now.
+        // ideally we can split the i128 into 3 u64 prime numbers
+        // and apply `fast-reduction` to accelerate this
         assert_ne!(self.c0.len(), 0);
-        SummationNonLeaf {
-            c0: self.c0[0],
-            c1: self.c1[0],
-        }
+        let c0 = self.c0.iter().fold(0i128, |x, y| (x + y) % MODULUS);
+        let c1 = self.c1.iter().fold(0i128, |x, y| (x + y) % MODULUS);
+        SummationNonLeaf { c0, c1 }
     }
 }
 

@@ -42,6 +42,11 @@ tracing-subscriber = "0.2"
 opentelemetry = { version = "0.16", features = ["rt-tokio"] }
 opentelemetry-jaeger = { version = "0.15", features = ["rt-tokio"] }
 
+neptune={path="./lib/neptune"}
+typenum = "1.13.0"
+bellperson = { version = "0.16", default-features = false }
+ff = { version = "0.3.1", package = "fff" }
+
 #zmq = "0.9"
 [dev-dependencies]
 criterion = "0.3"

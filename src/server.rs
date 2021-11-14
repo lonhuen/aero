@@ -4,7 +4,6 @@ use futures::{
     future::{self, Join, Ready},
     prelude::*,
 };
-use quail::zksnark::{Prover, Verifier};
 use rand::{Rng, SeedableRng};
 use rayon::{ThreadPool, ThreadPoolBuilder};
 use std::{
@@ -205,20 +204,6 @@ async fn main() -> anyhow::Result<()> {
         IpAddr::V4(config.get_addr("server_addr")),
         config.get_int("server_port") as u16,
     );
-
-    //let mc = McTree::new(nr_real + nr_sim, nr_sybil);
-    //let ms = MsTree::new(nr_real + nr_sim, nr_sybil);
-    //let prover = Prover::setup("./data/encryption.txt");
-    //let pvk = prover.serialize_pvk();
-    //let verifier = Verifier::new(&prover);
-
-    //drop(prover);
-
-    //let mc_ref = Arc::new(RwLock::new(mc));
-    //let ms_ref = Arc::new(RwLock::new(ms));
-
-    //let prover_ref = Arc::new(pvk);
-    //let verifier_ref = Arc::new(verifier);
 
     let pool = Arc::new(ThreadPoolBuilder::new().build().unwrap());
     let server = Server::setup(nr_real, nr_sim, nr_sybil, nr_parameter, &pool);

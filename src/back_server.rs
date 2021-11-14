@@ -64,14 +64,7 @@ impl Server {
             .into_iter()
             .map(|_| MsTree::new(nr_real + nr_sim, nr_sybil))
             .collect();
-        //// get rid of prover
-        //let (pvk, verifier) = {
-        //    let prover = Prover::setup("./data/encryption.txt");
-        //    let pvk = prover.serialize_pvk();
-        //    let verifier = Verifier::new(&prover);
-        //    (pvk, verifier)
-        //};
-        //let prover_ref = Arc::new(pvk);
+        //let verifier = Verifier::new("./data/verifying_key");
         //let verifier_ref = Arc::new(verifier);
 
         let mc_ref = Arc::new(RwLock::new(mc));
