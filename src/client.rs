@@ -1,4 +1,5 @@
 mod common;
+mod rlwe;
 mod util;
 mod zksnark;
 use crate::common::aggregation::{
@@ -12,6 +13,7 @@ use crate::zksnark::{Prover, Verifier};
 use ark_std::{end_timer, start_timer};
 #[cfg(feature = "hashfn_blake3")]
 extern crate blake3;
+use crate::rlwe::PublicKey;
 #[cfg(not(feature = "hashfn_blake3"))]
 use crypto::{digest::Digest, sha3::Sha3};
 use tracing::{error, event, instrument, span, warn, Level};
@@ -26,8 +28,6 @@ use std::{io::BufRead, process::id};
 use std::{thread, time};
 use tarpc::{client, context, tokio_serde::formats::Bincode};
 use tracing_subscriber::filter::LevelFilter;
-mod rlwe;
-use rlwe::PublicKey;
 
 const DEADLINE_TIME: u64 = 6000;
 const NUM_DIMENSION: u32 = 4096;
@@ -45,6 +45,7 @@ pub struct Client {
     m: Vec<Vec<i128>>,
     nonce: Vec<[u8; 16]>,
     prover: Prover,
+    enc_pk: PublicKey,
 }
 
 impl Client {
@@ -53,6 +54,35 @@ impl Client {
         let mut rng = rand::rngs::StdRng::from_entropy();
         let private_key = RsaPrivateKey::new(&mut rng, bits).expect("failed to generate a key");
         let public_key = RsaPublicKey::from(&private_key);
+        let enc_pk = {
+            let (pk0, pk1) = {
+                let mut pk_0 = [0i128; 4096];
+                let mut pk_1 = [0i128; 4096];
+                let file = match File::open("./data/encryption.txt") {
+                    Ok(f) => f,
+                    Err(_) => panic!(),
+                };
+                let reader = BufReader::new(file);
+                for line in reader.lines() {
+                    if let Ok(l) = line {
+                        let vec = l.split(" ").collect::<Vec<&str>>();
+                        for i in 1..vec.len() {
+                            if l.contains("pk_0") {
+                                if let Ok(x) = i128::from_str_radix(vec[i], 10) {
+                                    pk_0[i - 1] = x;
+                                }
+                            } else if l.contains("pk_1") {
+                                if let Ok(x) = i128::from_str_radix(vec[i], 10) {
+                                    pk_1[i - 1] = x;
+                                }
+                            }
+                        }
+                    }
+                }
+                (pk_0.to_vec(), pk_1.to_vec())
+            };
+            PublicKey::new(&pk0, &pk1)
+        };
         let prover = Prover::new("./data/encryption.txt", "./data/proving_key.txt");
         Self {
             inner,
@@ -69,6 +99,7 @@ impl Client {
             m: Vec::new(),
             nonce: Vec::new(),
             prover,
+            enc_pk,
         }
     }
     #[inline(always)]
@@ -83,14 +114,11 @@ impl Client {
     }
 
     #[instrument(skip_all, name = "encrypt")]
-    pub fn encrypt(&mut self, xs: Vec<u8>, pk0: &Vec<i128>, pk1: &Vec<i128>) {
-        let gc = start_timer!(|| "new public key");
-        let rlwe_pk = Arc::new(PublicKey::new(pk0, pk1));
+    pub fn encrypt(&mut self, xs: Vec<u8>) {
         self.clear();
-        end_timer!(gc);
         for i in 0..xs.len() / NUM_DIMENSION as usize {
-            let (r, e0, e1, d0, d1, ct) = rlwe_pk
-                .as_ref()
+            let (r, e0, e1, d0, d1, ct) = self
+                .enc_pk
                 .encrypt(&xs[i * NUM_DIMENSION as usize..(i + 1) * NUM_DIMENSION as usize]);
             self.rs.push(r);
             self.e0s.push(e0);
@@ -113,16 +141,14 @@ impl Client {
         let gc = start_timer!(|| "start proof generation");
         // let mut rng = rand::rngs::StdRng::from_entropy();
         // let mut ret: Vec<Vec<u8>> = Vec::with_capacity(self.c0s.len());
-        // // TODO (simulation) here we assume we have 10 threads to do this proof generation
         // thread::sleep(time::Duration::from_millis(self.c0s.len() as u64 * 825));
         // for _ in 0..self.c0s.len() {
         //     ret.push((0..192).map(|_| rng.gen::<u8>()).collect());
         // }
-        // // TODO fix this. just pass the required information to the circuit
-        // // TODO modify the groth16 library to prove in batch
         let ret = self.prover.create_proof_in_bytes(
             &self.c0s, &self.c1s, &self.rs, &self.e0s, &self.e1s, &self.d0s, &self.d1s, &self.m,
         );
+        println!("proof len {} * {}", ret.len(), ret[0].len());
         end_timer!(gc);
         ret
     }
@@ -132,35 +158,7 @@ impl Client {
     pub async fn upload(&mut self, round: u32, xs: Vec<u8>, pvk: Vec<u8>) -> bool {
         // set the deadline of the context
         let gc1 = start_timer!(|| "encrypt the gradients");
-        // TODO the keys should be read while settuping up
-        // but now let's assume the keys are already retrieved
-        let (pk0, pk1) = {
-            let mut pk_0 = [0i128; 4096];
-            let mut pk_1 = [0i128; 4096];
-            let file = match File::open("./data/encryption.txt") {
-                Ok(f) => f,
-                Err(_) => panic!(),
-            };
-            let reader = BufReader::new(file);
-            for line in reader.lines() {
-                if let Ok(l) = line {
-                    let vec = l.split(" ").collect::<Vec<&str>>();
-                    for i in 1..vec.len() {
-                        if l.contains("pk_0") {
-                            if let Ok(x) = i128::from_str_radix(vec[i], 10) {
-                                pk_0[i - 1] = x;
-                            }
-                        } else if l.contains("pk_1") {
-                            if let Ok(x) = i128::from_str_radix(vec[i], 10) {
-                                pk_1[i - 1] = x;
-                            }
-                        }
-                    }
-                }
-            }
-            (pk_0.to_vec(), pk_1.to_vec())
-        };
-        self.encrypt(xs, &pk0, &pk1);
+        self.encrypt(xs);
         // generate commitment to all the CTs
         let cm = self.hash();
         end_timer!(gc1);
@@ -219,9 +217,14 @@ impl Client {
         //    let mut x = HashAlgorithm::new();
         //    warn!("hash {:?}", x.leaf(h));
         //}
-        // TODO check all the proofs
-        ms_proof[0].clone().to_proof().validate::<HashAlgorithm>()
-            && mc_proof[0].clone().to_proof().validate::<HashAlgorithm>()
+        let mut flag = true;
+        for p in ms_proof {
+            flag = flag & p.clone().to_proof().validate::<HashAlgorithm>();
+        }
+        for p in mc_proof {
+            flag = flag & p.clone().to_proof().validate::<HashAlgorithm>();
+        }
+        flag
     }
 
     #[cfg(not(feature = "hashfn_blake3"))]
@@ -479,71 +482,71 @@ async fn main() -> anyhow::Result<()> {
     //let pvk_client =
     //    ServerServiceClient::new(client::Config::default(), pvk_transport.await?).spawn();
     let mut client = Client::new(inner_client);
+    // // testing the batch proof generation
+    // let xs = vec![0u8; 4096];
+    // let (pk0, pk1) = {
+    //     let mut pk_0 = [0i128; 4096];
+    //     let mut pk_1 = [0i128; 4096];
+    //     let file = match File::open("./data/encryption.txt") {
+    //         Ok(f) => f,
+    //         Err(_) => panic!(),
+    //     };
+    //     let reader = BufReader::new(file);
+    //     for line in reader.lines() {
+    //         if let Ok(l) = line {
+    //             let vec = l.split(" ").collect::<Vec<&str>>();
+    //             for i in 1..vec.len() {
+    //                 if l.contains("pk_0") {
+    //                     if let Ok(x) = i128::from_str_radix(vec[i], 10) {
+    //                         pk_0[i - 1] = x;
+    //                     }
+    //                 } else if l.contains("pk_1") {
+    //                     if let Ok(x) = i128::from_str_radix(vec[i], 10) {
+    //                         pk_1[i - 1] = x;
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     (pk_0.to_vec(), pk_1.to_vec())
+    // };
+    // let gc = start_timer!(|| "encryption");
+    // client.encrypt(xs, &pk0, &pk1);
+    // end_timer!(gc);
+    // let gc = start_timer!(|| "proof generation");
+    // let proof = client.generate_proof();
+    // end_timer!(gc);
+    // let verifier = Verifier::new("./data/verifying_key.txt");
+    // let mut inputs: Vec<_> = client.c0s[0]
+    //     .iter()
+    //     .chain(client.c1s[0].iter())
+    //     .map(|&x| x)
+    //     .collect::<Vec<_>>();
+    // let flag = verifier.verify_proof_from_bytes(&proof[0], &inputs);
+    // println!("proof size {}", proof[0].len());
+    // println!("flag {}", flag);
+    for i in 0..nr_round {
+        // begin uploading
+        let sr = start_timer!(|| "one round");
+        let train = start_timer!(|| "train model");
+        //let pvk = {
+        //    let mut ctx = context::current();
+        //    ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
+        //    pvk_client.retrieve_proving_key(ctx, i)
+        //};
+        let data = client.train_model(i).await;
+        end_timer!(train);
 
-    let xs = vec![0u8; 4096];
-    let (pk0, pk1) = {
-        let mut pk_0 = [0i128; 4096];
-        let mut pk_1 = [0i128; 4096];
-        let file = match File::open("./data/encryption.txt") {
-            Ok(f) => f,
-            Err(_) => panic!(),
-        };
-        let reader = BufReader::new(file);
-        for line in reader.lines() {
-            if let Ok(l) = line {
-                let vec = l.split(" ").collect::<Vec<&str>>();
-                for i in 1..vec.len() {
-                    if l.contains("pk_0") {
-                        if let Ok(x) = i128::from_str_radix(vec[i], 10) {
-                            pk_0[i - 1] = x;
-                        }
-                    } else if l.contains("pk_1") {
-                        if let Ok(x) = i128::from_str_radix(vec[i], 10) {
-                            pk_1[i - 1] = x;
-                        }
-                    }
-                }
-            }
-        }
-        (pk_0.to_vec(), pk_1.to_vec())
-    };
-    let gc = start_timer!(|| "encryption");
-    client.encrypt(xs, &pk0, &pk1);
-    end_timer!(gc);
-    let gc = start_timer!(|| "proof generation");
-    let proof = client.generate_proof();
-    end_timer!(gc);
-    let verifier = Verifier::new("./data/verifying_key.txt");
-    let mut inputs: Vec<_> = client.c0s[0]
-        .iter()
-        .chain(client.c1s[0].iter())
-        .map(|&x| x)
-        .collect::<Vec<_>>();
-    let flag = verifier.verify_proof_from_bytes(&proof[0], &inputs);
-    println!("proof size {}", proof[0].len());
-    println!("flag {}", flag);
-    //for i in 0..nr_round {
-    //    // begin uploading
-    //    let sr = start_timer!(|| "one round");
-    //    let train = start_timer!(|| "train model");
-    //    //let pvk = {
-    //    //    let mut ctx = context::current();
-    //    //    ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
-    //    //    pvk_client.retrieve_proving_key(ctx, i)
-    //    //};
-    //    let data = client.train_model(i).await;
-    //    end_timer!(train);
+        let rs = start_timer!(|| "upload data");
+        //let result = client.upload(i, data, pvk.await.unwrap()).await;
+        let result = client.upload(i, data, vec![0u8; 1]).await;
+        end_timer!(rs);
 
-    //    let rs = start_timer!(|| "upload data");
-    //    //let result = client.upload(i, data, pvk.await.unwrap()).await;
-    //    let result = client.upload(i, data, vec![0u8; 1]).await;
-    //    end_timer!(rs);
-
-    //    let vr = start_timer!(|| "verify the data");
-    //    client.verify(i, nr_real + nr_sim, 5).await;
-    //    end_timer!(vr);
-    //    end_timer!(sr);
-    //}
+        let vr = start_timer!(|| "verify the data");
+        client.verify(i, nr_real + nr_sim, 5).await;
+        end_timer!(vr);
+        end_timer!(sr);
+    }
     end_timer!(start);
     opentelemetry::global::shutdown_tracer_provider();
     Ok(())

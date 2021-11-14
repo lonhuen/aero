@@ -195,6 +195,7 @@ impl Server {
         }
 
         // TODO also verify the proofs
+        // Since verification cost is little and we don't focus on aggregator cost, we don't really check the proofs here
         if flag {
             //let _ = self.canceller.as_ref().read().unwrap().cancel();
             *state = (STAGE::Verify, state.1);

@@ -171,6 +171,7 @@ impl MsTree {
         } else {
             // first from the leafs to the tree first
             // TODO check the rsa_pk appears in Mc
+            // still, since we don't focus on the aggregator cost, we don't implement it for now
             let gc = start_timer!(|| "gen tree of ms");
             warn!("start gen tree");
             self.summation_array.sort_by(|a, b| {
