@@ -13,9 +13,9 @@ in_bytes=$(echo $start | awk -v OFS=, '/eth0:/ { print $2 }')
 out_bytes=$(echo $start | awk -v OFS=, '/eth0:/ { print $10 }')
 
 for i in `seq 0 $((nr_real-2))`; do
-	./target/release/client $i 2>&1 > client$i.log &
+	RAYON_NUM_THREADS=1 ./target/release/client $i 2>&1 > client$i.log &
 done
-./target/release/client $((i+1)) 2>&1 > client$((i+1)).log
+RAYON_NUM_THREADS=1 ./target/release/client $((i+1)) 2>&1 > client$((i+1)).log
 wait
 
 end=$(cat /proc/net/dev | grep "eth0")

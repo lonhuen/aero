@@ -148,7 +148,8 @@ impl Client {
         let ret = self.prover.create_proof_in_bytes(
             &self.c0s, &self.c1s, &self.rs, &self.e0s, &self.e1s, &self.d0s, &self.d1s, &self.m,
         );
-        println!("proof len {} * {}", ret.len(), ret[0].len());
+        //println!("proof len {} * {}", ret.len(), ret[0].len());
+        // # of ct * 192
         end_timer!(gc);
         ret
     }
@@ -483,71 +484,45 @@ async fn main() -> anyhow::Result<()> {
     //    ServerServiceClient::new(client::Config::default(), pvk_transport.await?).spawn();
     let mut client = Client::new(inner_client);
     // // testing the batch proof generation
-    // let xs = vec![0u8; 4096];
-    // let (pk0, pk1) = {
-    //     let mut pk_0 = [0i128; 4096];
-    //     let mut pk_1 = [0i128; 4096];
-    //     let file = match File::open("./data/encryption.txt") {
-    //         Ok(f) => f,
-    //         Err(_) => panic!(),
-    //     };
-    //     let reader = BufReader::new(file);
-    //     for line in reader.lines() {
-    //         if let Ok(l) = line {
-    //             let vec = l.split(" ").collect::<Vec<&str>>();
-    //             for i in 1..vec.len() {
-    //                 if l.contains("pk_0") {
-    //                     if let Ok(x) = i128::from_str_radix(vec[i], 10) {
-    //                         pk_0[i - 1] = x;
-    //                     }
-    //                 } else if l.contains("pk_1") {
-    //                     if let Ok(x) = i128::from_str_radix(vec[i], 10) {
-    //                         pk_1[i - 1] = x;
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     (pk_0.to_vec(), pk_1.to_vec())
-    // };
-    // let gc = start_timer!(|| "encryption");
-    // client.encrypt(xs, &pk0, &pk1);
-    // end_timer!(gc);
-    // let gc = start_timer!(|| "proof generation");
-    // let proof = client.generate_proof();
-    // end_timer!(gc);
-    // let verifier = Verifier::new("./data/verifying_key.txt");
-    // let mut inputs: Vec<_> = client.c0s[0]
-    //     .iter()
-    //     .chain(client.c1s[0].iter())
-    //     .map(|&x| x)
-    //     .collect::<Vec<_>>();
-    // let flag = verifier.verify_proof_from_bytes(&proof[0], &inputs);
-    // println!("proof size {}", proof[0].len());
-    // println!("flag {}", flag);
-    for i in 0..nr_round {
-        // begin uploading
-        let sr = start_timer!(|| "one round");
-        let train = start_timer!(|| "train model");
-        //let pvk = {
-        //    let mut ctx = context::current();
-        //    ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
-        //    pvk_client.retrieve_proving_key(ctx, i)
-        //};
-        let data = client.train_model(i).await;
-        end_timer!(train);
+    let xs = vec![0u8; 4096 * 3];
+    let gc = start_timer!(|| "encryption");
+    client.encrypt(xs);
+    end_timer!(gc);
+    let gc = start_timer!(|| "proof generation");
+    let proof = client.generate_proof();
+    end_timer!(gc);
+    let verifier = Verifier::new("./data/verifying_key.txt");
+    let mut inputs: Vec<_> = client.c0s[0]
+        .iter()
+        .chain(client.c1s[0].iter())
+        .map(|&x| x)
+        .collect::<Vec<_>>();
+    let flag = verifier.verify_proof_from_bytes(&proof[0], &inputs);
+    println!("proof size {}", proof[0].len());
+    println!("flag {}", flag);
+    // for i in 0..nr_round {
+    //     // begin uploading
+    //     let sr = start_timer!(|| "one round");
+    //     let train = start_timer!(|| "train model");
+    //     //let pvk = {
+    //     //    let mut ctx = context::current();
+    //     //    ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
+    //     //    pvk_client.retrieve_proving_key(ctx, i)
+    //     //};
+    //     let data = client.train_model(i).await;
+    //     end_timer!(train);
 
-        let rs = start_timer!(|| "upload data");
-        //let result = client.upload(i, data, pvk.await.unwrap()).await;
-        let result = client.upload(i, data, vec![0u8; 1]).await;
-        end_timer!(rs);
+    //     let rs = start_timer!(|| "upload data");
+    //     //let result = client.upload(i, data, pvk.await.unwrap()).await;
+    //     let result = client.upload(i, data, vec![0u8; 1]).await;
+    //     end_timer!(rs);
 
-        let vr = start_timer!(|| "verify the data");
-        client.verify(i, nr_real + nr_sim, 5).await;
-        end_timer!(vr);
-        end_timer!(sr);
-    }
-    end_timer!(start);
+    //     let vr = start_timer!(|| "verify the data");
+    //     client.verify(i, nr_real + nr_sim, 5).await;
+    //     end_timer!(vr);
+    //     end_timer!(sr);
+    // }
+    // end_timer!(start);
     opentelemetry::global::shutdown_tracer_provider();
     Ok(())
 }
