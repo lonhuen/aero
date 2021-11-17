@@ -23,6 +23,8 @@ use ark_std::test_rng;
 mod constraints;
 mod online;
 use crate::zksnark::constraints::Circuit;
+
+use self::online::CircuitOnline;
 const NUM_DIMENSION: usize = 4096;
 
 pub fn i128_to_field(x: i128) -> Fr {
@@ -209,11 +211,11 @@ impl Verifier {
 
 pub struct ProverOnline {
     pub proving_key: ProvingKey<Bls12<Parameters>>,
-    pub circuit: Circuit<Fr>,
+    pub circuit: CircuitOnline,
 }
 impl ProverOnline {
     pub fn setup(enc_path: &str) -> Self {
-        let c = Circuit::<Fr>::new(NUM_DIMENSION, enc_path);
+        let c = CircuitOnline::new(enc_path);
         //TODO use OsRng here
         let rng = &mut test_rng();
 
@@ -233,7 +235,7 @@ impl ProverOnline {
         }
     }
     pub fn new(enc_path: &str, pvk_path: &str) -> Self {
-        let c = Circuit::<Fr>::new(NUM_DIMENSION, enc_path);
+        let c = CircuitOnline::new(enc_path);
 
         let pvk = BufReader::new(File::open(pvk_path).unwrap());
 
@@ -257,81 +259,52 @@ impl ProverOnline {
     // }
     pub fn create_proof_in_bytes(
         &self,
-        c0: &Vec<Vec<i128>>,
         c1: &Vec<Vec<i128>>,
         r: &Vec<Vec<i128>>,
-        e0: &Vec<Vec<i128>>,
         e1: &Vec<Vec<i128>>,
-        delta0: &Vec<Vec<i128>>,
         delta1: &Vec<Vec<i128>>,
         m: &Vec<Vec<i128>>,
+        hash: &Vec<[u8; 224]>,
     ) -> Vec<Vec<u8>> {
+        // TODO actually this requires we get intermediate state from neptune.
+        // These numbers can be retrieved from an offline phase.
+        // So for simplicity, we just assume they are the same from previous circuit
+        // update the witness in constraint system
+        // so here we call generate_circuit to generate the intermediate state and reuse them
         let cs = ConstraintSystem::new_ref();
         cs.set_optimization_goal(OptimizationGoal::Constraints);
-        self.circuit
-            .clone()
-            .generate_constraints(cs.clone())
-            .unwrap();
+        let mut circuit = self.circuit.clone();
+        // for i in 0..4096 {
+        //     circuit.c_0[i] = c1[0][i];
+        //     circuit.r[i] = r[0][i];
+        //     circuit.e_0[i] = e1[0][i];
+        //     circuit.delta_0[i] = delta1[0][i];
+        //     circuit.m[i] = m[0][i];
+        // }
+        // for i in 0..224 {
+        //     circuit.hash[i] = hash[0][i];
+        // }
+        circuit.generate_constraints(cs.clone()).unwrap();
         cs.finalize();
         let matrices = cs.to_matrices().unwrap();
         let rng = &mut test_rng();
 
-        let mut ret = Vec::with_capacity(c0.len());
-        for i in 0..c0.len() {
-            let cs = cs.clone();
-            // update the witness in constraint system
-            //r[i].iter().chain(e0[i].iter()).chain(e1[i].iter)
-            let e0_bit: Vec<i128> = e0[i]
-                .iter()
-                .flat_map(|x| (0..5).map(|l| (x >> l) & 0x1).collect::<Vec<i128>>())
-                .collect();
-            let e1_bit: Vec<i128> = e1[i]
-                .iter()
-                .flat_map(|x| (0..5).map(|l| (x >> l) & 0x1).collect::<Vec<i128>>())
-                .collect();
-            let m_bit: Vec<i128> = m[i]
-                .iter()
-                .flat_map(|x| (0..8).map(|l| (x >> l) & 0x1).collect::<Vec<i128>>())
-                .collect();
-            let delta0_bit: Vec<i128> = delta0[i]
-                .iter()
-                .flat_map(|x| {
-                    (0..13)
-                        .map(|l| ((x + 4096) >> l) & 0x1)
-                        .collect::<Vec<i128>>()
-                })
-                .collect();
-            let delta1_bit: Vec<i128> = delta1[i]
-                .iter()
-                .flat_map(|x| {
-                    (0..13)
-                        .map(|l| ((x + 4096) >> l) & 0x1)
-                        .collect::<Vec<i128>>()
-                })
-                .collect();
-            r[i].iter()
-                .chain(e0[i].iter())
-                .chain(e1[i].iter())
-                .chain(delta0[i].iter())
-                .chain(delta1[i].iter())
-                .chain(m[i].iter())
-                .chain(e0_bit.iter())
-                .chain(e1_bit.iter())
-                .chain(m_bit.iter())
-                .chain(delta0_bit.iter())
-                .chain(delta1_bit.iter())
-                .zip(cs.borrow_mut().unwrap().witness_assignment.iter_mut())
-                .for_each(|(x, y)| *y = i128_to_field(*x));
-            c0[i]
-                .iter()
-                .chain(c1[0].iter())
-                .zip(cs.borrow_mut().unwrap().instance_assignment[1..].iter_mut())
-                .for_each(|(x, y)| *y = i128_to_field(*x));
+        let mut ret = Vec::with_capacity(c1.len());
+        for i in 0..c1.len() {
+            // let cs = cs.clone();
+            // cs.borrow_mut()
+            //     .unwrap()
+            //     .witness_assignment
+            //     .iter_mut()
+            //     .for_each(|x| *x = *x);
+            // cs.borrow_mut().unwrap().instance_assignment[1..]
+            //     .iter_mut()
+            //     .for_each(|x| *x = *x);
             // first r
             let rr = Fr::rand(rng);
             let rs = Fr::rand(rng);
             let proof = lonhh_create_proof::<Bls12<Parameters>, Circuit<Fr>>(
-                cs,
+                cs.clone(),
                 &matrices,
                 &self.proving_key,
                 rr,

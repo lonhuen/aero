@@ -359,6 +359,10 @@ impl<F: Field> ConstraintSynthesizer<F> for Circuit<F> {
         //eprintln!("# of constraints {}", cs.num_constraints());
         //eprintln!("# of instances {}", cs.num_instance_variables());
         //eprintln!("# of witness {}", cs.num_witness_variables());
+        println!("# of constraints {}", cs.num_constraints());
+        println!("# of instances {}", cs.num_instance_variables());
+        println!("# of witness {}", cs.num_witness_variables());
+        println!("# of lc{}", cs.borrow().unwrap().num_linear_combinations);
         Ok(())
     }
 }

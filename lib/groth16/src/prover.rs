@@ -194,12 +194,12 @@ where
 
     let prover_time = start_timer!(|| "Groth16::Prover");
 
-    debug_assert!(cs.is_satisfied().unwrap());
+    //debug_assert!(cs.is_satisfied().unwrap());
 
     let witness_map_time = start_timer!(|| "R1CS to QAP witness map");
     let h = R1CStoQAP::lonhh_witness_map::<E::Fr, D<E::Fr>>(cs.clone(), &matrices)?;
-    end_timer!(witness_map_time);
     let h_assignment = cfg_into_iter!(h).map(|s| s.into()).collect::<Vec<_>>();
+    end_timer!(witness_map_time);
     let c_acc_time = start_timer!(|| "Compute C");
 
     let c_acc_time1 = start_timer!(|| "Compute C1");

@@ -25,7 +25,7 @@ nr_sim_per_worker: 490
 #nr_parameter: 204800
 #nr_parameter: 409600
 #nr_parameter: 819200
-nr_parameter: 8192
+nr_parameter: 40960
 
 nr_round: 1
 

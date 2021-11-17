@@ -29,7 +29,7 @@ ark-r1cs-std = { version = "^0.2.0", default-features = false, optional = true }
 tracing = { version = "0.1", default-features = false, features = [ "attributes" ], optional = true }
 derivative = { version = "2.0", features = ["use_core"], optional = true}
 
-rayon = { version = "1", optional = true }
+rayon = { version = "1.5", optional = true }
 
 [dev-dependencies]
 csv = { version = "1" }

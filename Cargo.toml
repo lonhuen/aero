@@ -4,7 +4,7 @@ version = "0.0.1"
 edition = "2018"
 
 [dependencies]
-ark-groth16 = {path="./lib/groth16",version="0.2.0",features = ["parallel"]}
+ark-groth16 = {path="./lib/groth16",version="0.2.0",features = ["parallel","std"]}
 ark-ff = { version = "^0.2.0", default-features = false }
 ark-std = { version = "^0.2.0", default-features = false }
 ark-ec = { version = "^0.2.0", default-features = false }
@@ -92,11 +92,14 @@ name = "data_generator"
 path = "src/data_generator.rs"
 
 [features]
-default = [ "print-trace","hashfn_blake3","parallel"]
-hashfn_blake3=[]
+#default = [ "print-trace","hashfn_blake3","parallel","online","ark-groth16/std"]
+default = [ "print-trace","hashfn_blake3","parallel","std"]
+hashfn_blake3 = []
 json = []
 print-trace = [ "ark-std/print-trace" ]
 parallel = [ "ark-groth16/parallel" ]
+std = ["ark-groth16/std","ark-ff/std", "ark-ec/std", "ark-relations/std", "ark-std/std" ]
+online = []
 
 [profile.release]
 panic = 'abort'

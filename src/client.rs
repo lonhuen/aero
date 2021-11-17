@@ -9,8 +9,12 @@ use crate::common::aggregation::{
 use crate::common::server_service::ServerServiceClient;
 use crate::common::{i128vec_to_le_bytes, summation_array_size, ZKProof};
 use crate::util::{config::ConfigUtils, log::init_tracing};
-use crate::zksnark::{Prover, Verifier};
+use crate::zksnark::Verifier;
 use ark_std::{end_timer, start_timer};
+#[cfg(not(feature = "online"))]
+use quail::zksnark::Prover;
+#[cfg(feature = "online")]
+use quail::zksnark::ProverOnline as Prover;
 #[cfg(feature = "hashfn_blake3")]
 extern crate blake3;
 use crate::rlwe::PublicKey;
@@ -45,6 +49,7 @@ pub struct Client {
     m: Vec<Vec<i128>>,
     nonce: Vec<[u8; 16]>,
     prover: Prover,
+    //prover: ProverOnline,
     enc_pk: PublicKey,
 }
 
@@ -84,6 +89,7 @@ impl Client {
             PublicKey::new(&pk0, &pk1)
         };
         let prover = Prover::new("./data/encryption.txt", "./data/proving_key.txt");
+        //let prover = ProverOnline::new("./data/encryption.txt", "./data/proving_key.txt");
         Self {
             inner,
             //prover: prover,
@@ -145,8 +151,18 @@ impl Client {
         // for _ in 0..self.c0s.len() {
         //     ret.push((0..192).map(|_| rng.gen::<u8>()).collect());
         // }
+        #[cfg(not(feature = "online"))]
         let ret = self.prover.create_proof_in_bytes(
             &self.c0s, &self.c1s, &self.rs, &self.e0s, &self.e1s, &self.d0s, &self.d1s, &self.m,
+        );
+        #[cfg(feature = "online")]
+        let ret = self.prover.create_proof_in_bytes(
+            &self.c0s,
+            &self.rs,
+            &self.e0s,
+            &self.d0s,
+            &self.m,
+            &vec![[0u8; 224]],
         );
         //println!("proof len {} * {}", ret.len(), ret[0].len());
         // # of ct * 192
@@ -484,7 +500,7 @@ async fn main() -> anyhow::Result<()> {
     //    ServerServiceClient::new(client::Config::default(), pvk_transport.await?).spawn();
     let mut client = Client::new(inner_client);
     // // testing the batch proof generation
-    let xs = vec![0u8; 4096 * 3];
+    let xs = vec![0u8; 4096 * 30];
     let gc = start_timer!(|| "encryption");
     client.encrypt(xs);
     end_timer!(gc);
@@ -494,11 +510,11 @@ async fn main() -> anyhow::Result<()> {
     let verifier = Verifier::new("./data/verifying_key.txt");
     let mut inputs: Vec<_> = client.c0s[0]
         .iter()
-        .chain(client.c1s[0].iter())
+        //.chain(client.c1s[0].iter())
         .map(|&x| x)
         .collect::<Vec<_>>();
     let flag = verifier.verify_proof_from_bytes(&proof[0], &inputs);
-    println!("proof size {}", proof[0].len());
+    println!("proof size {} {}", proof.len(), proof[0].len());
     println!("flag {}", flag);
     // for i in 0..nr_round {
     //     // begin uploading

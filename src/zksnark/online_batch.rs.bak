@@ -21,29 +21,30 @@ use typenum::*;
 #[derive(Clone)]
 pub struct CircuitOnline {
     pub num_dimension: usize,
-    pub c_0: [i128; 4096],
-    pub r: [i128; 4096],
-    pub e_0: [i128; 4096],
-    pub m: [i128; 4096],
+    //pub c_0: [i128; 4096],
+    //pub r: [i128; 4096],
+    //pub e_0: [i128; 4096],
+    //pub m: [i128; 4096],
     pub pk_0: [i128; 4096],
-    pub delta_0: [i128; 4096],
-    constants: PoseidonConstants<Bls12, typenum::U36>,
-    arity: usize,
-    // 7 256-bit numbers
+    //pub delta_0: [i128; 4096],
+    // 7 elements, each with 256 bit (32 bytes)
+    // 7 * 32 = 224
     pub hash: [u8; 224],
+    constants: PoseidonConstants<Bls12, typenum::U5>,
+    arity: usize,
     // TODO hash result should be here
     pub _engine: PhantomData<ArkFr>,
 }
 impl CircuitOnline {
     pub fn new(enc_path: &str) -> Self {
         let num_dimension = 4096usize;
-        let mut c_0 = [0i128; 4096];
-        let mut r = [0i128; 4096];
-        let mut e_0 = [0i128; 4096];
+        //let mut r = [0i128; 4096];
+        //let mut e_0 = [0i128; 4096];
         let mut pk_0 = [0i128; 4096];
-        let mut delta_0 = [0i128; 4096];
-        let mut hash = [0u8; 224];
-        let file = File::open(enc_path).unwrap();
+        //let mut delta_0 = [0i128; 4096];
+        //let mut hash = [0u8; 224];
+        let hash = [0u8; 224];
+        let file = File::open("enc_path").unwrap();
         let reader = BufReader::new(file);
         for line in reader.lines() {
             if let Ok(l) = line {
@@ -53,43 +54,17 @@ impl CircuitOnline {
                         if let Ok(x) = i128::from_str_radix(vec[i], 10) {
                             pk_0[i - 1] = x;
                         }
-                    } else if l.contains("r") {
-                        if let Ok(x) = i128::from_str_radix(vec[i], 10) {
-                            r[i - 1] = x;
-                        }
-                    } else if l.contains("c_0") {
-                        if let Ok(x) = i128::from_str_radix(vec[i], 10) {
-                            c_0[i - 1] = x;
-                        }
-                    } else if l.contains("pk_0") {
-                        if let Ok(x) = i128::from_str_radix(vec[i], 10) {
-                            pk_0[i - 1] = x;
-                        }
-                    } else if l.contains("e_0") {
-                        if let Ok(x) = i128::from_str_radix(vec[i], 10) {
-                            e_0[i - 1] = x;
-                        }
-                    } else if l.contains("delta_0") {
-                        if let Ok(x) = i128::from_str_radix(vec[i], 10) {
-                            delta_0[i - 1] = x;
-                        }
                     }
                 }
             }
         }
 
-        let constants = PoseidonConstants::<Bls12, typenum::U36>::new_with_strength(
-            neptune::Strength::Standard,
-        );
-        let arity = typenum::U36::to_usize();
+        let constants =
+            PoseidonConstants::<Bls12, typenum::U5>::new_with_strength(neptune::Strength::Standard);
+        let arity = typenum::U5::to_usize();
         Self {
             num_dimension,
-            c_0,
-            r,
-            e_0,
-            m: [0i128; 4096],
             pk_0,
-            delta_0,
             constants,
             arity,
             hash,
@@ -109,13 +84,10 @@ impl CircuitOnline {
 }
 
 impl ConstraintSynthesizer<ArkFr> for CircuitOnline {
-    // TODO maybe rename c0 to c1 for online
     fn generate_constraints(self, cs: ConstraintSystemRef<ArkFr>) -> Result<(), SynthesisError> {
-        // TODO this should be moved into circuit field
         let arity = self.arity;
 
         // begin
-
         let pk_0 = self
             .pk_0
             .to_vec()
@@ -127,38 +99,53 @@ impl ConstraintSynthesizer<ArkFr> for CircuitOnline {
             * ArkFr::from(0x1ffffe0001u64);
 
         // c0
-        let mut c0_val_vec = Vec::new();
+        //let mut c0_val_vec = Vec::new();
         let mut c0_var_vec = Vec::new();
         for i in 0..self.num_dimension {
-            c0_val_vec.push(self.i128toField(self.c_0[i]));
-            c0_var_vec.push(cs.new_input_variable(|| Ok(c0_val_vec[i]))?);
+            //c0_val_vec.push(self.i128toField(self.c_0[i]));
+            //c0_var_vec.push(cs.new_input_variable(|| Ok(c0_val_vec[i]))?);
+            c0_var_vec.push(cs.new_input_variable(|| Ok(ArkFr::zero()))?);
         }
         // r
         // r_bit
-        let mut r_bit_val_vec = Vec::new();
+        //let mut r_bit_val_vec = Vec::new();
         let mut r_bit_var_vec = Vec::new();
         let mut r_agg_val_vec = Vec::new();
         let mut r_agg_var_vec = Vec::new();
         for i in 0..self.num_dimension {
-            r_bit_val_vec.push(self.i128toField(self.r[i] & 0x1));
-            r_bit_var_vec.push(cs.new_witness_variable(|| Ok(r_bit_val_vec[2 * i]))?);
-            r_bit_val_vec.push(self.i128toField(self.r[i] & 0x2));
-            r_bit_var_vec.push(cs.new_witness_variable(|| Ok(r_bit_val_vec[2 * i + 1]))?);
+            //r_bit_val_vec.push(self.i128toField(self.r[i] & 0x1));
+            //r_bit_var_vec.push(cs.new_witness_variable(|| Ok(r_bit_val_vec[2 * i]))?);
+            //r_bit_val_vec.push(self.i128toField(self.r[i] & 0x2));
+            //r_bit_var_vec.push(cs.new_witness_variable(|| Ok(r_bit_val_vec[2 * i + 1]))?);
+            r_bit_var_vec.push(cs.new_witness_variable(|| Ok(ArkFr::zero()))?);
+            r_bit_var_vec.push(cs.new_witness_variable(|| Ok(ArkFr::zero()))?);
+            // bit
+            // cs.enforce_constraint(
+            //    lc!() + r_bit_var_vec[2 * i],
+            //    lc!() + r_bit_var_vec[2 * i] + (-ArkFr::one(), Variable::One),
+            //    lc!(),
+            //)?;
+            // cs.enforce_constraint(
+            //    lc!() + r_bit_var_vec[2 * i + 1],
+            //    lc!() + r_bit_var_vec[2 * i + 1] + (-ArkFr::one(),
+            // Variable::One),    lc!(),
+            //)?;
         }
-        // aggregate of all bits into 33 elements + one random elements
+        // aggregate of all bits into 34 elements
         {
             let mut l = lc!();
             let mut t = ArkFr::zero();
             let mut x = ArkFr::one();
             let mut ii = 0;
             let y = ArkFr::one().double();
-            for i in 0..r_bit_val_vec.len() {
+            for i in 0..r_bit_var_vec.len() {
                 l = l + (x, r_bit_var_vec[i]);
-                t = t + x * r_bit_val_vec[i];
+                //t = t + x * r_bit_val_vec[i];
                 x = x * y;
                 if i % 255 == 0 {
-                    r_agg_val_vec.push(t);
-                    r_agg_var_vec.push(cs.new_witness_variable(|| Ok(r_agg_val_vec[ii]))?);
+                    r_agg_val_vec.push(ArkFr::zero());
+                    //r_agg_var_vec.push(cs.new_witness_variable(|| Ok(r_agg_val_vec[ii]))?);
+                    r_agg_var_vec.push(cs.new_witness_variable(|| Ok(ArkFr::zero()))?);
                     cs.enforce_constraint(
                         lc!() + &l,
                         lc!() + Variable::One,
@@ -171,31 +158,42 @@ impl ConstraintSynthesizer<ArkFr> for CircuitOnline {
                 }
             }
             if l.len() != 0 {
-                r_agg_val_vec.push(t);
-                r_agg_var_vec.push(cs.new_witness_variable(|| Ok(r_agg_val_vec[ii]))?);
+                r_agg_val_vec.push(ArkFr::zero());
+                //r_agg_val_vec.push(t);
+                //r_agg_var_vec.push(cs.new_witness_variable(|| Ok(r_agg_val_vec[ii]))?);
+                r_agg_var_vec.push(cs.new_witness_variable(|| Ok(ArkFr::zero()))?);
                 cs.enforce_constraint(lc!() + l, lc!() + Variable::One, lc!() + r_agg_var_vec[ii])?;
             }
         }
+        // let mut r_val_vec = Vec::new();
+        // let mut r_var_vec = Vec::new();
+        // for i in 0..self.num_dimension {
+        //    r_val_vec.push(self.i128toField(self.r[i]));
+        //    r_var_vec.push(cs.new_witness_variable(|| Ok(r_val_vec[i]))?);
+        //}
         // e0
-        let mut e0_val_vec = Vec::new();
+        //let mut e0_val_vec = Vec::new();
         let mut e0_var_vec = Vec::new();
         for i in 0..self.num_dimension {
-            e0_val_vec.push(self.i128toField(self.e_0[i]));
-            e0_var_vec.push(cs.new_witness_variable(|| Ok(e0_val_vec[i]))?);
+            //e0_val_vec.push(self.i128toField(self.e_0[i]));
+            //e0_var_vec.push(cs.new_witness_variable(|| Ok(e0_val_vec[i]))?);
+            e0_var_vec.push(cs.new_witness_variable(|| Ok(ArkFr::zero()))?);
         }
         // delta_0
-        let mut delta_0_val_vec = Vec::new();
+        //let mut delta_0_val_vec = Vec::new();
         let mut delta_0_var_vec = Vec::new();
         for i in 0..self.num_dimension {
-            delta_0_val_vec.push(self.i128toField(self.delta_0[i]));
-            delta_0_var_vec.push(cs.new_witness_variable(|| Ok(delta_0_val_vec[i]))?);
+            //delta_0_val_vec.push(self.i128toField(self.delta_0[i]));
+            //delta_0_var_vec.push(cs.new_witness_variable(|| Ok(delta_0_val_vec[i]))?);
+            delta_0_var_vec.push(cs.new_witness_variable(|| Ok(ArkFr::zero()))?);
         }
         // m
-        let mut m_val_vec = Vec::new();
+        //let mut m_val_vec = Vec::new();
         let mut m_var_vec = Vec::new();
         for i in 0..self.num_dimension {
-            m_val_vec.push(self.i128toField(self.m[i]));
-            m_var_vec.push(cs.new_witness_variable(|| Ok(m_val_vec[i]))?);
+            //m_val_vec.push(self.i128toField(self.m[i]));
+            //m_var_vec.push(cs.new_witness_variable(|| Ok(m_val_vec[i]))?);
+            m_var_vec.push(cs.new_witness_variable(|| Ok(ArkFr::zero()))?);
         }
         // pk_0 * r + e_0 + m = c_0 + delta_0 * q
         for i in 0..self.num_dimension {
@@ -223,16 +221,17 @@ impl ConstraintSynthesizer<ArkFr> for CircuitOnline {
         }
         // range_proof of e0 [-19,19] -> [0,38]
         for i in 0..self.num_dimension {
-            let mut bit_val_vec = Vec::new();
+            //let mut bit_val_vec = Vec::new();
             let mut bit_var_vec = Vec::new();
             let mut x = ArkFr::one();
             for k in 0..5 {
-                if (self.e_0[i] & (0x1 << k)) == 0 {
-                    bit_val_vec.push(ArkFr::zero());
-                } else {
-                    bit_val_vec.push(ArkFr::one());
-                }
-                bit_var_vec.push(cs.new_witness_variable(|| Ok(bit_val_vec[k]))?);
+                //if (self.e_0[i] & (0x1 << k)) == 0 {
+                //    bit_val_vec.push(ArkFr::zero());
+                //} else {
+                //    bit_val_vec.push(ArkFr::one());
+                //}
+                //bit_var_vec.push(cs.new_witness_variable(|| Ok(bit_val_vec[k]))?);
+                bit_var_vec.push(cs.new_witness_variable(|| Ok(ArkFr::zero()))?);
             }
             let mut tmp_lc = LinearCombination::zero();
             for k in 0..5 {
@@ -250,16 +249,17 @@ impl ConstraintSynthesizer<ArkFr> for CircuitOnline {
         }
         // range_proof of m
         for i in 0..self.num_dimension {
-            let mut bit_val_vec = Vec::new();
+            //let mut bit_val_vec = Vec::new();
             let mut bit_var_vec = Vec::new();
             let mut x = ArkFr::one();
             for k in 0..8 {
-                if (self.m[i] & (0x1 << k)) == 0 {
-                    bit_val_vec.push(ArkFr::zero());
-                } else {
-                    bit_val_vec.push(ArkFr::one());
-                }
-                bit_var_vec.push(cs.new_witness_variable(|| Ok(bit_val_vec[k]))?);
+                //if (self.m[i] & (0x1 << k)) == 0 {
+                //    bit_val_vec.push(ArkFr::zero());
+                //} else {
+                //    bit_val_vec.push(ArkFr::one());
+                //}
+                //bit_var_vec.push(cs.new_witness_variable(|| Ok(bit_val_vec[k]))?);
+                bit_var_vec.push(cs.new_witness_variable(|| Ok(ArkFr::zero()))?);
             }
             let mut tmp_lc = LinearCombination::zero();
             for k in 0..8 {
@@ -276,16 +276,17 @@ impl ConstraintSynthesizer<ArkFr> for CircuitOnline {
         }
         // range_proof of delta_0
         for i in 0..self.num_dimension {
-            let mut bit_val_vec = Vec::new();
+            //let mut bit_val_vec = Vec::new();
             let mut bit_var_vec = Vec::new();
             let mut x = ArkFr::one();
             for k in 0..13 {
-                if ((self.delta_0[i] + 4096i128) & (0x1 << k)) == 0 {
-                    bit_val_vec.push(ArkFr::zero());
-                } else {
-                    bit_val_vec.push(ArkFr::one());
-                }
-                bit_var_vec.push(cs.new_witness_variable(|| Ok(bit_val_vec[k]))?);
+                //if ((self.delta_0[i] + 4096i128) & (0x1 << k)) == 0 {
+                //    bit_val_vec.push(ArkFr::zero());
+                //} else {
+                //    bit_val_vec.push(ArkFr::one());
+                //}
+                //bit_var_vec.push(cs.new_witness_variable(|| Ok(bit_val_vec[k]))?);
+                bit_var_vec.push(cs.new_witness_variable(|| Ok(ArkFr::zero()))?);
             }
             let mut tmp_lc = LinearCombination::zero();
             for k in 0..13 {
@@ -293,7 +294,7 @@ impl ConstraintSynthesizer<ArkFr> for CircuitOnline {
                 cs.enforce_constraint(
                     lc!() + bit_var_vec[k],
                     lc!() + bit_var_vec[k] + (-ArkFr::one(), Variable::One),
-                    lc!() + (ArkFr::from(4096u64), Variable::One),
+                    lc!(),
                 )?;
                 x = x + x;
             }
@@ -305,31 +306,26 @@ impl ConstraintSynthesizer<ArkFr> for CircuitOnline {
             )?;
         }
 
-        //for i in (0..r_agg_var_vec.len()).step_by(arity) {
-        //    let data: Vec<AllocatedNum<Bls12>> = if i + arity > r_agg_val_vec.len() {
-        //        r_agg_val_vec[(4096 - arity)..4096]
-        //            .iter()
-        //            .map(|x| {
-        //                AllocatedNum::alloc(&cs, || Ok(neptune::bls381num::ark2bp(*x))).unwrap()
-        //            })
-        //            .collect::<Vec<_>>()
-        //    } else {
-        //        r_agg_val_vec[i..i + arity]
-        //            .iter()
-        //            .map(|x| {
-        //                AllocatedNum::alloc(&cs, || Ok(neptune::bls381num::ark2bp(*x))).unwrap()
-        //            })
-        //            .collect::<Vec<_>>()
-        //    };
-        //    let _out = neptune::circuit::poseidon_hash(&cs, data, &self.constants)
-        //        .expect("poseidon hashing failed");
-        //}
-        let data: Vec<AllocatedNum<Bls12>> = r_agg_val_vec
-            .iter()
-            .map(|x| AllocatedNum::alloc(&cs, || Ok(neptune::bls381num::ark2bp(*x))).unwrap())
-            .collect::<Vec<_>>();
-        let _out = neptune::circuit::poseidon_hash(&cs, data, &self.constants)
-            .expect("poseidon hashing failed");
+        for i in (0..r_agg_var_vec.len()).step_by(arity) {
+            let data: Vec<AllocatedNum<Bls12>> = if i + arity > r_agg_val_vec.len() {
+                r_agg_val_vec[(r_agg_val_vec.len() - arity)..r_agg_val_vec.len()]
+                    .iter()
+                    .map(|x| {
+                        AllocatedNum::alloc(&cs, || Ok(neptune::bls381num::ark2bp(*x))).unwrap()
+                    })
+                    .collect::<Vec<_>>()
+            } else {
+                r_agg_val_vec[i..i + arity]
+                    //c0_val_vec[i..i + arity]
+                    .iter()
+                    .map(|x| {
+                        AllocatedNum::alloc(&cs, || Ok(neptune::bls381num::ark2bp(*x))).unwrap()
+                    })
+                    .collect::<Vec<_>>()
+            };
+            let _out = neptune::circuit::poseidon_hash(&cs, data, &self.constants)
+                .expect("poseidon hashing failed");
+        }
         println!("# of constraints {}", cs.num_constraints());
         println!("# of instances {}", cs.num_instance_variables());
         println!("# of witness {}", cs.num_witness_variables());
