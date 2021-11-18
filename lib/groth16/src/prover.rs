@@ -178,6 +178,7 @@ where
     })
 }
 
+/// Modified proof generation algorithm, used for batch proof generation
 #[inline]
 pub fn lonhh_create_proof<E, C>(
     cs: ConstraintSystemRef<<E as PairingEngine>::Fr>,
@@ -194,7 +195,7 @@ where
 
     let prover_time = start_timer!(|| "Groth16::Prover");
 
-    //debug_assert!(cs.is_satisfied().unwrap());
+    debug_assert!(cs.is_satisfied().unwrap());
 
     let witness_map_time = start_timer!(|| "R1CS to QAP witness map");
     let h = R1CStoQAP::lonhh_witness_map::<E::Fr, D<E::Fr>>(cs.clone(), &matrices)?;

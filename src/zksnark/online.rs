@@ -29,8 +29,9 @@ pub struct CircuitOnline {
     pub delta_0: [i128; 4096],
     constants: PoseidonConstants<Bls12, typenum::U36>,
     arity: usize,
-    // 7 256-bit numbers
-    pub hash: [u8; 224],
+    // 2 256-bit numbers used in hashing function
+    pub nonce: [u8; 32],
+    pub hash: [u8; 32],
     // TODO hash result should be here
     pub _engine: PhantomData<ArkFr>,
 }
@@ -42,7 +43,8 @@ impl CircuitOnline {
         let mut e_0 = [0i128; 4096];
         let mut pk_0 = [0i128; 4096];
         let mut delta_0 = [0i128; 4096];
-        let mut hash = [0u8; 224];
+        let hash = [0u8; 32];
+        let nonce = [0u8; 32];
         let file = File::open(enc_path).unwrap();
         let reader = BufReader::new(file);
         for line in reader.lines() {
@@ -92,6 +94,7 @@ impl CircuitOnline {
             delta_0,
             constants,
             arity,
+            nonce,
             hash,
             _engine: PhantomData,
         }
@@ -175,6 +178,8 @@ impl ConstraintSynthesizer<ArkFr> for CircuitOnline {
                 r_agg_var_vec.push(cs.new_witness_variable(|| Ok(r_agg_val_vec[ii]))?);
                 cs.enforce_constraint(lc!() + l, lc!() + Variable::One, lc!() + r_agg_var_vec[ii])?;
             }
+            r_agg_val_vec.push(ArkFr::from_random_bytes(&self.nonce).unwrap());
+            r_agg_var_vec.push(cs.new_witness_variable(|| Ok(r_agg_val_vec[ii + 1]))?);
         }
         // e0
         let mut e0_val_vec = Vec::new();
@@ -305,25 +310,6 @@ impl ConstraintSynthesizer<ArkFr> for CircuitOnline {
             )?;
         }
 
-        //for i in (0..r_agg_var_vec.len()).step_by(arity) {
-        //    let data: Vec<AllocatedNum<Bls12>> = if i + arity > r_agg_val_vec.len() {
-        //        r_agg_val_vec[(4096 - arity)..4096]
-        //            .iter()
-        //            .map(|x| {
-        //                AllocatedNum::alloc(&cs, || Ok(neptune::bls381num::ark2bp(*x))).unwrap()
-        //            })
-        //            .collect::<Vec<_>>()
-        //    } else {
-        //        r_agg_val_vec[i..i + arity]
-        //            .iter()
-        //            .map(|x| {
-        //                AllocatedNum::alloc(&cs, || Ok(neptune::bls381num::ark2bp(*x))).unwrap()
-        //            })
-        //            .collect::<Vec<_>>()
-        //    };
-        //    let _out = neptune::circuit::poseidon_hash(&cs, data, &self.constants)
-        //        .expect("poseidon hashing failed");
-        //}
         let data: Vec<AllocatedNum<Bls12>> = r_agg_val_vec
             .iter()
             .map(|x| AllocatedNum::alloc(&cs, || Ok(neptune::bls381num::ark2bp(*x))).unwrap())
