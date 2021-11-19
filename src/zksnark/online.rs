@@ -27,7 +27,7 @@ pub struct CircuitOnline {
     pub m: [i128; 4096],
     pub pk_0: [i128; 4096],
     pub delta_0: [i128; 4096],
-    constants: PoseidonConstants<Bls12, typenum::U36>,
+    constants: PoseidonConstants<Bls12, typenum::U34>,
     arity: usize,
     // 2 256-bit numbers used in hashing function
     pub nonce: [u8; 32],
@@ -80,10 +80,10 @@ impl CircuitOnline {
             }
         }
 
-        let constants = PoseidonConstants::<Bls12, typenum::U36>::new_with_strength(
+        let constants = PoseidonConstants::<Bls12, typenum::U34>::new_with_strength(
             neptune::Strength::Standard,
         );
-        let arity = typenum::U36::to_usize();
+        let arity = typenum::U34::to_usize();
         Self {
             num_dimension,
             c_0,
@@ -145,7 +145,7 @@ impl ConstraintSynthesizer<ArkFr> for CircuitOnline {
         for i in 0..self.num_dimension {
             r_bit_val_vec.push(self.i128toField(self.r[i] & 0x1));
             r_bit_var_vec.push(cs.new_witness_variable(|| Ok(r_bit_val_vec[2 * i]))?);
-            r_bit_val_vec.push(self.i128toField(self.r[i] & 0x2));
+            r_bit_val_vec.push(self.i128toField((self.r[i] >> 1) & 0x1));
             r_bit_var_vec.push(cs.new_witness_variable(|| Ok(r_bit_val_vec[2 * i + 1]))?);
         }
         // aggregate of all bits into 33 elements + one random elements
@@ -159,7 +159,7 @@ impl ConstraintSynthesizer<ArkFr> for CircuitOnline {
                 l = l + (x, r_bit_var_vec[i]);
                 t = t + x * r_bit_val_vec[i];
                 x = x * y;
-                if i % 255 == 0 {
+                if (i % 254) == 0 && (i != 0) {
                     r_agg_val_vec.push(t);
                     r_agg_var_vec.push(cs.new_witness_variable(|| Ok(r_agg_val_vec[ii]))?);
                     cs.enforce_constraint(

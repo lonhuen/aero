@@ -198,7 +198,7 @@ impl Server {
             let mc = self.mc.clone();
             let ms = self.ms.clone();
             let child_ref = self.child.clone();
-            let canceller = Timer::after(Duration::from_secs(10), move |_| {
+            let canceller = Timer::after(Duration::from_secs(2), move |_| {
                 let (lock, cvar) = &*cond.clone();
                 let mut state = lock.lock().unwrap();
                 if let STAGE::Verify = state.0 {
@@ -219,11 +219,6 @@ impl Server {
                         .arg("offline")
                         .spawn()
                         .unwrap();
-                    // *child = Command::new("bash")
-                    //     .arg("-c")
-                    //     .arg("sleep 10")
-                    //     .spawn()
-                    //     .unwrap();
                     *state = (STAGE::Commit, state.1 + 1);
                     //println!("Server move to stage {:?}", *state);
                     mc.write().unwrap().iter_mut().for_each(|t| t.clear());

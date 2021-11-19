@@ -92,8 +92,8 @@ name = "data_generator"
 path = "src/data_generator.rs"
 
 [features]
-#default = [ "print-trace","hashfn_blake3","parallel","online","ark-groth16/std"]
-default = [ "print-trace","hashfn_blake3","parallel","std"]
+default = [ "print-trace","hashfn_blake3","parallel","online","ark-groth16/std"]
+#default = [ "print-trace","hashfn_blake3","parallel","std"]
 hashfn_blake3 = []
 json = []
 print-trace = [ "ark-std/print-trace" ]

@@ -92,7 +92,6 @@ impl Client {
         //let prover = ProverOnline::new("./data/encryption.txt", "./data/proving_key.txt");
         Self {
             inner,
-            //prover: prover,
             rsa_pk: public_key.to_public_key_pem().unwrap().into_bytes(),
             _rsa_vk: private_key,
             c0s: Vec::new(),
@@ -145,12 +144,6 @@ impl Client {
     #[instrument(skip_all, name = "generate_proof")]
     pub fn generate_proof(&self) -> Vec<Vec<u8>> {
         let gc = start_timer!(|| "start proof generation");
-        // let mut rng = rand::rngs::StdRng::from_entropy();
-        // let mut ret: Vec<Vec<u8>> = Vec::with_capacity(self.c0s.len());
-        // thread::sleep(time::Duration::from_millis(self.c0s.len() as u64 * 825));
-        // for _ in 0..self.c0s.len() {
-        //     ret.push((0..192).map(|_| rng.gen::<u8>()).collect());
-        // }
         #[cfg(not(feature = "online"))]
         let ret = self.prover.create_proof_in_bytes(
             &self.c0s, &self.c1s, &self.rs, &self.e0s, &self.e1s, &self.d0s, &self.d1s, &self.m,
@@ -490,55 +483,29 @@ async fn main() -> anyhow::Result<()> {
     let mut transport = tarpc::serde_transport::tcp::connect(server_addr, Json::default);
     #[cfg(not(feature = "json"))]
     let mut transport = tarpc::serde_transport::tcp::connect(server_addr, Bincode::default);
-    //let mut pvk_transport = tarpc::serde_transport::tcp::connect(server_addr, Bincode::default);
     transport.config_mut().max_frame_length(usize::MAX);
-    //pvk_transport.config_mut().max_frame_length(usize::MAX);
 
     let inner_client =
         ServerServiceClient::new(client::Config::default(), transport.await?).spawn();
-    //let pvk_client =
-    //    ServerServiceClient::new(client::Config::default(), pvk_transport.await?).spawn();
     let mut client = Client::new(inner_client);
-    // // testing the batch proof generation
-    let xs = vec![0u8; 4096 * 30];
-    let gc = start_timer!(|| "encryption");
-    client.encrypt(xs);
-    end_timer!(gc);
-    let gc = start_timer!(|| "proof generation");
-    let proof = client.generate_proof();
-    end_timer!(gc);
-    let verifier = Verifier::new("./data/verifying_key.txt");
-    let mut inputs: Vec<_> = client.c0s[0]
-        .iter()
-        //.chain(client.c1s[0].iter())
-        .map(|&x| x)
-        .collect::<Vec<_>>();
-    let flag = verifier.verify_proof_from_bytes(&proof[0], &inputs);
-    println!("proof size {} {}", proof.len(), proof[0].len());
-    println!("flag {}", flag);
-    // for i in 0..nr_round {
-    //     // begin uploading
-    //     let sr = start_timer!(|| "one round");
-    //     let train = start_timer!(|| "train model");
-    //     //let pvk = {
-    //     //    let mut ctx = context::current();
-    //     //    ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
-    //     //    pvk_client.retrieve_proving_key(ctx, i)
-    //     //};
-    //     let data = client.train_model(i).await;
-    //     end_timer!(train);
+    for i in 0..nr_round {
+        // begin uploading
+        let sr = start_timer!(|| "one round");
+        let train = start_timer!(|| "train model");
+        let data = client.train_model(i).await;
+        end_timer!(train);
 
-    //     let rs = start_timer!(|| "upload data");
-    //     //let result = client.upload(i, data, pvk.await.unwrap()).await;
-    //     let result = client.upload(i, data, vec![0u8; 1]).await;
-    //     end_timer!(rs);
+        let rs = start_timer!(|| "upload data");
+        //let result = client.upload(i, data, pvk.await.unwrap()).await;
+        let result = client.upload(i, data, vec![0u8; 1]).await;
+        end_timer!(rs);
 
-    //     let vr = start_timer!(|| "verify the data");
-    //     client.verify(i, nr_real + nr_sim, 5).await;
-    //     end_timer!(vr);
-    //     end_timer!(sr);
-    // }
-    // end_timer!(start);
+        let vr = start_timer!(|| "verify the data");
+        client.verify(i, nr_real + nr_sim, 5).await;
+        end_timer!(vr);
+        end_timer!(sr);
+    }
+    end_timer!(start);
     opentelemetry::global::shutdown_tracer_provider();
     Ok(())
 }

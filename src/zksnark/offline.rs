@@ -18,26 +18,38 @@ use std::{
     marker::PhantomData,
 };
 use typenum::*;
-pub struct Benchmark {
+
+#[derive(Clone)]
+pub struct CircuitOffline {
     pub num_dimension: usize,
-    pub num_poly: usize,
     pub c_0: [i128; 4096],
     pub r: [i128; 4096],
     pub e_0: [i128; 4096],
     pub pk_0: [i128; 4096],
     pub delta_0: [i128; 4096],
+    pub nonce: [u8; 32],
+    pub hash: [u8; 32],
+    constants: PoseidonConstants<Bls12, typenum::U34>,
+    arity: usize,
     // TODO hash result should be here
     pub _engine: PhantomData<ArkFr>,
 }
-impl Benchmark {
-    pub fn new(num_dimension: usize, num_poly: usize) -> Self {
+impl CircuitOffline {
+    pub fn new(enc_path: &str) -> Self {
+        let num_dimension = 4096;
         let mut c_0 = [0i128; 4096];
         let mut r = [0i128; 4096];
         let mut e_0 = [0i128; 4096];
         let mut pk_0 = [0i128; 4096];
         let mut delta_0 = [0i128; 4096];
-        let file = File::open("data.output").unwrap();
+        let nonce = [0u8; 32];
+        let hash = [0u8; 32];
+        let file = File::open(enc_path).unwrap();
         let reader = BufReader::new(file);
+        let constants = PoseidonConstants::<Bls12, typenum::U34>::new_with_strength(
+            neptune::Strength::Standard,
+        );
+        let arity = typenum::U34::to_usize();
         for line in reader.lines() {
             if let Ok(l) = line {
                 let vec = l.split(" ").collect::<Vec<&str>>();
@@ -68,18 +80,21 @@ impl Benchmark {
         }
         Self {
             num_dimension,
-            num_poly,
             c_0,
             r,
             e_0,
             pk_0,
             delta_0,
+            nonce,
+            hash,
+            constants,
+            arity,
             _engine: PhantomData,
         }
     }
 }
 
-impl Benchmark {
+impl CircuitOffline {
     pub fn i128toField(&self, x: i128) -> ArkFr {
         if x < 0 {
             -ArkFr::from_random_bytes(&((-x).to_le_bytes())[..]).unwrap()
@@ -89,15 +104,11 @@ impl Benchmark {
     }
 }
 
-impl ConstraintSynthesizer<ArkFr> for Benchmark {
+impl ConstraintSynthesizer<ArkFr> for CircuitOffline {
     // TODO maybe c1 should be used for online
     fn generate_constraints(self, cs: ConstraintSystemRef<ArkFr>) -> Result<(), SynthesisError> {
         // TODO this should be moved into circuit field
         // init constants
-        let constants = PoseidonConstants::<Bls12, typenum::U34>::new_with_strength(
-            neptune::Strength::Standard,
-        );
-        let arity = typenum::U34::to_usize();
 
         // begin
 
@@ -129,17 +140,6 @@ impl ConstraintSynthesizer<ArkFr> for Benchmark {
             r_bit_var_vec.push(cs.new_witness_variable(|| Ok(r_bit_val_vec[2 * i]))?);
             r_bit_val_vec.push(self.i128toField(self.r[i] & 0x2));
             r_bit_var_vec.push(cs.new_witness_variable(|| Ok(r_bit_val_vec[2 * i + 1]))?);
-            // bit
-            // cs.enforce_constraint(
-            //    lc!() + r_bit_var_vec[2 * i],
-            //    lc!() + r_bit_var_vec[2 * i] + (-ArkFr::one(), Variable::One),
-            //    lc!(),
-            //)?;
-            // cs.enforce_constraint(
-            //    lc!() + r_bit_var_vec[2 * i + 1],
-            //    lc!() + r_bit_var_vec[2 * i + 1] + (-ArkFr::one(),
-            // Variable::One),    lc!(),
-            //)?;
         }
         // aggregate of all bits into 34 elements
         {
@@ -172,12 +172,6 @@ impl ConstraintSynthesizer<ArkFr> for Benchmark {
                 cs.enforce_constraint(lc!() + l, lc!() + Variable::One, lc!() + r_agg_var_vec[ii])?;
             }
         }
-        // let mut r_val_vec = Vec::new();
-        // let mut r_var_vec = Vec::new();
-        // for i in 0..self.num_dimension {
-        //    r_val_vec.push(self.i128toField(self.r[i]));
-        //    r_var_vec.push(cs.new_witness_variable(|| Ok(r_val_vec[i]))?);
-        //}
         // e0
         let mut e0_val_vec = Vec::new();
         let mut e0_var_vec = Vec::new();
@@ -273,95 +267,12 @@ impl ConstraintSynthesizer<ArkFr> for Benchmark {
                 lc!() + delta_0_var_vec[i] + (ArkFr::from(4096u64), Variable::One),
             )?;
         }
-        // hash
-        // r_bit
-        // let mut r_bit_val_vec = Vec::new();
-        // let mut r_bit_var_vec = Vec::new();
-        // let mut r_agg_val_vec = Vec::new();
-        // let mut r_agg_var_vec = Vec::new();
-        // for i in 0..self.num_dimension {
-        // r_bit_val_vec.push(self.i128toField(self.r[i] & 0x1));
-        // r_bit_var_vec.push(cs.new_witness_variable(|| Ok(r_bit_val_vec[2 * i]))?);
-        // r_bit_val_vec.push(self.i128toField(self.r[i] & 0x2));
-        // r_bit_var_vec.push(cs.new_witness_variable(|| Ok(r_bit_val_vec[2 * i +
-        // 1]))?); bit decompose
-        // cs.enforce_constraint(
-        //    lc!() + r_bit_var_vec[2 * i] + (ArkFr::from(2u64),
-        // r_bit_var_vec[2 * i + 1]),    lc!() + Variable::One,
-        //    lc!() + r_var_vec[i],
-        // )?;
-        // }
-        // aggregate of all bits into 34 elements
-        // {
-        // let mut l = lc!();
-        // let mut t = ArkFr::zero();
-        // let mut x = ArkFr::one();
-        // let mut ii = 0;
-        // let y = ArkFr::one().double();
-        // for i in 0..r_bit_val_vec.len() {
-        // l = l + (x, r_bit_var_vec[i]);
-        // t = t + x * r_bit_val_vec[i];
-        // x = x * y;
-        // if i % 255 == 0 {
-        // r_agg_val_vec.push(t);
-        // r_agg_var_vec.push(cs.new_witness_variable(|| Ok(r_agg_val_vec[ii]))?);
-        // cs.enforce_constraint(
-        //    lc!() + &l,
-        //    lc!() + Variable::One,
-        //    lc!() + r_agg_var_vec[ii],
-        // )?;
-        // l.clear();
-        // x = ArkFr::one();
-        // t = ArkFr::zero();
-        // ii = ii + 1;
-        // }
-        // }
-        // if l.len() != 0 {
-        // r_agg_val_vec.push(t);
-        // r_agg_var_vec.push(cs.new_witness_variable(|| Ok(r_agg_val_vec[ii]))?);
-        // cs.enforce_constraint(lc!() + l, lc!() + Variable::One, lc!()
-        // + r_agg_var_vec[ii])?;
-        // }
-        // }
-        // for i in (0..r_agg_val_vec.len()).step_by(arity) {
-        //    let data: Vec<AllocatedNum<Bls12>> = r_agg_val_vec[i..i + arity]
-        //        .iter()
-        //        .map(|x| AllocatedNum::alloc(&cs, ||
-        // Ok(neptune::bls381num::ark2bp(*x))).unwrap())        .collect::
-        // <Vec<_>>();    // let data: Vec<AllocatedNum<Bls12>> = r_agg_val_vec
-        //    // .iter()
-        //    //    .map(|x| AllocatedNum::alloc(&cs, ||
-        //    // Ok(neptune::bls381num::ark2bp(*x))).unwrap())    .collect::
-        //    // <Vec<_>>();
-        //    println!("len of data {} ", data.len());
-        //    let out = neptune::circuit::poseidon_hash(&cs, data, &constants)
-        //        .expect("poseidon hashing failed");
-        //}
-        for i in (0..r_agg_var_vec.len()).step_by(arity) {
-            let data: Vec<AllocatedNum<Bls12>> = if i + arity > c0_val_vec.len() {
-                c0_val_vec[(4096 - arity)..4096]
-                    .iter()
-                    .map(|x| {
-                        AllocatedNum::alloc(&cs, || Ok(neptune::bls381num::ark2bp(*x))).unwrap()
-                    })
-                    .collect::<Vec<_>>()
-            } else {
-                c0_val_vec[i..i + arity]
-                    .iter()
-                    .map(|x| {
-                        AllocatedNum::alloc(&cs, || Ok(neptune::bls381num::ark2bp(*x))).unwrap()
-                    })
-                    .collect::<Vec<_>>()
-            };
-            // let data: Vec<AllocatedNum<Bls12>> = r_agg_val_vec
-            // .iter()
-            //    .map(|x| AllocatedNum::alloc(&cs, ||
-            // Ok(neptune::bls381num::ark2bp(*x))).unwrap())    .collect::
-            // <Vec<_>>();
-            println!("len of data {} ", data.len());
-            let _out = neptune::circuit::poseidon_hash(&cs, data, &constants)
-                .expect("poseidon hashing failed");
-        }
+        let data: Vec<AllocatedNum<Bls12>> = r_agg_val_vec
+            .iter()
+            .map(|x| AllocatedNum::alloc(&cs, || Ok(neptune::bls381num::ark2bp(*x))).unwrap())
+            .collect::<Vec<_>>();
+        let _out = neptune::circuit::poseidon_hash(&cs, data, &self.constants)
+            .expect("poseidon hashing failed");
         println!("# of constraints {}", cs.num_constraints());
         println!("# of instances {}", cs.num_instance_variables());
         println!("# of witness {}", cs.num_witness_variables());
