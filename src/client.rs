@@ -346,8 +346,6 @@ impl Client {
             return;
         }
 
-        println!("leaf len {} * {}", ret.len(), ret[0].len());
-
         // verify all the leafs
         let gc2 = start_timer!(|| "verify the proofs");
         for result in &ret {
