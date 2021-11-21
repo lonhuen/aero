@@ -81,8 +81,8 @@ impl PublicKey {
         Vec<i128>,
         Vec<i128>,
         Vec<i128>,
-        Vec<i32>,
-        Vec<i32>,
+        Vec<i128>,
+        Vec<i128>,
         Ciphertext,
     ) {
         let r = rand_poly::sample_ternary();
@@ -95,8 +95,8 @@ impl PublicKey {
             pkr0[i] += e0[i];
             pkr1[i] += e1[i] + m[i] as i128;
         }
-        let delta_0 = pkr0.iter().map(|x| x.div_euclid(MODULUS) as i32).collect();
-        let delta_1 = pkr1.iter().map(|x| x.div_euclid(MODULUS) as i32).collect();
+        let delta_0 = pkr0.iter().map(|x| x.div_euclid(MODULUS)).collect();
+        let delta_1 = pkr1.iter().map(|x| x.div_euclid(MODULUS)).collect();
         pkr0.iter_mut().for_each(|x| *x = x.rem_euclid(MODULUS));
         pkr1.iter_mut().for_each(|x| *x = x.rem_euclid(MODULUS));
         (

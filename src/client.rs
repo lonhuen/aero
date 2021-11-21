@@ -35,14 +35,18 @@ pub struct Client {
     inner: ServerServiceClient,
     rsa_pk: Vec<u8>,
     _rsa_vk: RsaPrivateKey,
-    c0s: Vec<i128>,
-    c1s: Vec<i128>,
-    rs: Vec<i128>,
-    e0s: Vec<i128>,
-    e1s: Vec<i128>,
-    d0s: Vec<i32>,
-    d1s: Vec<i32>,
+    c0s: Vec<Vec<i128>>,
+    c1s: Vec<Vec<i128>>,
+    rs: Vec<Vec<i128>>,
+    e0s: Vec<Vec<i128>>,
+    e1s: Vec<Vec<i128>>,
+    d0s: Vec<Vec<i128>>,
+    d1s: Vec<Vec<i128>>,
+    m: Vec<Vec<i128>>,
     nonce: [u8; 16],
+    prover: Prover,
+    //prover: ProverOnline,
+    enc_pk: PublicKey,
 }
 
 impl Client {
@@ -52,9 +56,38 @@ impl Client {
         let mut rng = rand::rngs::StdRng::from_entropy();
         let private_key = RsaPrivateKey::new(&mut rng, bits).expect("failed to generate a key");
         let public_key = RsaPublicKey::from(&private_key);
+        let enc_pk = {
+            let (pk0, pk1) = {
+                let mut pk_0 = [0i128; 4096];
+                let mut pk_1 = [0i128; 4096];
+                let file = match File::open("./data/encryption.txt") {
+                    Ok(f) => f,
+                    Err(_) => panic!(),
+                };
+                let reader = BufReader::new(file);
+                for line in reader.lines() {
+                    if let Ok(l) = line {
+                        let vec = l.split(" ").collect::<Vec<&str>>();
+                        for i in 1..vec.len() {
+                            if l.contains("pk_0") {
+                                if let Ok(x) = i128::from_str_radix(vec[i], 10) {
+                                    pk_0[i - 1] = x;
+                                }
+                            } else if l.contains("pk_1") {
+                                if let Ok(x) = i128::from_str_radix(vec[i], 10) {
+                                    pk_1[i - 1] = x;
+                                }
+                            }
+                        }
+                    }
+                }
+                (pk_0.to_vec(), pk_1.to_vec())
+            };
+            PublicKey::new(&pk0, &pk1)
+        };
+        let prover = Prover::new("./data/encryption.txt", "./data/proving_key.txt");
         Self {
             inner,
-            //prover: prover,
             rsa_pk: public_key.to_public_key_pem().unwrap().into_bytes(),
             _rsa_vk: private_key,
             c0s: Vec::new(),
@@ -64,7 +97,11 @@ impl Client {
             e1s: Vec::new(),
             d0s: Vec::new(),
             d1s: Vec::new(),
+            m: Vec::new(),
+            // TODO random this nonce
             nonce: [0u8; 16],
+            prover,
+            enc_pk,
         }
     }
     #[inline(always)]
@@ -76,43 +113,36 @@ impl Client {
         self.e1s.clear();
         self.d0s.clear();
         self.d1s.clear();
+        self.m.clear();
     }
 
     #[instrument(skip_all, name = "encrypt")]
-    pub fn encrypt(&mut self, xs: Vec<u8>, pk0: &Vec<i128>, pk1: &Vec<i128>) {
-        let gc = start_timer!(|| "new public key");
-        let rlwe_pk = Arc::new(PublicKey::new(pk0, pk1));
+    pub fn encrypt(&mut self, xs: Vec<u8>) {
         self.clear();
-        end_timer!(gc);
         for i in 0..xs.len() / NUM_DIMENSION as usize {
-            let (r, e0, e1, d0, d1, ct) = rlwe_pk
-                .as_ref()
+            let (r, e0, e1, d0, d1, ct) = self
+                .enc_pk
                 .encrypt(&xs[i * NUM_DIMENSION as usize..(i + 1) * NUM_DIMENSION as usize]);
-            self.rs.extend(r);
-            self.e0s.extend(e0);
-            self.e1s.extend(e1);
-            self.d0s.extend(d0);
-            self.d1s.extend(d1);
-            self.c0s.extend(ct.c_0);
-            self.c1s.extend(ct.c_1);
+            self.rs.push(r);
+            self.e0s.push(e0);
+            self.e1s.push(e1);
+            self.d0s.push(d0);
+            self.d1s.push(d1);
+            self.c0s.push(ct.c_0);
+            self.c1s.push(ct.c_1);
+            let m = xs[i * NUM_DIMENSION as usize..(i + 1) * NUM_DIMENSION as usize]
+                .iter()
+                .map(|x| *x as i128)
+                .collect();
+            self.m.push(m);
         }
     }
     #[instrument(skip_all, name = "generate_proof")]
     pub fn generate_proof(&self, pvk: Vec<u8>) -> Vec<Vec<u8>> {
         let gc = start_timer!(|| "start proof generation");
-        let mut rng = rand::rngs::StdRng::from_entropy();
-        let mut ret: Vec<Vec<u8>> =
-            Vec::with_capacity(self.c0s.len() / NUM_DIMENSION as usize * 192);
-        // TODO (simulation) here we assume we have 10 threads to do this proof generation
-        thread::sleep(time::Duration::from_millis(
-            (self.c0s.len() as f64 / NUM_DIMENSION as f64) as u64 * 825,
-        ));
-        for _ in 0..self.c0s.len() / NUM_DIMENSION as usize {
-            ret.push((0..192).map(|_| rng.gen::<u8>()).collect());
-        }
-        // TODO fix this. we just need encryption keys
-        // TODO modify the groth16 library to prove in batch
-        // let prover = Prover::new("data/encryption.txt", pvk);
+        let ret = self.prover.create_proof_in_bytes(
+            &self.c0s, &self.c1s, &self.rs, &self.e0s, &self.e1s, &self.d0s, &self.d1s, &self.m,
+        );
         end_timer!(gc);
         ret
     }
@@ -122,35 +152,7 @@ impl Client {
     pub async fn upload(&mut self, round: u32, xs: Vec<u8>, pvk: Vec<u8>) -> bool {
         // set the deadline of the context
         let gc1 = start_timer!(|| "encrypt the gradients");
-        // TODO the keys should be retrieved from the committee with signature
-        // but now let's assume the keys are already retrieved
-        let (pk0, pk1) = {
-            let mut pk_0 = [0i128; 4096];
-            let mut pk_1 = [0i128; 4096];
-            let file = match File::open("./data/encryption.txt") {
-                Ok(f) => f,
-                Err(_) => panic!(),
-            };
-            let reader = BufReader::new(file);
-            for line in reader.lines() {
-                if let Ok(l) = line {
-                    let vec = l.split(" ").collect::<Vec<&str>>();
-                    for i in 1..vec.len() {
-                        if l.contains("pk_0") {
-                            if let Ok(x) = i128::from_str_radix(vec[i], 10) {
-                                pk_0[i - 1] = x;
-                            }
-                        } else if l.contains("pk_1") {
-                            if let Ok(x) = i128::from_str_radix(vec[i], 10) {
-                                pk_1[i - 1] = x;
-                            }
-                        }
-                    }
-                }
-            }
-            (pk_0.to_vec(), pk_1.to_vec())
-        };
-        self.encrypt(xs, &pk0, &pk1);
+        self.encrypt(xs);
         // generate commitment to all the CTs
         let cm = self.hash();
         end_timer!(gc1);
@@ -179,9 +181,13 @@ impl Client {
         // TODO this might needs to be changed
         let mut proof_bytes: Vec<u8> = Vec::with_capacity(self.c0s.len() / NUM_DIMENSION as usize);
 
-        cts_bytes.extend(&self.c0s);
-        cts_bytes.extend(&self.c1s);
-        for i in 0..self.c0s.len() / NUM_DIMENSION as usize {
+        for i in 0..self.c0s.len() {
+            cts_bytes.extend(&self.c0s[i]);
+        }
+        for i in 0..self.c1s.len() {
+            cts_bytes.extend(&self.c1s[i]);
+        }
+        for i in 0..proofs.len() {
             proof_bytes.extend(proofs[i].iter());
         }
         warn!("data prepared");
@@ -224,9 +230,12 @@ impl Client {
         // t = Hash(r, c0, c1,..., pi)
         let mut hasher = Sha3::sha3_256();
         hasher.input(&self.nonce);
-        hasher.input(&i128vec_to_le_bytes(&self.c0s));
-        hasher.input(&i128vec_to_le_bytes(&self.c1s));
-        // TODO pem or der? or other ways to convert to [u8]
+        for i in 0..self.c0s.len() {
+            hasher.input(&i128vec_to_le_bytes(&self.c0s[i]));
+        }
+        for i in 0..self.c1s.len() {
+            hasher.input(&i128vec_to_le_bytes(&self.c1s[i]));
+        }
         hasher.input(&self.rsa_pk);
         let mut h = [0u8; 32];
         hasher.result(&mut h);
@@ -236,8 +245,12 @@ impl Client {
     fn hash(&mut self) -> [u8; 32] {
         let mut hasher = blake3::Hasher::new();
         hasher.update(&self.nonce);
-        hasher.update(&i128vec_to_le_bytes(&self.c0s));
-        hasher.update(&i128vec_to_le_bytes(&self.c1s));
+        for i in 0..self.c0s.len() {
+            hasher.update(&i128vec_to_le_bytes(&self.c0s[i]));
+        }
+        for i in 0..self.c0s.len() {
+            hasher.update(&i128vec_to_le_bytes(&self.c1s[i]));
+        }
         hasher.update(&self.rsa_pk);
         hasher.finalize().into()
     }
@@ -456,25 +469,16 @@ async fn main() -> anyhow::Result<()> {
     let mut transport = tarpc::serde_transport::tcp::connect(server_addr, Json::default);
     #[cfg(not(feature = "json"))]
     let mut transport = tarpc::serde_transport::tcp::connect(server_addr, Bincode::default);
-    //let mut pvk_transport = tarpc::serde_transport::tcp::connect(server_addr, Bincode::default);
     transport.config_mut().max_frame_length(usize::MAX);
-    //pvk_transport.config_mut().max_frame_length(usize::MAX);
 
     let inner_client =
         ServerServiceClient::new(client::Config::default(), transport.await?).spawn();
-    //let pvk_client =
-    //    ServerServiceClient::new(client::Config::default(), pvk_transport.await?).spawn();
     let mut client = Client::new(inner_client);
 
     for i in 0..nr_round {
         // begin uploading
         let sr = start_timer!(|| "one round");
         let train = start_timer!(|| "train model");
-        //let pvk = {
-        //    let mut ctx = context::current();
-        //    ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
-        //    pvk_client.retrieve_proving_key(ctx, i)
-        //};
         let data = client.train_model(i).await;
         end_timer!(train);
 
