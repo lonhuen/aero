@@ -116,6 +116,7 @@ impl Client {
         self.e1s.clear();
         self.d0s.clear();
         self.d1s.clear();
+        self.nonce.clear();
     }
 
     #[instrument(skip_all, name = "encrypt")]
