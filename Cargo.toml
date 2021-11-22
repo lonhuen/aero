@@ -91,8 +91,20 @@ path = "src/light_client.rs"
 name = "data_generator"
 path = "src/data_generator.rs"
 
+[[bin]]
+name = "baseline"
+path = "benches/baseline/groth16.rs"
+
+[[bin]]
+name = "online"
+path = "benches/online/groth16.rs"
+
+[[bin]]
+name = "offline"
+path = "benches/offline/groth16.rs"
+
 [features]
-default = [ "hashfn_blake3","parallel","online","ark-groth16/std"]
+default = [ "hashfn_blake3","parallel","online","ark-groth16/std","print-trace"]
 #default = [ "hashfn_blake3","parallel","std"]
 hashfn_blake3 = []
 json = []
