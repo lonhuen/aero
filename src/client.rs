@@ -24,11 +24,11 @@ use tracing::{error, event, instrument, span, warn, Level};
 
 use rand::{Rng, SeedableRng};
 use rsa::{pkcs8::ToPublicKey, RsaPrivateKey, RsaPublicKey};
-use std::sync::Arc;
 use std::time::Duration;
 use std::time::SystemTime;
 use std::{fs::File, io::BufReader, net::IpAddr};
 use std::{io::BufRead, process::id};
+use std::{sync::Arc, time::Instant};
 use std::{thread, time};
 use tarpc::{client, context, tokio_serde::formats::Bincode};
 use tracing_subscriber::filter::LevelFilter;
@@ -487,7 +487,11 @@ async fn main() -> anyhow::Result<()> {
     let inner_client =
         ServerServiceClient::new(client::Config::default(), transport.await?).spawn();
     let mut client = Client::new(inner_client);
+
+    let start = Instant::now();
+
     for i in 0..nr_round {
+        let per_round_start = Instant::now();
         // begin uploading
         let sr = start_timer!(|| "one round");
         let train = start_timer!(|| "train model");
@@ -503,8 +507,22 @@ async fn main() -> anyhow::Result<()> {
         client.verify(i, nr_real + nr_sim, 5).await;
         end_timer!(vr);
         end_timer!(sr);
+        let per_round_duration = per_round_start.elapsed();
+        println!(
+            "Round {} running time: {}s",
+            i,
+            per_round_duration.subsec_nanos() as f64 / 1_000_000_000f64
+                + (per_round_duration.as_secs() as f64)
+        );
     }
     end_timer!(start);
+
+    let duration = start.elapsed();
+    println!(
+        "Total running time: {}s",
+        duration.subsec_nanos() as f64 / 1_000_000_000f64 + (duration.as_secs() as f64)
+    );
+
     opentelemetry::global::shutdown_tracer_provider();
     Ok(())
 }

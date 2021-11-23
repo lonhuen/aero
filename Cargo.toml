@@ -105,7 +105,8 @@ name = "offline"
 path = "benches/offline/groth16.rs"
 
 [features]
-default = [ "hashfn_blake3","parallel","online","print-trace"]
+#default = [ "hashfn_blake3","parallel","online","print-trace"]
+default = [ "hashfn_blake3","parallel","online"]
 #default = [ "hashfn_blake3","parallel","online","ark-groth16/std","print-trace"]
 #default = [ "hashfn_blake3","parallel","std"]
 hashfn_blake3 = []
