@@ -1,10 +1,12 @@
+waddr=172.31.40.188
 cargo run --bin server --release &
-scp -i ./data/aws01.pem config.ini ubuntu@172.31.47.222:/home/ubuntu/quail
-#scp -i ./data/aws01.pem config.ini ubuntu@172.31.47.163:/home/ubuntu/quail
-#scp -i ./data/aws01.pem config.ini ubuntu@172.31.37.209:/home/ubuntu/quail
-#scp -i ./data/aws01.pem config.ini ubuntu@172.31.47.34:/home/ubuntu/quail
+#scp -i ./data/aws01.pem config.yaml ubuntu@172.31.47.222:/home/ubuntu/quail
+scp -i ./data/aws01.pem config.ini ubuntu@${waddr}:/home/ubuntu/quail
+#scp -i ./data/aws01.pem config.yaml ubuntu@172.31.47.163:/home/ubuntu/quail
+#scp -i ./data/aws01.pem config.yaml ubuntu@172.31.37.209:/home/ubuntu/quail
+#scp -i ./data/aws01.pem config.yaml ubuntu@172.31.47.34:/home/ubuntu/quail
 
-scp -i ./data/aws01.pem scripts/exp.sh ubuntu@172.31.47.222:/home/ubuntu/quail/scripts/
+scp -i ./data/aws01.pem scripts/exp.sh ubuntu@${waddr}:/home/ubuntu/quail/scripts/
 #scp -i ./data/aws01.pem scripts/exp.sh ubuntu@172.31.47.163:/home/ubuntu/quail/scripts/
 #scp -i ./data/aws01.pem scripts/exp.sh ubuntu@172.31.37.209:/home/ubuntu/quail/scripts/
 #scp -i ./data/aws01.pem scripts/exp.sh ubuntu@172.31.47.34:/home/ubuntu/quail/scripts/
@@ -13,7 +15,7 @@ scp -i ./data/aws01.pem scripts/exp.sh ubuntu@172.31.47.222:/home/ubuntu/quail/s
 #ssh -i ./data/aws01.pem ubuntu@172.31.47.163 "bash ~/quail/scripts/network.sh > /dev/null 2>/dev/null" &
 #ssh -i ./data/aws01.pem ubuntu@172.31.37.209 "bash ~/quail/scripts/network.sh > /dev/null 2>/dev/null" &
 #ssh -i ./data/aws01.pem ubuntu@172.31.47.222 "~/quail/scripts/exp.sh 8 > /dev/null 2>/dev/null" &
-ssh -i ./data/aws01.pem ubuntu@172.31.47.222 "bash ~/quail/scripts/exp.sh 8"
+ssh -i ./data/aws01.pem ubuntu@${waddr} "bash ~/quail/scripts/exp.sh 10"
 #ssh -i ./data/aws01.pem ubuntu@172.31.47.163 "~/quail/scripts/exp.sh 3 > /dev/null 2>/dev/null" &
 #ssh -i ./data/aws01.pem ubuntu@172.31.37.209 "~/quail/scripts/exp.sh 4 > /dev/null 2>/dev/null" &
 #ssh -i ./data/aws01.pem ubuntu@172.31.47.34 "source ~/.cargo/env; cd ~/quail && cargo run --bin light_client --release 130 2>&1 > light_client.log"&
