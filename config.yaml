@@ -1,10 +1,8 @@
-#server_addr: "169.231.33.135"
-#server_addr: " 172.31.44.120"
-server_addr: 127.0.0.1
-##server_addr: "172.31.46.27"
+server_addr: "172.31.44.120"
+#server_addr: 127.0.0.1
 server_port: 38886
 
-nr_real: 8
+nr_real: 10
 nr_simulated: 0
 nr_sybil: 0
 
@@ -25,7 +23,7 @@ nr_sim_per_worker: 490
 #nr_parameter: 204800
 #nr_parameter: 409600
 #nr_parameter: 819200
-nr_parameter: 40960
+nr_parameter: 1400832
 
 nr_round: 1
 
@@ -91,4 +89,4 @@ players:
   #- 172.31.44.120:38913
   #- 172.31.44.120:38914
 aggregator: 127.0.0.1:39999
-threshold: 4
+threshold: 9

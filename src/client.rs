@@ -488,7 +488,7 @@ async fn main() -> anyhow::Result<()> {
         ServerServiceClient::new(client::Config::default(), transport.await?).spawn();
     let mut client = Client::new(inner_client);
 
-    let start = Instant::now();
+    let total_start = Instant::now();
 
     for i in 0..nr_round {
         let per_round_start = Instant::now();
@@ -517,7 +517,7 @@ async fn main() -> anyhow::Result<()> {
     }
     end_timer!(start);
 
-    let duration = start.elapsed();
+    let duration = total_start.elapsed();
     println!(
         "Total running time: {}s",
         duration.subsec_nanos() as f64 / 1_000_000_000f64 + (duration.as_secs() as f64)

@@ -47,3 +47,48 @@ processes:
     #  - name: "client"
     match:
     - cmdline: .*/client 0
+  "Atom Client 5":
+    download: 1000kbps
+    upload: 1000kbps
+    download-priority: 0
+    upload-priority: 0
+    #match:
+    #  - name: "client"
+    match:
+    - cmdline: .*/client 5
+  "Atom Client 6":
+    download: 1000kbps
+    upload: 1000kbps
+    download-priority: 0
+    upload-priority: 0
+    #match:
+    #  - name: "client"
+    match:
+    - cmdline: .*/client 6
+  "Atom Client 7":
+    download: 1000kbps
+    upload: 1000kbps
+    download-priority: 0
+    upload-priority: 0
+    #match:
+    #  - name: "client"
+    match:
+    - cmdline: .*/client 7
+  "Atom Client 8":
+    download: 1000kbps
+    upload: 1000kbps
+    download-priority: 0
+    upload-priority: 0
+    #match:
+    #  - name: "client"
+    match:
+    - cmdline: .*/client 8
+  "Atom Client 9":
+    download: 1000kbps
+    upload: 1000kbps
+    download-priority: 0
+    upload-priority: 0
+    #match:
+    #  - name: "client"
+    match:
+    - cmdline: .*/client 9
