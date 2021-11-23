@@ -336,35 +336,18 @@ impl ConstraintSynthesizer<ArkFr> for Benchmark {
         //    let out = neptune::circuit::poseidon_hash(&cs, data, &constants)
         //        .expect("poseidon hashing failed");
         //}
-        for i in (0..r_agg_var_vec.len()).step_by(arity) {
-            let data: Vec<AllocatedNum<Bls12>> = if i + arity > c0_val_vec.len() {
-                c0_val_vec[(4096 - arity)..4096]
-                    .iter()
-                    .map(|x| {
-                        AllocatedNum::alloc(&cs, || Ok(neptune::bls381num::ark2bp(*x))).unwrap()
-                    })
-                    .collect::<Vec<_>>()
-            } else {
-                c0_val_vec[i..i + arity]
-                    .iter()
-                    .map(|x| {
-                        AllocatedNum::alloc(&cs, || Ok(neptune::bls381num::ark2bp(*x))).unwrap()
-                    })
-                    .collect::<Vec<_>>()
-            };
-            // let data: Vec<AllocatedNum<Bls12>> = r_agg_val_vec
-            // .iter()
-            //    .map(|x| AllocatedNum::alloc(&cs, ||
-            // Ok(neptune::bls381num::ark2bp(*x))).unwrap())    .collect::
-            // <Vec<_>>();
-            println!("len of data {} ", data.len());
-            let _out = neptune::circuit::poseidon_hash(&cs, data, &constants)
-                .expect("poseidon hashing failed");
-        }
-        println!("# of constraints {}", cs.num_constraints());
-        println!("# of instances {}", cs.num_instance_variables());
-        println!("# of witness {}", cs.num_witness_variables());
-        println!("# of lc{}", cs.borrow().unwrap().num_linear_combinations);
+        let data: Vec<AllocatedNum<Bls12>> = r_agg_val_vec
+                .iter()
+                .map(|x| {
+                    AllocatedNum::alloc(&cs, || Ok(neptune::bls381num::ark2bp(*x))).unwrap()
+                })
+                .collect::<Vec<_>>();
+        let _out = neptune::circuit::poseidon_hash(&cs, data, &constants)
+            .expect("poseidon hashing failed");
+        //println!("# of constraints {}", cs.num_constraints());
+        //println!("# of instances {}", cs.num_instance_variables());
+        //println!("# of witness {}", cs.num_witness_variables());
+        //println!("# of lc{}", cs.borrow().unwrap().num_linear_combinations);
         Ok(())
     }
 }

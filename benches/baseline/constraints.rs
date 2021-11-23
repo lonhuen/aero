@@ -372,10 +372,10 @@ impl<F: Field> ConstraintSynthesizer<F> for Benchmark<F> {
                 lc!() + delta_1_var_vec[i] + (F::from(4096u64), Variable::One),
             )?;
         }
-        println!("# of constraints {}", cs.num_constraints());
-        println!("# of instances {}", cs.num_instance_variables());
-        println!("# of witness {}", cs.num_witness_variables());
-        println!("# of lc{}", cs.borrow().unwrap().num_linear_combinations);
+        //println!("# of constraints {}", cs.num_constraints());
+        //println!("# of instances {}", cs.num_instance_variables());
+        //println!("# of witness {}", cs.num_witness_variables());
+        //println!("# of lc{}", cs.borrow().unwrap().num_linear_combinations);
         Ok(())
     }
 }

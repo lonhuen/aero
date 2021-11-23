@@ -4,11 +4,9 @@ use std::borrow::Borrow;
 
 use crate::rlwe::context::*;
 //use crate::zksnark::*;
-#[cfg(not(feature = "online"))]
 use crate::zksnark::Prover;
 use crate::zksnark::ProverOffline;
-#[cfg(feature = "online")]
-use crate::zksnark::ProverOnline as Prover;
+use crate::zksnark::ProverOnline;
 use ark_groth16::lonhh_create_proof;
 use cupcake::integer_arith::scalar::Scalar;
 use cupcake::integer_arith::ArithUtils;
@@ -33,8 +31,8 @@ fn main() {
 
     {
         //let prover = Prover::setup("./data/encryption.txt");
-        //let prover = ProverOnline::setup("./data/encryption.txt");
-        let prover = ProverOffline::setup("./data/encryption.txt");
+        let prover = ProverOnline::setup("./data/encryption.txt");
+        //let prover = ProverOffline::setup("./data/encryption.txt");
     }
     //let gc = start_timer!(|| "deserialization");
     //let mut pv = Prover::new("./data/encryption.txt", "./data/proving_key.txt");
