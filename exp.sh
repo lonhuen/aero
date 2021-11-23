@@ -6,7 +6,7 @@ if [ -z $nr_real ]; then
 fi
 
 for i in `seq 0 $((nr_real-2))`; do
-RAYON_NUM_THREADS=6	./target/release/client $i 2>&1 > client$i.log &
+	RAYON_NUM_THREADS=6 ./target/release/client $i 2>&1 > client$i.log &
 done
 RAYON_NUM_THREADS=6 ./target/release/client $((i+1)) 2>&1 > client$((i+1)).log
 wait
