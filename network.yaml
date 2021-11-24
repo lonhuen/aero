@@ -2,6 +2,15 @@ download: 10mbps
 upload: 10mbps
 # A list of processes you want to match and their respective settings
 processes:
+  "Atom Client 0":
+    download: 1000kbps
+    upload: 1000kbps
+    download-priority: 0
+    upload-priority: 0
+    #match:
+    #  - name: "client"
+    match:
+    - cmdline: .*/client 0
   "Atom Client 1":
     download: 1000kbps
     upload: 1000kbps
@@ -38,7 +47,7 @@ processes:
     #  - name: "client"
     match:
     - cmdline: .*/client 4
-  "Atom Client 0":
+  "Atom Client 5":
     download: 1000kbps
     upload: 1000kbps
     download-priority: 0
@@ -46,4 +55,40 @@ processes:
     #match:
     #  - name: "client"
     match:
-    - cmdline: .*/client 0
+    - cmdline: .*/client 5
+  "Atom Client 6":
+    download: 1000kbps
+    upload: 1000kbps
+    download-priority: 0
+    upload-priority: 0
+    #match:
+    #  - name: "client"
+    match:
+    - cmdline: .*/client 6
+  "Atom Client 7":
+    download: 1000kbps
+    upload: 1000kbps
+    download-priority: 0
+    upload-priority: 0
+    #match:
+    #  - name: "client"
+    match:
+    - cmdline: .*/client 7
+  "Atom Client 8":
+    download: 1000kbps
+    upload: 1000kbps
+    download-priority: 0
+    upload-priority: 0
+    #match:
+    #  - name: "client"
+    match:
+    - cmdline: .*/client 8
+  "Atom Client 9":
+    download: 1000kbps
+    upload: 1000kbps
+    download-priority: 0
+    upload-priority: 0
+    #match:
+    #  - name: "client"
+    match:
+    - cmdline: .*/client 9
