@@ -69,7 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .collect();
     let aggregator_addr = config.get("aggregator");
     // truncated nr_bits / NUM_DIMENSION
-    let nr_bits = config.get_int("nr_parameter_committee") as usize * 40 / NUM_DIMENSION;
+    let nr_bits = config.get_int("nr_parameter_committee") as usize * 60 / NUM_DIMENSION;
 
     let nr_players = players.len();
     let threshold = config.get_int("threshold") as usize;

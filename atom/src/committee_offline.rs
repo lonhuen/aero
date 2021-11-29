@@ -81,8 +81,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let aggregator_addr = config.get("aggregator");
     let (nr_bits, to_truncate_len) = {
         let nr_parameters = config.get_int("nr_parameter_committee") as usize;
-        let nr_bits = (nr_parameters as f32 * 40_f32 / (players.len() as f32)).ceil() as usize;
-        (nr_bits, nr_bits * players.len() - nr_parameters * 40)
+        let nr_bits = (nr_parameters as f32 * 60_f32 / (players.len() as f32)).ceil() as usize;
+        (nr_bits, nr_bits * players.len() - nr_parameters * 60)
     };
 
     let id = usize::from_str_radix(&args[1], 10).unwrap();
@@ -274,14 +274,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for k in 0..3usize {
         noise.push(
             (0..rb[0].len())
-                .step_by(40)
+                .step_by(60)
                 .map(|x| {
                     let mut p_sum: u64 = 0;
-                    for i in x..x + 20usize {
+                    for i in x..x + 30usize {
                         p_sum += rb[k][i];
                     }
                     let mut n_sum: u64 = 0;
-                    for i in x + 20..x + 40usize {
+                    for i in x + 30..x + 60usize {
                         n_sum += rb[k][i];
                     }
                     Scalar::sub_mod(

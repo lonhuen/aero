@@ -39,7 +39,7 @@ cd ${BASE_DIR}
 
 # update the config file and running scripts
 for w in ${waddr[@]}; do
-	ssh -i ${BASE_DIR}/data/aws01.pem ubuntu@${w} "cd ${BASE_DIR} && ./scripts.sh $app 15" &
+	ssh -i ${BASE_DIR}/data/aws01.pem ubuntu@${w} "cd ${BASE_DIR} && ./scripts/exp.sh $app 15" &
 done
 
 wait

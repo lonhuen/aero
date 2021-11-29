@@ -7,7 +7,7 @@ nr_simulated: 0
 #nr_sybil: 0
 
 nr_parameter: 40960
-nr_parameter_committee: 40960
+nr_parameter_committee: 4096
 #nr_parameter: 1400832
 
 nr_round: 1
