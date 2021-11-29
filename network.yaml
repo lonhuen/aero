@@ -1,7 +1,16 @@
-download: 10mbps
-upload: 10mbps
+download: 15mbps
+upload: 15mbps
 # A list of processes you want to match and their respective settings
 processes:
+  "Atom Client 0":
+    download: 1000kbps
+    upload: 1000kbps
+    download-priority: 0
+    upload-priority: 0
+    #match:
+    #  - name: "client"
+    match:
+    - cmdline: .*/client 0
   "Atom Client 1":
     download: 1000kbps
     upload: 1000kbps
@@ -38,15 +47,6 @@ processes:
     #  - name: "client"
     match:
     - cmdline: .*/client 4
-  "Atom Client 0":
-    download: 1000kbps
-    upload: 1000kbps
-    download-priority: 0
-    upload-priority: 0
-    #match:
-    #  - name: "client"
-    match:
-    - cmdline: .*/client 0
   "Atom Client 5":
     download: 1000kbps
     upload: 1000kbps
@@ -92,3 +92,57 @@ processes:
     #  - name: "client"
     match:
     - cmdline: .*/client 9
+  "Atom Client 10":
+    download: 1000kbps
+    upload: 1000kbps
+    download-priority: 0
+    upload-priority: 0
+    #match:
+    #  - name: "client"
+    match:
+    - cmdline: .*/client 10
+  "Atom Client 11":
+    download: 1000kbps
+    upload: 1000kbps
+    download-priority: 0
+    upload-priority: 0
+    #match:
+    #  - name: "client"
+    match:
+    - cmdline: .*/client 11
+  "Atom Client 12":
+    download: 1000kbps
+    upload: 1000kbps
+    download-priority: 0
+    upload-priority: 0
+    #match:
+    #  - name: "client"
+    match:
+    - cmdline: .*/client 12
+  "Atom Client 13":
+    download: 1000kbps
+    upload: 1000kbps
+    download-priority: 0
+    upload-priority: 0
+    #match:
+    #  - name: "client"
+    match:
+    - cmdline: .*/client 13
+  "Atom Client 13":
+    download: 1000kbps
+    upload: 1000kbps
+    download-priority: 0
+    upload-priority: 0
+    #match:
+    #  - name: "client"
+    match:
+    - cmdline: .*/client 13
+  "Atom Client 14":
+    download: 1000kbps
+    upload: 1000kbps
+    download-priority: 0
+    upload-priority: 0
+    #match:
+    #  - name: "client"
+    match:
+    - cmdline: .*/client 14
