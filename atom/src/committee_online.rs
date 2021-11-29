@@ -112,31 +112,39 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let share2: Vec<u64> = deserialize_from(&mut f).unwrap();
         vec![share0, share1, share2]
     };
-    let ct: Vec<Vec<u64>> = {
-        let file_name = format!("./data/ciphertext.txt");
-        let mut f = BufReader::new(File::open(file_name).unwrap());
-        deserialize_from(&mut f).unwrap()
-    };
-    // local compute and sends shares to the aggregator
-    {
-        for k in 0..3 {
-            for j in (0..noise[0].len()).step_by(NUM_DIMENSION) {
-                let ct_sk = ntt_context[k].coeff_mul_mod(&sk[k], &ct[k]);
-                for i in 0..NUM_DIMENSION {
-                    noise[k][j + i] = Scalar::add_mod(
-                        &Scalar::from(noise[k][j + i]),
-                        &Scalar::from(ct_sk[i]),
-                        &ntt_context[k].modulus,
-                    )
-                    .rep();
-                }
-            }
-        }
-    }
+    //let ct: Vec<Vec<u64>> = {
+    //    let file_name = format!("./data/ciphertext.txt");
+    //    let mut f = BufReader::new(File::open(file_name).unwrap());
+    //    deserialize_from(&mut f).unwrap()
+    //};
     // send to aggregator
     {
         let mut stream = TcpStream::connect(&aggregator_addr).await?;
         let mut buf = vec![0u8; noise[0].len() * 5 * 3 + 1];
+        // receive from aggregator
+        stream.read_exact(&mut buf).await?;
+        // read ciphertext first
+        let ct: Vec<Vec<u64>> = {
+            let (ct0, ct1, ct2) = deserialize_shares(&buf[1..]);
+            vec![ct0, ct1, ct2]
+        };
+
+        // local compute and sends shares to the aggregator
+        {
+            for k in 0..3 {
+                for j in (0..noise[0].len()).step_by(NUM_DIMENSION) {
+                    let ct_sk = ntt_context[k].coeff_mul_mod(&sk[k], &ct[k]);
+                    for i in 0..NUM_DIMENSION {
+                        noise[k][j + i] = Scalar::add_mod(
+                            &Scalar::from(noise[k][j + i]),
+                            &Scalar::from(ct_sk[i]),
+                            &ntt_context[k].modulus,
+                        )
+                        .rep();
+                    }
+                }
+            }
+        }
         buf[0] = id as u8;
         serialize_shares_into(&noise[0], &noise[1], &noise[2], &mut buf[1..]);
         stream.write_all(&buf).await?;

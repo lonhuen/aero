@@ -80,7 +80,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .collect();
     let aggregator_addr = config.get("aggregator");
     let (nr_bits, to_truncate_len) = {
-        let nr_parameters = config.get_int("nr_parameter") as usize;
+        let nr_parameters = config.get_int("nr_parameter_committee") as usize;
         let nr_bits = (nr_parameters as f32 * 40_f32 / (players.len() as f32)).ceil() as usize;
         (nr_bits, nr_bits * players.len() - nr_parameters * 40)
     };

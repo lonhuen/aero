@@ -106,7 +106,7 @@ fn main() {
     }
     // write to the files
     for k in 0..nr_players {
-        let file_name = format!("./data/sk_share{}.txt", k);
+        let file_name = format!("../data/sk_share{}.txt", k);
         let mut f = BufWriter::new(File::create(file_name).unwrap());
         serialize_into(&mut f, &shares[0][k]).unwrap();
         serialize_into(&mut f, &shares[1][k]).unwrap();
@@ -114,7 +114,7 @@ fn main() {
     }
     // write the public ct into a file
     {
-        let file_name = format!("./data/ciphertext.txt");
+        let file_name = format!("../data/ciphertext.txt");
         let mut f = BufWriter::new(File::create(file_name).unwrap());
         let mut ct = vec![vec![1u64; 4096]; 3];
         ntt_context[0].lazy_ntt_inplace(&mut ct[0]);

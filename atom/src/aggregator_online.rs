@@ -4,7 +4,7 @@ use cupcake::integer_arith::ArithUtils;
 use quail::rlwe::context::{NTTContext, ShamirContext};
 use quail::rlwe::NUM_DIMENSION;
 use ring_algorithm::chinese_remainder_theorem;
-use tokio::io::AsyncReadExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
 mod util;
 use crate::util::config::ConfigUtils;
@@ -69,7 +69,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .map(|x| x.into_str().unwrap())
         .collect();
     let aggregator_addr = config.get("aggregator");
-    let nr_bits: usize = config.get_int("nr_parameter") as usize;
+    let nr_bits: usize = config.get_int("nr_parameter_committee") as usize;
 
     let nr_players = players.len();
     let threshold = config.get_int("threshold") as usize;
@@ -104,6 +104,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             handles.push(tokio::spawn(async move {
                 let mut buf = vec![0u8; nr_bits * 15 + 1];
 
+                // write it to the committee first
+                socket.write_all(&buf).await.unwrap();
                 let n = match socket.read_exact(&mut buf).await {
                     // socket closed
                     Ok(n) if n == 0 => return,
