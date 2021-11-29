@@ -319,7 +319,7 @@ impl Client {
     // this N should be known from the board
     // s has to be at least 1
     #[instrument(skip_all)]
-    pub async fn verify(&self, round: u32, n: u32, s: u32) {
+    pub async fn verify(&self, round: u32, n: u32, s: u32, pr: f64) {
         let gc = start_timer!(|| "verify");
 
         assert!(s >= 1, "s should be at least 1");
@@ -331,7 +331,14 @@ impl Client {
         let non_leafs: Vec<u32> = Self::get_random_non_leafs(n, s, vinit);
 
         let gc1 = start_timer!(|| "receive verify");
-        let ct_id = vec![0usize, 1usize, 2usize];
+        let ct_id: Vec<usize> = {
+            (0..self.c0s.len()).into_iter().filter(|_| {
+                let mut rng = rand::thread_rng();
+                rng.gen::<f64>() < pr
+            })
+        }
+        .collect();
+        //println!("{:?}", ct_id);
         let ret = {
             let mut ctx = context::current();
             ctx.deadline = SystemTime::now() + Duration::from_secs(DEADLINE_TIME);
@@ -473,6 +480,7 @@ async fn main() -> anyhow::Result<()> {
     let nr_real = config.get_int("nr_real") as u32;
     let nr_sim = config.get_int("nr_simulated") as u32;
     let nr_round = config.get_int("nr_round") as u32;
+    let pr: f64 = config.get_f64("ct_probability") as f64;
 
     let server_addr = (
         IpAddr::V4(config.get_addr("server_addr")),
@@ -504,7 +512,7 @@ async fn main() -> anyhow::Result<()> {
         end_timer!(rs);
 
         let vr = start_timer!(|| "verify the data");
-        client.verify(i, nr_real + nr_sim, 5).await;
+        client.verify(i, nr_real + nr_sim, 1, pr).await;
         end_timer!(vr);
         end_timer!(sr);
         let per_round_duration = per_round_start.elapsed();

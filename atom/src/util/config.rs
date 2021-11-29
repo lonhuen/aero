@@ -19,6 +19,10 @@ impl ConfigUtils {
         self.settings.get(key).unwrap()
     }
 
+    pub fn get_f64(&self, key: &str) -> f64 {
+        self.settings.get_float(key).unwrap()
+    }
+
     pub fn get_addr(&self, key: &str) -> Ipv4Addr {
         let addr: String = self.settings.get(key).unwrap();
         Ipv4Addr::from_str(&addr).unwrap()

@@ -1,27 +1,42 @@
-waddr=172.31.40.188
-cargo run --bin server --release &
-#scp -i ./data/aws01.pem config.yaml ubuntu@172.31.47.222:/home/ubuntu/quail
-scp -i ./data/aws01.pem config.yaml ubuntu@${waddr}:/home/ubuntu/quail
-#scp -i ./data/aws01.pem config.yaml ubuntu@172.31.47.163:/home/ubuntu/quail
-#scp -i ./data/aws01.pem config.yaml ubuntu@172.31.37.209:/home/ubuntu/quail
-#scp -i ./data/aws01.pem config.yaml ubuntu@172.31.47.34:/home/ubuntu/quail
+#! /bin/bash
+app=$1
+BASE_DIR="/home/ubuntu/quail"
+WORKING_DIR="/home/ubuntu/quail/$app"
 
-scp -i ./data/aws01.pem scripts/exp.sh ubuntu@${waddr}:/home/ubuntu/quail/scripts/
-#scp -i ./data/aws01.pem scripts/exp.sh ubuntu@172.31.47.163:/home/ubuntu/quail/scripts/
-#scp -i ./data/aws01.pem scripts/exp.sh ubuntu@172.31.37.209:/home/ubuntu/quail/scripts/
-#scp -i ./data/aws01.pem scripts/exp.sh ubuntu@172.31.47.34:/home/ubuntu/quail/scripts/
+if [ ! -d "${BASE_DIR}" ]; then
+	echo "${BASE_DIR} doesn't exist. Clone the repo and install depences first"
+	exit
+fi
 
-#ssh -i ./data/aws01.pem ubuntu@172.31.47.222 "bash ~/quail/scripts/network.sh > /dev/null 2>/dev/null" &
-#ssh -i ./data/aws01.pem ubuntu@172.31.47.163 "bash ~/quail/scripts/network.sh > /dev/null 2>/dev/null" &
-#ssh -i ./data/aws01.pem ubuntu@172.31.37.209 "bash ~/quail/scripts/network.sh > /dev/null 2>/dev/null" &
-#ssh -i ./data/aws01.pem ubuntu@172.31.47.222 "~/quail/scripts/exp.sh 8 > /dev/null 2>/dev/null" &
-ssh -i ./data/aws01.pem ubuntu@${waddr} "bash ~/quail/scripts/exp.sh 10"
-#ssh -i ./data/aws01.pem ubuntu@172.31.47.163 "~/quail/scripts/exp.sh 3 > /dev/null 2>/dev/null" &
-#ssh -i ./data/aws01.pem ubuntu@172.31.37.209 "~/quail/scripts/exp.sh 4 > /dev/null 2>/dev/null" &
-#ssh -i ./data/aws01.pem ubuntu@172.31.47.34 "source ~/.cargo/env; cd ~/quail && cargo run --bin light_client --release 130 2>&1 > light_client.log"&
-#ssh -i ./data/aws01.pem ubuntu@172.31.47.34 "source ~/.cargo/env; cd ~/quail && cargo run --bin light_client --release 130 2>&1 > light_client.log"&
-#ssh -i ./data/aws01.pem ubuntu@172.31.47.34 "source ~/.cargo/env; cd ~/quail && cargo run --bin light_client --release 130 2>&1 > light_client.log"&
-#ssh -i ./data/aws01.pem ubuntu@172.31.47.34 "source ~/.cargo/env; cd ~/quail && cargo run --bin light_client --release 100 2>&1 > light_client.log"&
-#(cargo run --bin light_client --release 490 2>&1 > light_client.log) &
+if [[ "$app" != "atom" ]] && [[ "$app" != "baseline" ]]; then
+	echo "./run_server atom/baseline"
+	exit
+fi
+
+waddr=("ubuntu@172.31.40.188" "ubuntu@172.31.40.188")
+light_client="ubuntu@172.31.40.188"
+waddr_list="${waddr[@]}"
+echo "worker list"
+echo $waddr_list
+
+# build first
+cd ${WORKING_DIR}
+cargo build --release
+pssh  -i  -H "${waddr_list}"  -x "-oStrictHostKeyChecking=no  -i ${BASE_DIR}/data/aws01.pem" "cd ${WORKING_DIR}; cargo build --release"
+
+# update the config file and running scripts
+for w in ${waddr[@]}; do
+	# update the config
+	scp -i ${BASE_DIR}/data/aws01.pem ${BASE_DIR}/config.yaml ubuntu@${w}:${BASE_DIR}/config.yaml
+	# update the script
+	scp -i ${BASE_DIR}/data/aws01.pem ${BASE_DIR}/scripts/exp.sh ubuntu@${w}:/home/ubuntu/quail/scripts/
+done
+
+# start running the server
+./$app/target/release/server &
+# start running the light_client
+ssh -i ${BASE_DIR}/data/aws01.pem ${light_client} "cd ${WORKING_DIR} && ./target/release/light_client 130 2>&1 > light_client.log" &
+pssh  -i  -H "${waddr_list}"  -x "-oStrictHostKeyChecking=no  -i ${BASE_DIR}/data/aws01.pem" "cd ${BASE_DIR} && ./scripts/exp.sh $app"
+
 wait
-sudo pkill -P $$
+#sudo pkill -P $$

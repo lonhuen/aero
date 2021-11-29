@@ -110,55 +110,54 @@ impl Prover {
         let mut ret = Vec::with_capacity(c0.len());
         for i in 0..c0.len() {
             let cs = cs.clone();
-            // // update the witness in constraint system
-            // //r[i].iter().chain(e0[i].iter()).chain(e1[i].iter)
-            // let e0_bit: Vec<i128> = e0[i]
-            //     .iter()
-            //     .flat_map(|x| (0..5).map(|l| (x >> l) & 0x1).collect::<Vec<i128>>())
-            //     .collect();
-            // let e1_bit: Vec<i128> = e1[i]
-            //     .iter()
-            //     .flat_map(|x| (0..5).map(|l| (x >> l) & 0x1).collect::<Vec<i128>>())
-            //     .collect();
-            // let m_bit: Vec<i128> = m[i]
-            //     .iter()
-            //     .flat_map(|x| (0..8).map(|l| (x >> l) & 0x1).collect::<Vec<i128>>())
-            //     .collect();
-            // let delta0_bit: Vec<i128> = delta0[i]
-            //     .iter()
-            //     .flat_map(|x| {
-            //         (0..13)
-            //             .map(|l| ((x + 4096) >> l) & 0x1)
-            //             .collect::<Vec<i128>>()
-            //     })
-            //     .collect();
-            // let delta1_bit: Vec<i128> = delta1[i]
-            //     .iter()
-            //     .flat_map(|x| {
-            //         (0..13)
-            //             .map(|l| ((x + 4096) >> l) & 0x1)
-            //             .collect::<Vec<i128>>()
-            //     })
-            //     .collect();
-            // r[i].iter()
-            //     .chain(e0[i].iter())
-            //     .chain(e1[i].iter())
-            //     .chain(delta0[i].iter())
-            //     .chain(delta1[i].iter())
-            //     .chain(m[i].iter())
-            //     .chain(e0_bit.iter())
-            //     .chain(e1_bit.iter())
-            //     .chain(m_bit.iter())
-            //     .chain(delta0_bit.iter())
-            //     .chain(delta1_bit.iter())
-            //     .zip(cs.borrow_mut().unwrap().witness_assignment.iter_mut())
-            //     .for_each(|(x, y)| *y = i128_to_field(*x));
-            // c0[i]
-            //     .iter()
-            //     .chain(c1[0].iter())
-            //     .zip(cs.borrow_mut().unwrap().instance_assignment[1..].iter_mut())
-            //     .for_each(|(x, y)| *y = i128_to_field(*x));
-            // first r
+            // update the witness in constraint system
+            //r[i].iter().chain(e0[i].iter()).chain(e1[i].iter)
+            let e0_bit: Vec<i128> = e0[i]
+                .iter()
+                .flat_map(|x| (0..5).map(|l| (x >> l) & 0x1).collect::<Vec<i128>>())
+                .collect();
+            let e1_bit: Vec<i128> = e1[i]
+                .iter()
+                .flat_map(|x| (0..5).map(|l| (x >> l) & 0x1).collect::<Vec<i128>>())
+                .collect();
+            let m_bit: Vec<i128> = m[i]
+                .iter()
+                .flat_map(|x| (0..8).map(|l| (x >> l) & 0x1).collect::<Vec<i128>>())
+                .collect();
+            let delta0_bit: Vec<i128> = delta0[i]
+                .iter()
+                .flat_map(|x| {
+                    (0..13)
+                        .map(|l| ((x + 4096) >> l) & 0x1)
+                        .collect::<Vec<i128>>()
+                })
+                .collect();
+            let delta1_bit: Vec<i128> = delta1[i]
+                .iter()
+                .flat_map(|x| {
+                    (0..13)
+                        .map(|l| ((x + 4096) >> l) & 0x1)
+                        .collect::<Vec<i128>>()
+                })
+                .collect();
+            r[i].iter()
+                .chain(e0[i].iter())
+                .chain(e1[i].iter())
+                .chain(delta0[i].iter())
+                .chain(delta1[i].iter())
+                .chain(m[i].iter())
+                .chain(e0_bit.iter())
+                .chain(e1_bit.iter())
+                .chain(m_bit.iter())
+                .chain(delta0_bit.iter())
+                .chain(delta1_bit.iter())
+                .zip(cs.borrow_mut().unwrap().witness_assignment.iter_mut())
+                .for_each(|(x, y)| *y = i128_to_field(*x));
+            c0[i]
+                .iter()
+                .chain(c1[0].iter())
+                .zip(cs.borrow_mut().unwrap().instance_assignment[1..].iter_mut())
+                .for_each(|(x, y)| *y = i128_to_field(*x));
             let rr = Fr::rand(rng);
             let rs = Fr::rand(rng);
             let proof = lonhh_create_proof::<Bls12<Parameters>, Circuit<Fr>>(

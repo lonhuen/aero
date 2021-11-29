@@ -1,4 +1,4 @@
-#server_addr: "172.31.44.120"
+#server_addr: 172.31.44.120
 server_addr: 127.0.0.1
 server_port: 38886
 
@@ -10,6 +10,10 @@ nr_parameter: 40960
 #nr_parameter: 1400832
 
 nr_round: 1
+# t * k * s = 5
+# 100 * 1% * 5 = 5
+# 100 * 5% * 1 = 5
+ct_probability: 0.05
 
 #agent_endpoint: "169.231.32.113:6831"
 
@@ -70,5 +74,6 @@ players:
   #- 172.31.44.120:38912
   #- 172.31.44.120:38913
   #- 172.31.44.120:38914
-aggregator: 127.0.0.1:39999
+#aggregator: 127.0.0.1:39999
+aggregator: 172.31.44.120:39999
 threshold: 9

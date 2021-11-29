@@ -71,12 +71,12 @@ impl Server {
 
         let canceller = Timer::after(Duration::from_secs(WAITTIME), move |_| {}).unwrap();
         // TODO start random bit generation
-        warn!("Atom: Asking committee to generate random bits");
-        Command::new("bash")
-            .arg("/home/ubuntu/quail/test.sh")
-            .arg("offline")
-            .output()
-            .expect("failed to execute process");
+        //warn!("Atom: Asking committee to generate random bits");
+        //Command::new("bash")
+        //    .arg("/home/ubuntu/quail/test.sh")
+        //    .arg("offline")
+        //    .output()
+        //    .expect("failed to execute process");
 
         Self {
             mc: mc_ref,
@@ -177,20 +177,20 @@ impl Server {
                 let (lock, cvar) = &*cond.clone();
                 let mut state = lock.lock().unwrap();
                 if let STAGE::Verify = state.0 {
-                    // TODO update the global model
-                    warn!("Atom: Asking committee to decrypt");
-                    Command::new("bash")
-                        .arg("/home/ubuntu/quail/test.sh")
-                        .arg("online")
-                        .output()
-                        .expect("failed to execute process");
-                    // TODO start random bit generation
-                    warn!("Atom: Asking committee to generate random bits");
-                    Command::new("bash")
-                        .arg("/home/ubuntu/quail/test.sh")
-                        .arg("offline")
-                        .output()
-                        .expect("failed to execute process");
+                    // // TODO update the global model
+                    // warn!("Atom: Asking committee to decrypt");
+                    // Command::new("bash")
+                    //     .arg("/home/ubuntu/quail/test.sh")
+                    //     .arg("online")
+                    //     .output()
+                    //     .expect("failed to execute process");
+                    // // TODO start random bit generation
+                    // warn!("Atom: Asking committee to generate random bits");
+                    // Command::new("bash")
+                    //     .arg("/home/ubuntu/quail/test.sh")
+                    //     .arg("offline")
+                    //     .output()
+                    //     .expect("failed to execute process");
                     *state = (STAGE::Commit, state.1 + 1);
                     //println!("Server move to stage {:?}", *state);
                     ms.write().unwrap().clear();
