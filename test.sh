@@ -34,29 +34,25 @@ if [[ "$app" != "offline" ]] && [[ "$app" != "online" ]]; then
 	exit
 fi
 
-waddr=("ubuntu@172.31.40.85")
-waddr_list="${waddr[@]}"
-echo "worker list"
-echo $waddr_list
+w="172.31.40.85"
 
 # build first
-cd ${WORKING_DIR}
-cargo build --release
-pssh  -i  -H "${waddr_list}"  -x "-oStrictHostKeyChecking=no  -i ${BASE_DIR}/data/aws01.pem" "cd ${WORKING_DIR}; cargo build --release"
+cd ${WORKING_DIR} && cargo build --release
+ssh -i ${BASE_DIR}/data/aws01.pem ubuntu@${w} "cd ${WORKING_DIR} && cargo build --release"
 
 # update the config file and running scripts
-for w in ${waddr[@]}; do
-	# update the config
-	scp -i ${BASE_DIR}/data/aws01.pem ${BASE_DIR}/config.yaml ubuntu@${w}:${BASE_DIR}/config.yaml
-	# update the script
-	scp -i ${BASE_DIR}/data/aws01.pem ${BASE_DIR}/run_committee.sh ubuntu@${w}:${BASE_DIR}
-done
+# update the config
+scp -i ${BASE_DIR}/data/aws01.pem ${BASE_DIR}/config.yaml ubuntu@${w}:${BASE_DIR}
+# update the script
+scp -i ${BASE_DIR}/data/aws01.pem ${BASE_DIR}/run_committee.sh ubuntu@${w}:${BASE_DIR}
 
 # start running the aggregator
 ./target/release/aggregator_$app &
 # start running the light_client
 # ssh -i ${BASE_DIR}/data/aws01.pem ${light_client} "cd ${WORKING_DIR} && ./target/release/light_client 130 2>&1 > light_client.log" &
-pssh  -i  -H "${waddr_list}"  -x "-oStrictHostKeyChecking=no  -i ${BASE_DIR}/data/aws01.pem" "cd ${BASE_DIR} && ./test.sh $app"
+#pssh  -i  -H "${waddr_list}"  -x "-oStrictHostKeyChecking=no  -i ${BASE_DIR}/data/aws01.pem" "cd ${BASE_DIR} && ./test.sh $app"
+# update the config file and running scripts
+ssh -i ${BASE_DIR}/data/aws01.pem ubuntu@${w} "cd ${BASE_DIR} && ./run_committee.sh $app"
 
 wait
 #sudo pkill -P $$

@@ -19,25 +19,27 @@ echo "worker list"
 echo $waddr_list
 
 # build first
-cd ${WORKING_DIR}
-cargo build --release
-pssh  -i  -H "${waddr_list}"  -x "-oStrictHostKeyChecking=no  -i ${BASE_DIR}/data/aws01.pem" "cd ${WORKING_DIR}; cargo build --release"
+cd ${WORKING_DIR} && cargo build --release
+for w in ${waddr[@]}; do
+	ssh -i ${BASE_DIR}/data/aws01.pem "cd ${WORKING_DIR} && cargo build --release"
+done
 
 # update the config file and running scripts
 for w in ${waddr[@]}; do
 	# update the config
-	scp -i ${BASE_DIR}/data/aws01.pem ${BASE_DIR}/config.yaml ${w}:${BASE_DIR}/config.yaml
+	scp -i ${BASE_DIR}/data/aws01.pem ${BASE_DIR}/config.yaml ubuntu@${w}:${BASE_DIR}/
 	# update the script
-	scp -i ${BASE_DIR}/data/aws01.pem ${BASE_DIR}/scripts/exp.sh ${w}:/home/ubuntu/quail/scripts/
+	scp -i ${BASE_DIR}/data/aws01.pem ${BASE_DIR}/scripts/exp.sh ubuntu@${w}:${BASE_DIR}/scripts
 done
 
+cd ${BASE_DIR}
 # start running the server
 ./$app/target/release/server &
 # ./$app/target/release/light_client 1000 &
 
 # update the config file and running scripts
 for w in ${waddr[@]}; do
-	ssh -i ${BASE_DIR}/data/aws01.pem "cd ${BASE_DIR} && ./scripts.sh $app 15" &
+	ssh -i ${BASE_DIR}/data/aws01.pem ubuntu@${w} "cd ${BASE_DIR} && ./scripts.sh $app 15" &
 done
 
 wait
