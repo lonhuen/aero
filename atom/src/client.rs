@@ -512,7 +512,7 @@ async fn main() -> anyhow::Result<()> {
         end_timer!(rs);
 
         let vr = start_timer!(|| "verify the data");
-        client.verify(i, nr_real + nr_sim, 1, pr).await;
+        client.verify(i, nr_real + nr_sim, 5, pr).await;
         end_timer!(vr);
         end_timer!(sr);
         let per_round_duration = per_round_start.elapsed();

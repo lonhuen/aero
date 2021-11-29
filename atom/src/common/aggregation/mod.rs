@@ -142,7 +142,7 @@ impl MsTree {
 
     pub fn get_nonleaf_node(&self, id: u32) -> SummationEntry {
         if (id < self.nr_real) || (id >= self.nr_real + self.nr_non_leaf) {
-            error!("Atom: Ms get leaf node more than nr_real+nr_non_leaf");
+            error!("Atom: Ms get nonleaf node more than nr_real+nr_non_leaf");
             self.summation_array[(id % (self.nr_real + self.nr_non_leaf)) as usize].clone()
         } else {
             self.summation_array[id as usize].clone()

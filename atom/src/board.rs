@@ -30,8 +30,8 @@ fn main() {
     // println!("{:?}", e0_bit);
 
     {
-        //let prover = Prover::setup("./data/encryption.txt");
-        let prover = ProverOnline::setup("./data/encryption.txt");
+        let prover = Prover::setup("./data/encryption.txt");
+        //let prover = ProverOnline::setup("./data/encryption.txt");
         //let prover = ProverOffline::setup("./data/encryption.txt");
     }
     //let gc = start_timer!(|| "deserialization");
