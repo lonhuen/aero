@@ -23,6 +23,7 @@ rand_distr="0.4.2"
 rayon = "1.5"
 blake3 = "1.0.0"
 cancellable-timer = "0.1.0"
+cpu-time = "1.0.0"
 
 Cupcake = {version="0.2.1",features=["bench"]}
 ring-algorithm = "0.4.0"

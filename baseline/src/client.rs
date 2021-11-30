@@ -10,6 +10,7 @@ use crate::common::{i128vec_to_le_bytes, summation_array_size, ZKProof};
 use crate::util::{config::ConfigUtils, log::init_tracing};
 use crate::zksnark::{Prover, Verifier};
 use ark_std::{end_timer, start_timer};
+use cpu_time::ProcessTime;
 #[cfg(feature = "hashfn_blake3")]
 extern crate blake3;
 #[cfg(not(feature = "hashfn_blake3"))]
@@ -444,6 +445,10 @@ impl Client {
     }
 }
 
+#[inline]
+pub fn duration_to_sec(d: &Duration) -> f64 {
+    d.subsec_nanos() as f64 / 1_000_000_000f64 + (d.as_secs() as f64)
+}
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let config = ConfigUtils::init("config.yaml");
@@ -472,11 +477,12 @@ async fn main() -> anyhow::Result<()> {
     let inner_client =
         ServerServiceClient::new(client::Config::default(), transport.await?).spawn();
     let mut client = Client::new(inner_client);
-    
+
     let start = start_timer!(|| "clients");
 
     for i in 0..nr_round {
         // begin uploading
+        let prover_cpu = ProcessTime::now();
         let sr = start_timer!(|| "one round");
         let train = start_timer!(|| "train model");
         let data = client.train_model(i).await;
@@ -486,9 +492,17 @@ async fn main() -> anyhow::Result<()> {
         //let result = client.upload(i, data, pvk.await.unwrap()).await;
         let result = client.upload(i, data, vec![0u8; 1]).await;
         end_timer!(rs);
+        let prover_cpu_time: Duration = prover_cpu.elapsed();
+        println!("Prover CPU Time {} s", duration_to_sec(&prover_cpu_time));
 
         let vr = start_timer!(|| "verify the data");
+        let verifier_cpu = ProcessTime::now();
         client.verify(i, nr_real + nr_sim, 5).await;
+        let verifier_cpu_time = verifier_cpu.elapsed();
+        println!(
+            "Verifier CPU Time {} s",
+            duration_to_sec(&verifier_cpu_time)
+        );
         end_timer!(vr);
         end_timer!(sr);
     }

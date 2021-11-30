@@ -11,6 +11,7 @@ use crate::common::{i128vec_to_le_bytes, summation_array_size, ZKProof};
 use crate::util::{config::ConfigUtils, log::init_tracing};
 use crate::zksnark::Verifier;
 use ark_std::{end_timer, start_timer};
+use cpu_time::ProcessTime;
 #[cfg(not(feature = "online"))]
 use quail::zksnark::Prover;
 #[cfg(feature = "online")]
@@ -464,6 +465,11 @@ impl Client {
     }
 }
 
+#[inline]
+pub fn duration_to_sec(d: &Duration) -> f64 {
+    d.subsec_nanos() as f64 / 1_000_000_000f64 + (d.as_secs() as f64)
+}
+
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let config = ConfigUtils::init("config.yaml");
@@ -474,7 +480,6 @@ async fn main() -> anyhow::Result<()> {
     )?;
 
     let _span = span!(Level::WARN, "Atom Client").entered();
-
 
     let nr_real = config.get_int("nr_real") as u32;
     let nr_sim = config.get_int("nr_simulated") as u32;
@@ -495,11 +500,11 @@ async fn main() -> anyhow::Result<()> {
         ServerServiceClient::new(client::Config::default(), transport.await?).spawn();
     let mut client = Client::new(inner_client);
 
-    let total_start = Instant::now();
     let start = start_timer!(|| "clients");
 
     for i in 0..nr_round {
-        let per_round_start = Instant::now();
+        let prover_cpu = ProcessTime::now();
+
         // begin uploading
         let sr = start_timer!(|| "one round");
         let train = start_timer!(|| "train model");
@@ -508,28 +513,24 @@ async fn main() -> anyhow::Result<()> {
 
         let rs = start_timer!(|| "upload data");
         //let result = client.upload(i, data, pvk.await.unwrap()).await;
-        let result = client.upload(i, data, vec![0u8; 1]).await;
+        let _result = client.upload(i, data, vec![0u8; 1]).await;
         end_timer!(rs);
 
+        let prover_cpu_time: Duration = prover_cpu.elapsed();
+        println!("Prover CPU Time {} s", duration_to_sec(&prover_cpu_time));
+
         let vr = start_timer!(|| "verify the data");
+        let verifier_cpu = ProcessTime::now();
         client.verify(i, nr_real + nr_sim, 5, pr).await;
+        let verifier_cpu_time = verifier_cpu.elapsed();
+        println!(
+            "Verifier CPU Time {} s",
+            duration_to_sec(&verifier_cpu_time)
+        );
         end_timer!(vr);
         end_timer!(sr);
-        let per_round_duration = per_round_start.elapsed();
-        println!(
-            "Round {} running time: {}s",
-            i,
-            per_round_duration.subsec_nanos() as f64 / 1_000_000_000f64
-                + (per_round_duration.as_secs() as f64)
-        );
     }
     end_timer!(start);
-
-    let duration = total_start.elapsed();
-    println!(
-        "Total running time: {}s",
-        duration.subsec_nanos() as f64 / 1_000_000_000f64 + (duration.as_secs() as f64)
-    );
 
     opentelemetry::global::shutdown_tracer_provider();
     Ok(())
