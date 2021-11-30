@@ -369,12 +369,11 @@ impl Client {
                     "wrong merkle proofs"
                 );
                 if let SummationEntry::Leaf(s) = &ms_node.0 {
-                    #[cfg(not(feature = "compare"))]
-                    {
-                        let inputs: Vec<i128> =
-                            s.c0.iter().cloned().chain(s.c1.iter().cloned()).collect();
-                        let _proof = self.verifier.verify_proof_from_bytes(&s.proof, &inputs);
-                    }
+                    let inputs: Vec<i128> =
+                        s.c0.iter().cloned().chain(s.c1.iter().cloned()).collect();
+                    let _proof = self.verifier.verify_proof_from_bytes(&s.proof, &inputs);
+                    //println!("verify the zkproof {:?}", _proof);
+                    //assert!(_proof);
                     let h = s.hash();
                     if let SummationEntry::Commit(cm) = &mc_node.0 {
                         //TODO fix this

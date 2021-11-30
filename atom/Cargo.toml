@@ -107,13 +107,11 @@ path = "benches/offline/groth16.rs"
 
 [features]
 #default = [ "hashfn_blake3","parallel","online"]
-default = [ "hashfn_blake3","parallel","ark-groth16/std","print-trace", "verification"]
-compare = [ "hashfn_blake3","parallel","ark-groth16/std","print-trace"]
+default = [ "hashfn_blake3","parallel","ark-groth16/std","print-trace"]
 hashfn_blake3 = []
 json = []
 print-trace = [ "ark-std/print-trace" ]
 parallel = [ "ark-groth16/parallel" ]
-verification = []
 
 [profile.release]
 panic = 'abort'
