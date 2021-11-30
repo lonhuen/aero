@@ -475,7 +475,6 @@ async fn main() -> anyhow::Result<()> {
 
     let _span = span!(Level::WARN, "Atom Client").entered();
 
-    let start = start_timer!(|| "clients");
 
     let nr_real = config.get_int("nr_real") as u32;
     let nr_sim = config.get_int("nr_simulated") as u32;
@@ -497,6 +496,7 @@ async fn main() -> anyhow::Result<()> {
     let mut client = Client::new(inner_client);
 
     let total_start = Instant::now();
+    let start = start_timer!(|| "clients");
 
     for i in 0..nr_round {
         let per_round_start = Instant::now();

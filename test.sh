@@ -17,8 +17,8 @@ fi
 w="172.31.40.85"
 
 # build first
-cd ${WORKING_DIR} && ${CARGO} build --release
-ssh -i ${BASE_DIR}/data/aws01.pem ubuntu@${w} "cd ${WORKING_DIR} && ${CARGO} build --release"
+cd ${WORKING_DIR} && ${CARGO} build --release 2>/dev/null >/dev/null
+ssh -i ${BASE_DIR}/data/aws01.pem ubuntu@${w} "cd ${WORKING_DIR} && ${CARGO} build --release" 2>/dev/null > /dev/null
 
 # update the config file and running scripts
 # update the config
@@ -29,11 +29,10 @@ scp -i ${BASE_DIR}/data/aws01.pem ${BASE_DIR}/run_committee.sh ubuntu@${w}:${BAS
 # start running the aggregator
 cd ${BASE_DIR}
 ./atom/target/release/aggregator_$app 2>&1 >/dev/null &
-# start running the light_client
-# ssh -i ${BASE_DIR}/data/aws01.pem ${light_client} "cd ${WORKING_DIR} && ./target/release/light_client 130 2>&1 > light_client.log" &
-#pssh  -i  -H "${waddr_list}"  -x "-oStrictHostKeyChecking=no  -i ${BASE_DIR}/data/aws01.pem" "cd ${BASE_DIR} && ./test.sh $app"
+#ssh -i ${BASE_DIR}/data/aws01.pem ubuntu@${w} "cd ${BASE_DIR} && ./atom/target/release/aggregator_$app" 2>/dev/null >/dev/null &
 # update the config file and running scripts
-ssh -i ${BASE_DIR}/data/aws01.pem ubuntu@${w} "cd ${BASE_DIR} && ./run_committee.sh $app"
+#ssh -i ${BASE_DIR}/data/aws01.pem ubuntu@${w} "cd ${BASE_DIR} && ./run_committee.sh $app" 2>/dev/null >/dev/null
+ssh -i ${BASE_DIR}/data/aws01.pem ubuntu@${w} "cd ${BASE_DIR} && ./run_committee.sh $app" 
 
-wait
+#wait
 #sudo pkill -P $$

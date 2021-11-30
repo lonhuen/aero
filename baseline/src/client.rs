@@ -455,8 +455,6 @@ async fn main() -> anyhow::Result<()> {
 
     let _span = span!(Level::WARN, "Atom Client").entered();
 
-    let start = start_timer!(|| "clients");
-
     let nr_real = config.get_int("nr_real") as u32;
     let nr_sim = config.get_int("nr_simulated") as u32;
     let nr_round = config.get_int("nr_round") as u32;
@@ -474,6 +472,8 @@ async fn main() -> anyhow::Result<()> {
     let inner_client =
         ServerServiceClient::new(client::Config::default(), transport.await?).spawn();
     let mut client = Client::new(inner_client);
+    
+    let start = start_timer!(|| "clients");
 
     for i in 0..nr_round {
         // begin uploading

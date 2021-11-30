@@ -19,10 +19,10 @@ echo "worker list"
 echo $waddr_list
 
 # build first
-cd ${WORKING_DIR} && cargo build --release
-for w in ${waddr[@]}; do
-	ssh -i ${BASE_DIR}/data/aws01.pem "cd ${WORKING_DIR} && cargo build --release"
-done
+#cd ${WORKING_DIR} && cargo build --release
+#for w in ${waddr[@]}; do
+#	ssh -i ${BASE_DIR}/data/aws01.pem ubuntu@${w} "cd ${WORKING_DIR} && cargo build --release"
+#done
 
 # update the config file and running scripts
 for w in ${waddr[@]}; do
@@ -39,7 +39,7 @@ cd ${BASE_DIR}
 
 # update the config file and running scripts
 for w in ${waddr[@]}; do
-	ssh -i ${BASE_DIR}/data/aws01.pem ubuntu@${w} "cd ${BASE_DIR} && ./scripts/exp.sh $app 15" &
+	ssh -i ${BASE_DIR}/data/aws01.pem ubuntu@${w} "cd ${BASE_DIR} && ./scripts/exp.sh $app 15"  2>/dev/null >/dev/null &
 done
 
 wait
