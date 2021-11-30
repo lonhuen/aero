@@ -12,10 +12,10 @@ use crate::util::{config::ConfigUtils, log::init_tracing};
 use crate::zksnark::Verifier;
 use ark_std::{end_timer, start_timer};
 use cpu_time::ProcessTime;
-#[cfg(not(feature = "online"))]
+//#[cfg(not(feature = "online"))]
 use quail::zksnark::Prover;
-#[cfg(feature = "online")]
-use quail::zksnark::ProverOnline as Prover;
+//#[cfg(feature = "online")]
+//use quail::zksnark::ProverOnline as Prover;
 #[cfg(feature = "hashfn_blake3")]
 extern crate blake3;
 use crate::rlwe::PublicKey;
@@ -50,7 +50,7 @@ pub struct Client {
     m: Vec<Vec<i128>>,
     nonce: Vec<[u8; 16]>,
     prover: Prover,
-    //prover: ProverOnline,
+    verifier: Verifier,
     enc_pk: PublicKey,
 }
 
@@ -90,6 +90,7 @@ impl Client {
             PublicKey::new(&pk0, &pk1)
         };
         let prover = Prover::new("./data/encryption.txt", "./data/proving_key.txt");
+        let verifier = Verifier::new("./data/verifying_key.txt");
         //let prover = ProverOnline::new("./data/encryption.txt", "./data/proving_key.txt");
         Self {
             inner,
@@ -105,6 +106,7 @@ impl Client {
             m: Vec::new(),
             nonce: Vec::new(),
             prover,
+            verifier,
             enc_pk,
         }
     }
@@ -146,19 +148,19 @@ impl Client {
     #[instrument(skip_all, name = "generate_proof")]
     pub fn generate_proof(&self) -> Vec<Vec<u8>> {
         let gc = start_timer!(|| "start proof generation");
-        #[cfg(not(feature = "online"))]
+        //#[cfg(not(feature = "online"))]
         let ret = self.prover.create_proof_in_bytes(
             &self.c0s, &self.c1s, &self.rs, &self.e0s, &self.e1s, &self.d0s, &self.d1s, &self.m,
         );
-        #[cfg(feature = "online")]
-        let ret = self.prover.create_proof_in_bytes(
-            &self.c0s,
-            &self.rs,
-            &self.e0s,
-            &self.d0s,
-            &self.m,
-            &vec![[0u8; 224]],
-        );
+        //#[cfg(feature = "online")]
+        //let ret = self.prover.create_proof_in_bytes(
+        //    &self.c0s,
+        //    &self.rs,
+        //    &self.e0s,
+        //    &self.d0s,
+        //    &self.m,
+        //    &vec![[0u8; 224]],
+        //);
         //println!("proof len {} * {}", ret.len(), ret[0].len());
         // # of ct * 192
         end_timer!(gc);
@@ -367,6 +369,12 @@ impl Client {
                     "wrong merkle proofs"
                 );
                 if let SummationEntry::Leaf(s) = &ms_node.0 {
+                    #[cfg(not(feature = "compare"))]
+                    {
+                        let inputs: Vec<i128> =
+                            s.c0.iter().cloned().chain(s.c1.iter().cloned()).collect();
+                        let _proof = self.verifier.verify_proof_from_bytes(&s.proof, &inputs);
+                    }
                     let h = s.hash();
                     if let SummationEntry::Commit(cm) = &mc_node.0 {
                         //TODO fix this
