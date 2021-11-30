@@ -6,8 +6,12 @@ nr_real: 30
 nr_simulated: 0
 nr_sybil: 0
 
-#nr_parameter: 40960
-#nr_parameter_committee: 40960
+#nr_parameter: 4096
+#nr_parameter_committee: 4096
+#nr_parameter: 204800
+#nr_parameter_committee: 204800
+#nr_parameter: 409600
+#nr_parameter_committee: 409600
 nr_parameter: 1400832
 nr_parameter_committee: 1400832
 
@@ -15,7 +19,8 @@ nr_round: 1
 # t * k * s = 5
 # 100 * 1% * 5 = 5
 # 100 * 5% * 1 = 5
-ct_probability: 0.01
+#ct_probability: 0.01
+ct_probability: 1.01
 
 #agent_endpoint: "169.231.32.113:6831"
 

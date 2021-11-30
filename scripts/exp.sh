@@ -17,9 +17,9 @@ in_bytes=$(echo $start | awk -v OFS=, '/ens5:/ { print $2 }')
 out_bytes=$(echo $start | awk -v OFS=, '/ens5:/ { print $10 }')
 
 for i in `seq 0 $((nr_real-2))`; do
-	RAYON_NUM_THREADS=6 time ./$app/target/release/client $i 2>&1 > client$i.log &
+	(time RAYON_NUM_THREADS=6 ./$app/target/release/client $i) &> client$i.log &
 done
-RAYON_NUM_THREADS=6 time ./$app/target/release/client $((i+1)) 2>&1 > client$((i+1)).log
+(time RAYON_NUM_THREADS=6 ./$app/target/release/client $((i+1)))  &> client$((i+1)).log
 wait
 
 #end=$(cat /proc/net/dev | grep "eth0")

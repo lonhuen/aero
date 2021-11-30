@@ -31,8 +31,9 @@ cd ${BASE_DIR}
 ./atom/target/release/aggregator_$app 2>&1 >/dev/null &
 #ssh -i ${BASE_DIR}/data/aws01.pem ubuntu@${w} "cd ${BASE_DIR} && ./atom/target/release/aggregator_$app" 2>/dev/null >/dev/null &
 # update the config file and running scripts
-#ssh -i ${BASE_DIR}/data/aws01.pem ubuntu@${w} "cd ${BASE_DIR} && ./run_committee.sh $app" 2>/dev/null >/dev/null
-ssh -i ${BASE_DIR}/data/aws01.pem ubuntu@${w} "cd ${BASE_DIR} && ./run_committee.sh $app" 
+ssh -i ${BASE_DIR}/data/aws01.pem ubuntu@${w} "cd ${BASE_DIR} && ./run_committee.sh $app" 2>/dev/null >/dev/null
+#ssh -i ${BASE_DIR}/data/aws01.pem ubuntu@${w} "cd ${BASE_DIR} && ./run_committee.sh $app"  
+echo "committee $app done"
 
 #wait
 #sudo pkill -P $$

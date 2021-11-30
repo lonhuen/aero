@@ -128,15 +128,6 @@ processes:
     #  - name: "client"
     match:
     - cmdline: .*/client 13
-  "Atom Client 13":
-    download: 1000kbps
-    upload: 1000kbps
-    download-priority: 0
-    upload-priority: 0
-    #match:
-    #  - name: "client"
-    match:
-    - cmdline: .*/client 13
   "Atom Client 14":
     download: 1000kbps
     upload: 1000kbps
