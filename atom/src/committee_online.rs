@@ -84,7 +84,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let id = usize::from_str_radix(&args[1], 10).unwrap();
     let nr_players = players.len();
     let threshold = config.get_int("threshold") as usize;
-    let listener = TcpListener::bind(&players[id]).await?;
+    //let listener = TcpListener::bind(&players[id]).await?;
 
     let shamir_context = vec![
         ShamirContext::init(MODULUS[0], nr_players, threshold),

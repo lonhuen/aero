@@ -4,11 +4,12 @@ server_port: 38886
 
 nr_real: 30
 nr_simulated: 0
-#nr_sybil: 0
+nr_sybil: 0
 
-nr_parameter: 40960
-nr_parameter_committee: 4096
-#nr_parameter: 1400832
+#nr_parameter: 40960
+#nr_parameter_committee: 40960
+nr_parameter: 1400832
+nr_parameter_committee: 1400832
 
 nr_round: 1
 # t * k * s = 5
@@ -77,4 +78,5 @@ players:
   - 172.31.40.85:38914
 #aggregator: 127.0.0.1:39999
 aggregator: 172.31.43.73:39999
+#aggregator: 172.31.40.85:39999
 threshold: 9

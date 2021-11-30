@@ -19,7 +19,7 @@ processes:
     #match:
     #  - name: "client"
     match:
-    - cmdline: .*/client 1 
+    - cmdline: .*/client 1$
   "Atom Client 2":
     download: 1000kbps
     upload: 1000kbps

@@ -1,2 +1,2 @@
 cd ~/quail
-sudo tt ens5 network.yaml &
+sudo tt ens5 network.yaml

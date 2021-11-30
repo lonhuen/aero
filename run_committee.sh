@@ -15,11 +15,11 @@ out_bytes=$((out_lo_bytes + out_ens5_bytes))
 #echo $in_bytes
 #echo $out_bytes
 
-## ./atom/target/release/aggregator_$APP 2>&1 > aggregator.ens5g &
+#./atom/target/release/aggregator_$APP 2>&1 > aggregator_$APP.log &
 for i in {0..26}; do 
-	(./atom/target/release/committee_$APP $i 2>&1 > committee_${APP}$i.log ) &
+	(time ./atom/target/release/committee_$APP $i 2>&1 >> committee_${APP}$i.log ) &
 done
-(time ./atom/target/release/committee_$APP 27) 2>&1 | tee committee_${APP}$((i+1)).log
+(time ./atom/target/release/committee_$APP 27) 2>&1 | tee -a committee_${APP}$((i+1)).log
 wait
 
 end=$(cat /proc/net/dev | grep "lo")
