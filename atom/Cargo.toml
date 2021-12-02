@@ -12,6 +12,7 @@ ark-ec = { version = "^0.2.0", default-features = false }
 ark-bls12-381 = { version = "^0.2.0", default-features = false, features = ["curve"] }
 ark-relations = { version = "^0.2.0", default-features = false }
 ark-serialize= { version = "^0.2.0", default-features = false }
+curve25519-dalek = {version = "3.2", default_features = false, features = ["alloc", "u64_backend","serde"] }
 
 config = "0.11"
 
@@ -36,6 +37,7 @@ tarpc = { version = "0.27", features = ["full"] }
 tokio = { version = "1.13.0", features = ["full"]}
 tokio-serde = { version = "0.8", features = ["bincode","json"] }
 bincode = "1.3.3"
+num-bigint = "0.4"
 
 #log = "0.4"
 tracing = { version = "0.1.28" }
@@ -76,6 +78,10 @@ path = "src/committee_offline.rs"
 [[bin]]
 name = "committee_online"
 path = "src/committee_online.rs"
+
+[[bin]]
+name = "committee_reshare"
+path = "src/committee_reshare.rs"
 
 [[bin]]
 name = "aggregator_offline"

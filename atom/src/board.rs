@@ -19,94 +19,69 @@ use ark_relations::r1cs::{
     OptimizationGoal, Result as R1CSResult,
 };
 use ark_std::{end_timer, start_timer};
+use quail::rlwe::context::{NTTContext, ShamirContext};
+use quail::rlwe::NUM_DIMENSION;
 use ring_algorithm::chinese_remainder_theorem;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::{TcpListener, TcpStream};
+mod util;
+use crate::util::config::ConfigUtils;
+use bincode::deserialize_from;
+use bincode::serialize_into;
+use rand::SeedableRng;
+use std::env;
+use std::fs::File;
+use std::io::{BufReader, BufWriter};
+use std::sync::{Arc, Mutex};
 
 fn main() {
-    // let e0: Vec<i128> = vec![3i128; 4];
-    // let e0_bit: Vec<i128> = e0
-    //     .iter()
-    //     .flat_map(|x| (0..2).map(|l| (x >> l) & 0x1).collect::<Vec<i128>>())
-    //     .collect();
-    // println!("{:?}", e0_bit);
+    //{
+    //let prover = Prover::setup("./data/encryption.txt");
+    //let prover = ProverOnline::setup("./data/encryption.txt");
+    //let prover = ProverOffline::setup("./data/encryption.txt");
+    //}
+    let config = ConfigUtils::init("config.yaml");
+    let players: Vec<String> = config
+        .settings
+        .get_array("players")
+        .unwrap()
+        .into_iter()
+        .map(|x| x.into_str().unwrap())
+        .collect();
+    // vec[player_id][0,1,2][4096]
+    let shares: Vec<Vec<Vec<u64>>> = (0..players.len())
+        .into_iter()
+        .map(|i| {
+            let file_name = format!("./data/sk_share_new{}.txt", i);
+            let mut f = BufReader::new(File::open(file_name).unwrap());
+            let share0: Vec<u64> = deserialize_from(&mut f).unwrap();
+            let share1: Vec<u64> = deserialize_from(&mut f).unwrap();
+            let share2: Vec<u64> = deserialize_from(&mut f).unwrap();
+            vec![share0, share1, share2]
+        })
+        .collect();
+    let nr_players = players.len();
+    let threshold = config.get_int("threshold") as usize;
 
-    {
-        let prover = Prover::setup("./data/encryption.txt");
-        //let prover = ProverOnline::setup("./data/encryption.txt");
-        //let prover = ProverOffline::setup("./data/encryption.txt");
+    let shamir_context = vec![
+        ShamirContext::init(MODULUS[0], nr_players, threshold),
+        ShamirContext::init(MODULUS[1], nr_players, threshold),
+        ShamirContext::init(MODULUS[2], nr_players, threshold),
+    ];
+
+    for i in 0..NUM_DIMENSION {
+        let mut s = vec![0u64; nr_players];
+        for j in 0..nr_players {
+            s[j] = shares[j][0][i];
+        }
+        println!("id {} = {:?}", i, shamir_context[0].reconstruct(&s));
+        for j in 0..nr_players {
+            s[j] = shares[j][1][i];
+        }
+        println!("{:?}", shamir_context[1].reconstruct(&s));
+        for j in 0..nr_players {
+            s[j] = shares[j][2][i];
+        }
+        println!("{:?}", shamir_context[2].reconstruct(&s));
     }
-    //let gc = start_timer!(|| "deserialization");
-    //let mut pv = Prover::new("./data/encryption.txt", "./data/proving_key.txt");
-    // let mut ii = 0;
-    // for i in 0..4096 {
-    //     pv.circuit.r[i] = ii;
-    //     ii += 1;
-    // }
-    // for i in 0..4096 {
-    //     pv.circuit.e_0[i] = ii;
-    //     ii += 1;
-    // }
-    // for i in 0..4096 {
-    //     pv.circuit.e_1[i] = ii;
-    //     ii += 1;
-    // }
-    // for i in 0..4096 {
-    //     pv.circuit.delta_0[i] = ii;
-    //     ii += 1;
-    // }
-    // for i in 0..4096 {
-    //     pv.circuit.delta_1[i] = ii;
-    //     ii += 1;
-    // }
-    // for i in 0..4096 {
-    //     pv.circuit.m[i] = ii;
-    //     ii += 1;
-    // }
-    // ii = 0;
-    // for i in 0..4096 {
-    //     pv.circuit.c_0[i] = ii;
-    //     ii += 1;
-    // }
-    // for i in 0..4096 {
-    //     pv.circuit.c_1[i] = ii;
-    //     ii += 1;
-    // }
-    // let cs = ConstraintSystem::new_ref();
-    // cs.set_optimization_goal(OptimizationGoal::Constraints);
-    // pv.circuit.clone().generate_constraints(cs.clone()).unwrap();
-    // cs.finalize();
-    // let matrices = cs.to_matrices().unwrap();
-    // println!(
-    //     "witness len {:?}",
-    //     cs.borrow_mut().unwrap().witness_assignment.len()
-    // );
-    // println!(
-    //     "instance len {:?}",
-    //     cs.borrow_mut().unwrap().instance_assignment.len()
-    // );
-    // println!("witness");
-    // for i in cs.borrow().unwrap().witness_assignment.iter() {
-    //     println!("{}", i);
-    // }
-    // println!("instance");
-    // for i in cs.borrow().unwrap().instance_assignment.iter() {
-    //     println!("{}", i);
-    // }
-
-    //end_timer!(gc);
-    //let gc = start_timer!(|| "create proofs");
-    //let proof = pv.create_proof_in_bytes();
-    //end_timer!(gc);
-    //let verifier = Verifier::new("./data/verifying_key.txt");
-    //let mut inputs: Vec<_> = pv
-    //    .circuit
-    //    .c_0
-    //    .to_vec()
-    //    .iter()
-    //    .chain(pv.circuit.c_1.to_vec().iter())
-    //    //.map(|&x| pv.circuit.i128to_field(x))
-    //    .map(|&x| x)
-    //    .collect::<Vec<_>>();
-    //let gc = start_timer!(|| "verify proofs");
-    //println!("flag {}", verifier.verify_proof_from_bytes(&proof, &inputs));
-    //end_timer!(gc);
 }

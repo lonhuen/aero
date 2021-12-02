@@ -1,5 +1,6 @@
 #! /bin/bash
 LOG_DIR=$1
+IID=$2
 
 if [ ! -d ${LOG_DIR} ]; then
 	echo "give a log directory"
@@ -7,9 +8,9 @@ if [ ! -d ${LOG_DIR} ]; then
 fi
 
 flag=true
-if [[ "${LOG_DIR}" == *"baseline"* ]]; then
-	flag=false
-fi
+#if [[ "${LOG_DIR}" == *"baseline"* ]]; then
+#	flag=false
+#fi
 
 echo "Prover CPU (s)"
 #grep -h -r "Prover CPU Time" ${LOG_DIR}
@@ -44,10 +45,10 @@ grep -h -m 1 -r "recv bytes" ${LOG_DIR}/*/total.log  | awk '{total += $3; count+
 
 if [ "$flag" = true ]; then
 	echo "Committee Offline Network (B)"
-	grep -h -m 1 -r "sent bytes" ${LOG_DIR}/*/committee_offline27.log  | awk '{printf("%f\n",$3/28)}'
+	grep -h -m 1 -r "sent bytes" ${LOG_DIR}/*/committee_offline${IID}.log  | awk '{printf("%f\n",$3)}'
 
 	echo "Committee Online Network (B)"
-	grep -h -m 1 -r "sent bytes" ${LOG_DIR}/*/committee_online27.log  | awk '{printf("%f\n",$3/28)}'
+	grep -h -m 1 -r "sent bytes" ${LOG_DIR}/*/committee_online${IID}.log  | awk '{printf("%f\n",$3)}'
 
 
 	echo "Committee Offline Latency(s)"
