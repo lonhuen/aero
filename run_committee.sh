@@ -16,7 +16,7 @@ out_bytes=$((out_lo_bytes + out_ens5_bytes))
 #echo $out_bytes
 
 #./atom/target/release/aggregator_$APP 2>&1 > aggregator_$APP.log &
-for i in {0..26}; do 
+for i in {0..33}; do 
 	(time ./atom/target/release/committee_$APP $i) &>> committee_${APP}$i.log &
 #	(time ./atom/target/release/committee_$APP $i) &
 done
