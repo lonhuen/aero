@@ -1,0 +1,18 @@
+Start:   generate shamir sharing
+End:     generate shamir sharing ...................................................165.521s
+Elapsed time: 176.526975949 seconds
+
+real	3m0.696s
+user	0m42.493s
+sys	2m17.408s
+recv bytes  34070870167
+sent bytes  34079532585
+Start:   generate shamir sharing
+End:     generate shamir sharing ...................................................164.281s
+Error: Os { code: 111, kind: ConnectionRefused, message: "Connection refused" }
+
+real	2m57.278s
+user	0m41.776s
+sys	2m16.484s
+recv bytes  34070654582
+sent bytes  34071500961

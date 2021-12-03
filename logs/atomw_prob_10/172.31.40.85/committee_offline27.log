@@ -1,0 +1,18 @@
+Error: Os { code: 98, kind: AddrInUse, message: "Address already in use" }
+
+real	0m0.014s
+user	0m0.008s
+sys	0m0.014s
+recv bytes  34070866456
+sent bytes  34079609514
+recv bytes  15490723942
+sent bytes  15498210644
+Start:   generate shamir sharing
+End:     generate shamir sharing ...................................................158.674s
+Error: Os { code: 111, kind: ConnectionRefused, message: "Connection refused" }
+
+real	2m59.989s
+user	0m41.812s
+sys	2m11.588s
+recv bytes  34070950037
+sent bytes  34074044683

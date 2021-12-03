@@ -1,0 +1,52 @@
+[2mDec 03 07:52:27.194[0m [33m WARN[0m [1mAtom Client[0m: client: new
+Start:   clients
+··Start:   one round
+····Start:   train model
+······Start:   retrieve the model
+······End:     retrieve the model ..................................................986.804µs
+····End:     train model ...........................................................1.1s
+····Start:   upload data
+······Start:   encrypt the gradients
+······End:     encrypt the gradients ...............................................195.830ms
+······Start:   upload the mc+proof generation
+········Start:   start proof generation
+··········Start:   Groth16::Prover
+············Start:   R1CS to QAP witness map
+············End:     R1CS to QAP witness map .......................................836.741ms
+············Start:   Compute C
+··············Start:   Compute C1
+··············End:     Compute C1 ..................................................1.413s
+··············Start:   Compute C2
+··············End:     Compute C2 ..................................................888.774µs
+············End:     Compute C .....................................................1.555s
+············Start:   Compute A
+············End:     Compute A .....................................................166.832ms
+············Start:   Compute B in G1
+············End:     Compute B in G1 ...............................................94.476ms
+············Start:   Compute B in G2
+············End:     Compute B in G2 ...............................................234.906ms
+············Start:   Finish C
+············End:     Finish C ......................................................7.943µs
+··········End:     Groth16::Prover .................................................2.892s
+········End:     start proof generation ............................................7.341s
+······End:     upload the mc+proof generation ......................................7.343s
+······Start:   upload the data
+[2mDec 03 07:52:43.983[0m [33m WARN[0m [1mAtom Client[0m: client: data prepared
+[2mDec 03 07:52:43.985[0m [33m WARN[0m [1mAtom Client[0m: client: data uploaded,receving ms proof
+[2mDec 03 07:52:44.177[0m [33m WARN[0m [1mAtom Client[0m: client: ms proof received
+······End:     upload the data .....................................................193.336ms
+····End:     upload data ...........................................................7.733s
+Prover CPU Time 18.594423162 s
+····Start:   verify the data
+······Start:   verify
+········Start:   receive verify
+········End:     receive verify ....................................................1.399ms
+Verifier CPU Time 0.000622321 s
+······End:     verify the data .....................................................1.492ms
+····End:     one round .............................................................8.735s
+··End:     clients .................................................................8.735s
+[2mDec 03 07:52:44.261[0m [33m WARN[0m [1mAtom Client[0m: client: close time.busy=83.0ms time.idle=17.0s
+
+real	0m17.418s
+user	0m24.454s
+sys	0m2.841s

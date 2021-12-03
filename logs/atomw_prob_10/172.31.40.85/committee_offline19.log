@@ -1,0 +1,14 @@
+Start:   generate shamir sharing
+End:     generate shamir sharing ...................................................86.310s
+Error: Os { code: 111, kind: ConnectionRefused, message: "Connection refused" }
+
+real	1m33.584s
+user	0m37.379s
+sys	0m54.179s
+Start:   generate shamir sharing
+End:     generate shamir sharing ...................................................159.769s
+Error: Os { code: 111, kind: ConnectionRefused, message: "Connection refused" }
+
+real	2m58.568s
+user	0m41.602s
+sys	2m11.762s

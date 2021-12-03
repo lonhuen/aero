@@ -1,6 +1,6 @@
 #! /bin/bash
 LOG_DIR=$1
-IID=$2
+IID=34
 
 if [ ! -d ${LOG_DIR} ]; then
 	echo "give a log directory"
@@ -37,11 +37,11 @@ if [ "$flag" = true ]; then
 fi
 
 echo "Prover Network (B)"
-grep -h -m 1 -r "sent bytes" ${LOG_DIR}/*/total.log  | awk '{total += $3; count++} END {printf("%f\n",total/(count * 15))}'
+grep -h -m 1 -r "sent bytes" ${LOG_DIR}/*/total.log  | awk '{total += $3; count++} END {printf("%f\n",total/(count * 16))}'
 #echo "Prover Latency (s)"
 
 echo "Verifier Network (B)"
-grep -h -m 1 -r "recv bytes" ${LOG_DIR}/*/total.log  | awk '{total += $3; count++} END {printf("%f\n",total/(count * 15))}'
+grep -h -m 1 -r "recv bytes" ${LOG_DIR}/*/total.log  | awk '{total += $3; count++} END {printf("%f\n",total/(count * 16))}'
 
 if [ "$flag" = true ]; then
 	echo "Committee Offline Network (B)"

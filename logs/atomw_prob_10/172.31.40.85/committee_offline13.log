@@ -1,0 +1,14 @@
+Start:   generate shamir sharing
+End:     generate shamir sharing ...................................................84.860s
+Error: Os { code: 104, kind: ConnectionReset, message: "Connection reset by peer" }
+
+real	1m33.865s
+user	0m38.803s
+sys	0m55.451s
+Start:   generate shamir sharing
+End:     generate shamir sharing ...................................................167.760s
+Error: Os { code: 111, kind: ConnectionRefused, message: "Connection refused" }
+
+real	2m57.420s
+user	0m41.459s
+sys	2m19.540s

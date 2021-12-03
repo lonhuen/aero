@@ -1,0 +1,14 @@
+Start:   generate shamir sharing
+End:     generate shamir sharing ...................................................83.286s
+Error: Os { code: 32, kind: BrokenPipe, message: "Broken pipe" }
+
+real	1m33.860s
+user	0m38.792s
+sys	0m53.219s
+Start:   generate shamir sharing
+End:     generate shamir sharing ...................................................158.534s
+Elapsed time: 176.63567055 seconds
+
+real	2m56.835s
+user	0m41.846s
+sys	2m9.441s

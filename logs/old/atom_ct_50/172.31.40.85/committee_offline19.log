@@ -1,0 +1,14 @@
+Start:   generate shamir sharing
+End:     generate shamir sharing ...................................................21.693s
+Elapsed time: 26.190169745 seconds
+
+real	0m26.262s
+user	0m6.204s
+sys	0m17.447s
+Start:   generate shamir sharing
+End:     generate shamir sharing ...................................................22.347s
+Elapsed time: 25.573812147 seconds
+
+real	0m25.702s
+user	0m6.489s
+sys	0m17.862s
