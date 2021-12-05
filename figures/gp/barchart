@@ -1,0 +1,776 @@
+#!/usr/bin/perl -w
+
+# barchart
+# http://www.ptphong.com/software/barchart/
+# Copyright (c) Pham Thanh Phong
+#
+# This script is free software; permission to use, copy, modify, and
+# distribute this software and its documentation for any purpose without
+# fee is hereby granted, provided that both the above copyright notice
+# and this permission notice appear in all copies and in supporting
+# documentation.
+#
+# This software is provided "as is" without express or implied warranty
+# of any kind.
+
+=begin
+
+Usage
+=====
+
+barchart [option] inputfile output.eps
+
+Format for inputfile is CSV format.
+Please refer to http://www.ptphong.com/software/barchart/
+for more details on available options
+
+
+Change logs
+===========
+
+- Version 1.11 (041201):
+	* Support for major gridline
+	* Bug fix in displaying chart title with spaces
+	* Support for turning on/off legend
+	* Support for turning on/off value labels for x-axis
+- Version 1.1 (041130):
+	* Support for line chart and more subtypes of bar chart
+	* Add more options to change the generation of the chart
+- Version 1.0 (040401): Initial version
+
+=end
+=cut
+
+
+use strict;
+
+
+#---- configuration parameters ----#
+my @param = @ARGV;
+
+#---- chart type ----#
+my $chart_type = getOption ("--chart-type", \@param, 0, 
+							{"column" => 0, "line" => 1, "scatter" => 2});
+my $chart_sub_type = getOption ("--chart-sub-type", \@param, 0);
+
+
+#---- titles ----#
+# axis titles
+my $x_axis_title = getOption ("--x-axis-title", \@param);
+my $y_axis_title = getOption ("--y-axis-title", \@param);
+# chart titles
+my $chart_title;
+if (!getOption ("--show-chart-title", \@param, 1, {"yes" => 1, "no" => 0}))
+{
+	$chart_title = undef;
+}
+else
+{
+	$chart_title = getOption ("--chart-title", \@param);
+	if (! defined $chart_title)
+	{
+		# try to make an automatic one
+		# of form "y-axis-label vs. x-axis-label"
+		# if possible
+		if ((defined $x_axis_title) && (defined $y_axis_title))
+		{
+			$chart_title = "$y_axis_title vs. $x_axis_title";
+		}
+	}
+}
+
+#---- axes ----#
+my $show_x_axis_label = getOption ("--show-x-axis-label", \@param, 1, {"yes" => 1, "no" => 0});
+my $show_y_axis_label = getOption ("--show-y-axis-label", \@param, 1, {"yes" => 1, "no" => 0});
+my $y_min = getOption ("--y-min", \@param);
+my $y_max = getOption ("--y-max", \@param);
+my $y_major_unit = getOption ("--y-major-unit", \@param);
+my $y_minor_unit = getOption ("--y-minor-unit", \@param);
+my $x_axis_type = getOption ("--x-axis-type", \@param, 0, {"category" => 0, "scale" => 1});
+# rotation angle of x-axis data label
+my $x_axis_label_rotate = getOption ("--x-axis-label-rotate", \@param, 0, {"yes" => 1, "no" => 0});
+
+
+#---- gridlines ----#
+my $show_x_major_gridline = getOption ("--show-x-major-gridline", \@param, 0, {"yes" => 1, "no" => 0});
+my $show_x_minor_gridline = getOption ("--show-x-minor-gridline", \@param, 0, {"yes" => 1, "no" => 0});
+my $show_y_major_gridline = getOption ("--show-y-major-gridline", \@param, 0, {"yes" => 1, "no" => 0});
+my $show_y_minor_gridline = getOption ("--show-y-minor-gridline", \@param, 0, {"yes" => 1, "no" => 0});
+
+#---- legend ----#
+my $show_legend = getOption ("--show-legend", \@param, 1, {"yes" => 1, "no" => 0});
+my $first_data_line_as_legend = getOption ("--first-data-line-as-legend", \@param, 0, {"yes" => 1, "no" => 0});
+my $legendString = getOption ("--legend", \@param);
+my @legends = ();
+
+#---- data labels ----#
+my $show_data_label_value = getOption ("--show-data-label-value", \@param, 0, {"yes" => 1, "no" => 0});
+
+#---- graph sizing ----#
+my $x_scale = getOption ("--x-scale", \@param, 1);
+my $y_scale = getOption ("--y-scale", \@param, 1);
+
+#---- data handling ----#
+# which data column to be used, count from 0 start from the first column
+my $columns_string = getOption ("--column", \@param);
+my @columns;
+@columns = split (/,/, $columns_string) if (defined $columns_string);
+my $x_axis_label_column = getOption ("--x-axis-label-column", \@param);
+
+#---- chart specific options ----#
+my $bar_chart_box_width = getOption ("--bar-chart-box-width", \@param, 1);
+
+#MDD
+# e.g., --set-key=left
+my $set_key = getOption ("--set-key", \@param, "right");
+# e.g., --set-label-fonts=Helvetica,24
+my $set_label_fonts = getOption("--set-label-fonts", \@param);
+# e.g., --zero-is-NA=yes
+my $zero_is_NA = getOption("--zero-is-NA", \@param, 0, {"yes" => 1, "no" => 0});
+# e.g., --do-key-above-columns=yes --key-above-col-font=Helvetica,24
+my $do_key_above_columns = getOption("--do-key-above-columns", \@param, 0, {"yes" => 1, "no" => 0});
+my $key_above_col_font = getOption("--key-above-col-font", \@param, "Helvetica,18");
+my $key_above_col_gap = getOption("--key-above-col-gap", \@param, 1);
+
+#Srinath
+#option to explicitly specify labels
+my $str_label = getOption ("--set-label", \@param, "");
+my $str_label_x = getOption ("--set-label-x", \@param, 0);
+my $str_label_y = getOption ("--set-label-y", \@param, 0);
+
+#option to explicitly specify ytics
+my $str_ytics = getOption ("--set-ytics", \@param, "");
+
+#option to overlay errorlines with (low, high) on top of bars
+my $show_overlay_errorlines = getOption ("--show-overlay-errorlines",
+\@param, 0);
+my $errorline_width = getOption ("--errorline-width", \@param, 6);
+my $set_bars = getOption ("--set-bars", \@param, "");
+
+#option to specify grid line properties
+my $grid_display_options = getOption("--set-grid-display-options", \@param, "");
+my $str_margin_options = getOption("--set-margin-options", \@param, "");
+
+#
+# MDD -- chop off extra white space on left or right
+#
+# e.g., --chop-x-min=.5 --chop-x-max=.5
+my $chop_x_min = getOption ("--chop-x-min", \@param);
+my $chop_x_max = getOption ("--chop-x-max", \@param);
+
+# check for compulsory parameters
+my ($input_filename, $output_filename) = @param;
+if ((!defined $input_filename) ||
+	(!defined $output_filename))
+{
+	die "Input filename or output filename missing!\n";
+}
+
+
+#---- read in the data ----#
+my @data = ();
+open (DATA_FILE, "$input_filename");
+my $first_line = 1;
+while (<DATA_FILE>)
+{
+	my $line = $_;
+	chomp ($line);
+	$line =~ s/^\s+//;
+	$line =~ s/\s+$//;
+	next if ($line eq "");
+	if ($first_line && $first_data_line_as_legend)
+	{
+		$legendString = $line;
+		$first_line = 0;
+	}
+	else
+	{
+		my @data_line = split (/,/, $line);
+		push (@data, \@data_line);
+	}
+}
+close (DATA_FILE);
+
+if (scalar(@data) < 1)
+{
+	die "No data found!\n";
+}
+
+#---- preparation ----#
+# columns used
+if (! defined $columns_string)
+{
+	my $column_num = scalar (@{$data[0]});
+	@columns = ();
+	for (my $i = 0;$i < $column_num;++$i)
+	{
+		if ((! defined $x_axis_label_column) || ($x_axis_label_column != $i))
+		{
+			push (@columns, $i);
+		}
+	}
+}
+
+# legend
+@legends = split (/,/, $legendString) if (defined $legendString);
+
+# data size
+my $size = scalar (@data);
+my $source_num = scalar (@columns);
+
+# compute the ranges if needed
+# x-axis
+my $x_min;
+my $x_max;
+my $x_major_unit;
+
+#
+# MDD
+#
+#$x_min = 0;
+if ((!defined $chop_x_min)){
+    $x_min = 0;
+}
+else{
+    $x_min = $chop_x_min;
+}
+
+if ($chart_type == 0) # barchart
+{
+	$x_major_unit = $bar_chart_box_width * ($source_num + 2);
+	$x_major_unit = 1 if ($x_major_unit < 1);
+}
+elsif ($chart_type == 1)
+{
+	$x_major_unit = 1;
+}
+
+
+#
+# MDD
+#
+#$x_max = ($size + 1) * $x_major_unit;
+if ((!defined $chop_x_max)){
+    $x_max = ($size + 1) * $x_major_unit;
+}
+else{
+    $x_max = ($size + 1 - $chop_x_max) * $x_major_unit;
+}
+#/MDD
+
+my @x_values = ();
+if ($x_axis_type == 0)
+{
+	for (my $i = 0;$i < $size;++$i)
+	{
+		push (@x_values, ($i + 1 - $x_min) * $x_major_unit);
+	}
+}
+elsif ($x_axis_type == 1)
+{
+	# the column used for x-axis label must be specified
+	# and also all the values in this column must be numeric
+	# and in increasing order
+	if (! defined $x_axis_label_column)
+	{
+		die "Column for x-axis labels must be specified to use scale x-axis type\n";
+	}
+	for (my $i = 0;$i < $size;++$i)
+	{
+		if (! isNumeric ($data[$i]->[$x_axis_label_column]))
+		{
+			die "All values in x-axis label column must be numeric to use scale x-axis type\n";
+		}
+	}
+	for (my $i = 1;$i < $size;++$i)
+	{
+		if ($data[$i]->[$x_axis_label_column] <= 
+			$data[$i - 1]->[$x_axis_label_column])
+		{
+			die "Values in x-axis label column must be in increasing order to use scale x-axis type\n";
+		}
+	}
+	for (my $i = 0;$i < $size;++$i)
+	{
+		push (@x_values, (($data[$i]->[$x_axis_label_column] -
+			$data[0]->[$x_axis_label_column]) / 
+			($data[-1]->[$x_axis_label_column] - $data[0]->[$x_axis_label_column])
+			* ($size - 1) + 1 - $x_min) * $x_major_unit);
+	}
+}
+
+
+# y-axis
+# compute the average, min and max of data values
+my $y_min_auto;
+my $y_max_auto;
+my $y_major_unit_auto;
+{
+	my $average = 0;
+	my $count = 0;
+	$y_min_auto = 99999999;
+	$y_max_auto = -99999999;
+	for (my $i = 0;$i < scalar(@data);++$i)
+	{
+		for my $column (@columns)
+		{
+			if (defined $data[$i]->[$column])
+			{
+				my @hack_data_entries = split(/ /, $data[$i]->[$column]);
+				my $hack_data;
+				if (! isNumeric ($hack_data_entries[0]))
+				{
+					$hack_data = $data[$i]->[$column];
+				}
+				else 
+				{
+					$hack_data = $hack_data_entries[0];
+				}
+				
+				$y_min_auto = $hack_data if ($y_min_auto > $hack_data);
+				$y_max_auto = $hack_data if ($y_max_auto < $hack_data);
+				$average += $hack_data;
+				++$count;
+			}
+		}
+	}
+	$average /= $count;
+
+	$y_major_unit_auto = ($y_max_auto - $average) / 5;
+	if ($y_major_unit_auto < (($average - $y_min_auto) / 5))
+	{
+		$y_major_unit_auto = (($average - $y_min_auto) / 5);
+	}
+	
+	my $factor = 1;
+	while ($y_major_unit_auto < 1)
+	{
+		$factor *= 10;
+		$y_major_unit_auto *= 10;
+	}
+	$y_major_unit_auto = (int($y_major_unit_auto * 2) + 1) / 2 / $factor;
+	
+	$y_max_auto = int($average * $factor * 2) / 2 / $factor + 5 * $y_major_unit_auto;
+	$y_min_auto = int($average * $factor * 2) / 2 / $factor - 5 * $y_major_unit_auto;
+}
+if (! defined $y_min)
+{
+	$y_min = $y_min_auto;
+}
+if (! defined $y_max)
+{
+	$y_max = $y_max_auto;
+}
+if (! defined $y_major_unit)
+{
+	$y_major_unit = $y_major_unit_auto;
+}
+if (! defined $y_minor_unit)
+{
+	$y_minor_unit = $y_major_unit / 5;
+}
+
+#---- start drawing ----#
+
+my $draw_filename = "plot.plt";
+
+open (PLOT_FILE, ">$draw_filename");
+print PLOT_FILE "set terminal postscript eps \"Times-Roman,30\" enhanced monochrome\n";
+print PLOT_FILE "set output \"$output_filename\"\n";
+
+#Srinath: add labels if supplied
+if (defined $str_label)
+{
+	my $counter = 0;
+	my @labels = split ",", $str_label;
+	my @label_x = split ",", $str_label_x;
+	my @label_y = split ",", $str_label_y;
+	while ($counter <= $#labels)
+	{
+		print PLOT_FILE "set label \"" . $labels[$counter] . "\" rotate left at " .  $label_x[$counter] . "," . $label_y[$counter] . " font \"Times-Roman,24\"\n";
+		$counter = $counter + 1;
+	}
+}
+
+# titles
+if (defined $chart_title)
+{
+	print PLOT_FILE "set title \"$chart_title\"\n";
+}
+#MDD -- allow set fonts
+if (defined $set_label_fonts)
+{
+    print PLOT_FILE "set xlabel \"$x_axis_title\" font \"$set_label_fonts\"\n" if (defined $x_axis_title);
+    print PLOT_FILE "set ylabel \"$y_axis_title\" font \"$set_label_fonts\"\n" if (defined $y_axis_title);
+}
+else{
+    # Original
+    print PLOT_FILE "set xlabel \"$x_axis_title\"\n" if (defined $x_axis_title);
+    print PLOT_FILE "set ylabel \"$y_axis_title\"\n" if (defined $y_axis_title);
+}
+
+# axis
+print PLOT_FILE "set xrange [ $x_min : $x_max ]\n";
+print PLOT_FILE "set yrange [ $y_min : $y_max ]\n";
+print PLOT_FILE "set nomxtics\n";
+print PLOT_FILE "set mytics ", int($y_major_unit / $y_minor_unit),"\n";
+
+print PLOT_FILE "set xtics nomirror\n";
+print PLOT_FILE "set ytics nomirror\n";
+print PLOT_FILE "set border 3 lw 4\n";
+
+# MDD
+if (defined $set_key)
+{
+    print PLOT_FILE "set key $set_key\n";
+}
+
+# gridlines
+print PLOT_FILE "set grid ";
+if ($show_x_major_gridline)
+{
+	print PLOT_FILE "xtics ";
+}
+else
+{
+	print PLOT_FILE "noxtics ";
+}
+if ($show_y_major_gridline)
+{
+	print PLOT_FILE "ytics ";
+}
+else
+{
+	print PLOT_FILE "noytics ";
+}
+
+# specify line width for grid lines
+if ($grid_display_options ne "")
+{
+	print PLOT_FILE "$grid_display_options\n";
+}
+else
+{
+	# complete the previous line 
+	print PLOT_FILE "\n";
+}
+
+if ($str_margin_options ne "")
+{
+	print PLOT_FILE "set $str_margin_options\n";
+
+}
+
+
+# create x labels
+my @xtics = ();
+for (my $i = 0;$i < scalar (@data);++$i)
+{
+	if (defined $x_axis_label_column && $show_x_axis_label)
+	{
+		push (@xtics, '"'.$data[$i]->[$x_axis_label_column].'" '.$x_values[$i]);
+	}
+	else
+	{
+		push (@xtics, '"" '.$x_values[$i]);
+	}
+}
+    print PLOT_FILE "set xtics ";
+	print PLOT_FILE "rotate " if ($x_axis_label_rotate);
+#MDD -- provide option to set font
+# orig:	print PLOT_FILE "(", join (",", @xtics) ,")\n";
+        print PLOT_FILE "(", join (",", @xtics) ,")";
+if(defined $set_label_fonts){
+    print PLOT_FILE "font \"$set_label_fonts\"\n";
+}
+else{
+    print PLOT_FILE "\n";
+}
+
+
+#MDD -- provide option to set font
+if(defined $set_label_fonts){
+    #Srinath --use the explicit ytics
+		if ($str_ytics ne "")
+		{
+			print PLOT_FILE "set format y \"%1.1f\"\n";
+			print PLOT_FILE "set ytics ($str_ytics) font \"$set_label_fonts\"\n";
+		}
+		else
+		{
+			print PLOT_FILE "set ytics $y_major_unit font \"$set_label_fonts\"\n";
+		}
+}
+else{
+    # The original
+    print PLOT_FILE "set ytics $y_major_unit\n";
+}
+
+# scaling
+print PLOT_FILE "set size ", $x_scale, ", ", $y_scale, "\n";
+
+# data label - value
+if ($show_data_label_value)
+{
+	for (my $source_index = 0;$source_index < $source_num;++$source_index)
+	{
+		my $x_delta = $source_index - ($source_num - 1) / 2;
+		for (my $i = 0;$i < $size;++$i)
+		{
+
+#MDD -- if bar taller than graph, print label near top of graph and to right of bar
+#MDD -- if bar is zero and --zero-is-NA is set, then print "NA" instead of "0"
+#MDD -- rotate 90 degrees so the font can be bigger
+		    if($data[$i]->[$columns[$source_index]] < $y_max)
+		    {
+			# zero bar case
+			if(($zero_is_NA == 1) && ($data[$i]->[$columns[$source_index]] + 0 == 0))
+			{
+			    print PLOT_FILE "set label \"NA\" at first ", 
+			    $x_values[$i] + $x_delta * $bar_chart_box_width,
+			    ", first ",
+#			    $data[$i]->[$columns[$source_index]] + $y_minor_unit/2,
+			    $data[$i]->[$columns[$source_index]] + $y_minor_unit,
+#			    " center front\n";
+			    " font \"", $set_label_fonts, "\" center front rotate by 90\n";
+			}
+			else{
+			    #original case
+			    print PLOT_FILE "set label \"$data[$i]->[$columns[$source_index]]\" at first ", 
+			    $x_values[$i] + $x_delta * $bar_chart_box_width,
+			    ", first ",
+#			    $data[$i]->[$columns[$source_index]] + $y_minor_unit/2,
+			    $data[$i]->[$columns[$source_index]] + $y_minor_unit,
+#			    " center front\n";
+			    " font \"", $set_label_fonts, "\" center front rotate by 90\n";
+			}
+		    }
+		    else{
+			#taller bar case
+			print PLOT_FILE "set label \"$data[$i]->[$columns[$source_index]]\" at first ", 
+				$x_values[$i] + $x_delta * $bar_chart_box_width + $bar_chart_box_width/2,
+				", first ",
+				$y_max - $y_max/40,
+#				" left front\n";
+				" font \"", $set_label_fonts, "\" left front\n";
+		    }
+
+		}
+	}
+}
+
+if ($set_bars ne "")
+{
+    print PLOT_FILE "set bars $set_bars\n";
+}
+
+#MDD -- add option to put key over columns rather than separate key
+if($do_key_above_columns == 1)
+{
+    for (my $ndx = 0; $ndx < $source_num; ++$ndx)
+    {
+        my $xdel = $ndx - ($source_num - 1) / 2;
+        for (my $i = 0; $i < $size; ++$i)
+        {
+            my $xpos = $x_values[$i] + $xdel * $bar_chart_box_width;
+            my $ypos = $data[$i]->[$columns[$ndx]] + $key_above_col_gap;
+            print PLOT_FILE "set label \"$legends[$columns[$ndx]]\" at first $xpos, first $ypos center front font \"$key_above_col_font\"\n";
+        }
+    }
+    print PLOT_FILE "set nokey\n";
+
+}
+
+print PLOT_FILE "set boxwidth $bar_chart_box_width\n";
+print PLOT_FILE "plot";
+
+#
+# MDD: For NSDI camera ready -- the "empty" did not show up. ARGH!
+#
+#my @pattern = ("empty",
+#				"fs solid 0.25",
+#				"fs solid 0.5",
+#				"fill pattern 4",
+#				"fill pattern 5",
+#				"fill pattern 6",
+#				"fill pattern 1",
+#				"fill pattern 2",
+#				"fill pattern 7",
+#				"fill pattern 8",
+#				"fill pattern 9");
+
+my @pattern = ( "fs solid 0.8",
+				"fill pattern 5",
+				"fill pattern 6",
+				"fill pattern 1",
+				"fill pattern 4",
+				"fill pattern 2",
+				"fill pattern 7",
+				"fill pattern 3",
+				"fs solid 0.6",
+				"fs solid 0.4",
+				"fs solid 0.2",
+				"fill pattern 1");
+
+for (my $source_index = 0;$source_index < $source_num;++$source_index)
+{
+	print PLOT_FILE "," if ($source_index > 0);
+	print PLOT_FILE " '-' ";
+	
+  if ($chart_type == 0)
+	{
+		print PLOT_FILE " using 1:2 with boxes fill $pattern[$source_index] lt 1";
+	}
+	else
+	{
+		print PLOT_FILE " with linespoints";
+	}
+
+  if (($show_legend) && (defined $legends[$columns[$source_index]]))
+	{
+		print PLOT_FILE " title \"$legends[$columns[$source_index]]\"";
+	}
+	else
+	{
+		print PLOT_FILE " notitle";
+	}
+
+
+  if ($show_overlay_errorlines == 1)
+  {
+    print PLOT_FILE ", '-' using 1:2:3:4 notitle with errorbars lt 1 lw $errorline_width pt 4";
+  }
+}
+print PLOT_FILE "\n";
+
+for (my $source_index = 0;$source_index < $source_num;++$source_index)
+{
+	my $x_delta = $source_index - ($source_num - 1) / 2;
+	if ($chart_type != 0)
+	{
+		$x_delta = 0;
+	}
+	for (my $i = 0;$i < $size;++$i)
+	{
+		print PLOT_FILE $x_values[$i] + $x_delta * $bar_chart_box_width, 
+			" ", $data[$i]->[$columns[$source_index]], "\n";
+	}
+	print PLOT_FILE "e\n";
+
+  if ($show_overlay_errorlines == 1)
+  {
+    for (my $i = 0;$i < $size;++$i)
+	  {
+		  print PLOT_FILE $x_values[$i] + $x_delta * $bar_chart_box_width, 
+			  " ", $data[$i]->[$columns[$source_index]], "\n";
+	  }
+    print PLOT_FILE "e\n";
+  }
+}
+
+close (PLOT_FILE);
+
+#qx=gnuplot $draw_filename;rm -Rf $draw_filename=;
+qx=gnuplot $draw_filename=;
+
+
+#------------------------------------------------------------------------------#
+# Method getOption
+# Get option from an option array
+#
+# Usage:	CommandLineUtil::getOption ($flag, $optionArray, $default_value, $values);
+#
+# Param:
+#	$flag			: the option flag (needed)
+#	$optionArray	: the option array (needed)
+#	$default_value	: the default value to be used when the option is not defined
+#	$values			: value conversion hash, e.g. when user enter "yes", "no",
+#					  we would like to return 1 and 0 respectively, then use
+#					  $values as {"yes" => 1, "no" => 0}
+#
+# Return:	the value of the option
+#------------------------------------------------------------------------------#
+sub getOption
+{
+	# get the parameters
+	my ($flag, $optionArray, $default_value, $values) = @_;
+
+	my $size = scalar (@$optionArray);
+	for (my $i = 0;$i < $size;$i++)
+	{
+		my $token = $optionArray->[$i];
+		my $value = undef;
+		if ($token eq $flag)
+		{
+			if ($i == $size - 1)
+			{
+				die "Missing value for option $flag";
+			}
+			$value = $optionArray->[$i + 1];
+			splice (@$optionArray, $i, 2);
+		}
+		elsif ($token =~ m/^$flag=(.*)$/)
+		{
+			$value = $1;
+			splice (@$optionArray, $i, 1);
+		}
+		if (defined $value)
+		{
+			if (defined $values)
+			{
+				if (defined $values->{$value})
+				{
+					return $values->{$value};
+				}
+				else
+				{
+					die "Invalid parameter value. Possible values for \"$flag\" are [",
+						join (",", keys %{$values}), "]\n";
+				}
+			}
+			else
+			{
+				return $value;
+			}
+		}
+	}
+
+	return $default_value;
+}
+
+#------------------------------------------------------------------------------#
+# Method getFlag
+# Check if the flag is set in an option array
+#
+# Usage:	CommandLineUtil::getFlag ($flag, $optionArray)
+#
+# Param:
+#	$flag			: the flag of the option
+#	$optionArray	: the array reference to the option array
+#
+# Return:	1 if the flag is set, 0 otherwise
+#------------------------------------------------------------------------------#
+sub getFlag
+{
+	# get the parameters
+	my ($flag, $optionArray) = @_;
+
+	my $size = scalar (@$optionArray);
+	for (my $i = 0;$i < $size;$i++)
+	{
+		my $token = $optionArray->[$i];
+		if ($token eq $flag)
+		{
+			splice (@$optionArray, $i, 1);
+			return 1;
+		}
+	}
+
+	return 0;
+}
+
+sub isNumeric
+{
+	my ($value) = @_;
+	return $value =~ m/^(\d+\.?\d*|\.\d+)$/;
+}
