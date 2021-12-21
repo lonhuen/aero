@@ -296,10 +296,10 @@ impl ConstraintSynthesizer<ArkFr> for Benchmark {
             .collect::<Vec<_>>();
         let out = neptune::circuit::poseidon_hash(&cs, data, &constants)
             .expect("poseidon hashing failed");
-        // println!("# of constraints {}", cs.num_constraints());
-        // println!("# of instances {}", cs.num_instance_variables());
-        // println!("# of witness {}", cs.num_witness_variables());
-        // println!("# of lc{}", cs.borrow().unwrap().num_linear_combinations);
+        println!("# of constraints {}", cs.num_constraints());
+        println!("# of instances {}", cs.num_instance_variables());
+        println!("# of witness {}", cs.num_witness_variables());
+        println!("# of lc{}", cs.borrow().unwrap().num_linear_combinations);
         Ok(())
     }
 }

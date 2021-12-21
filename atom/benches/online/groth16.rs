@@ -35,6 +35,11 @@ use std::{env, fs::OpenOptions, path::PathBuf, process};
 
 mod constraints;
 use crate::constraints::Benchmark;
+use cpu_time::ProcessTime;
+#[inline]
+pub fn duration_to_sec(d: &Duration) -> f64 {
+    d.subsec_nanos() as f64 / 1_000_000_000f64 + (d.as_secs() as f64)
+}
 
 fn main() -> Result<(), Box<dyn Error>> {
     // This may not be cryptographically safe, use
@@ -50,11 +55,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         // generate_random_parameters::<MNT4_753, _, _>(c, rng)?
     };
 
+    let cpu_start = ProcessTime::now();
     // proof_vec.truncate(0);
     let proof = {
         // Create a proof with our parameters.
         create_random_proof(c, &params, rng)?
     };
+    let cpu_time = cpu_start.elapsed();
+    println!("proof cpu time {}", duration_to_sec(&cpu_time));
 
     let mut buf: Vec<u8> = Vec::new();
     proof.serialize(&mut buf).unwrap();

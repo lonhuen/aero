@@ -25,6 +25,7 @@ use std::{
 // use ark_bls12_377::{Bls12_377, Fr};
 use ark_bls12_381::{Bls12_381, Fr};
 // use bellperson::bls::{Bls12, Fr};
+use cpu_time::ProcessTime;
 
 // We're going to use the Groth 16 proving system.
 use ark_groth16::{
@@ -35,6 +36,10 @@ use std::{env, fs::OpenOptions, path::PathBuf, process};
 
 mod constraints;
 use crate::constraints::Benchmark;
+#[inline]
+pub fn duration_to_sec(d: &Duration) -> f64 {
+    d.subsec_nanos() as f64 / 1_000_000_000f64 + (d.as_secs() as f64)
+}
 
 fn main() -> Result<(), Box<dyn Error>> {
     // This may not be cryptographically safe, use
@@ -50,11 +55,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         // generate_random_parameters::<MNT4_753, _, _>(c, rng)?
     };
 
+    let cpu_start = ProcessTime::now();
     // proof_vec.truncate(0);
     let proof = {
         // Create a proof with our parameters.
         create_random_proof(c, &params, rng)?
     };
+    let cpu_time = cpu_start.elapsed();
+    println!("proof cpu time {}", duration_to_sec(&cpu_time));
 
     let mut buf: Vec<u8> = Vec::new();
     proof.serialize(&mut buf).unwrap();

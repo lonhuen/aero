@@ -40,7 +40,7 @@ set style line 1 lc rgb 'orange' dt 1 lt 1 lw 9 pt 7 pi -1 ps 3.5
 set style line 2 lc rgb 'blue' dt 1 lt 1 lw 7 pt 9 pi -1 ps 3.5
 plot \
 'dat/${EXPNAME}.dat' using 1:(\$2/1000000000) with linespoints ls 1 title 'Aero',\
-'dat/${EXPNAME}.dat' using 1:(\$3/1000000000) with linespoints ls 2 title 'HoneyCrisp',\
+'dat/${EXPNAME}.dat' using 1:(\$3/1000000000) with linespoints ls 2 title 'Baseline',\
 " > plot.plt
 gnuplot plot.plt
 epspdf $EPS

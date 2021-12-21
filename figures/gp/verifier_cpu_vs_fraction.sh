@@ -43,7 +43,7 @@ set style line 3 lc rgb 'black' dt 1 lt 1 lw 7 pt 4 pi -1 ps 3.0
 plot \
 'dat/${EXPNAME}.dat' using 1:(\$2) with linespoints ls 1 title 'Aero w',\
 'dat/${EXPNAME}.dat' using 1:(\$3) with linespoints ls 2 title 'Aero wo',\
-'dat/${EXPNAME}.dat' using 1:(\$4) with linespoints ls 3 title 'HoneyCrisp',\
+'dat/${EXPNAME}.dat' using 1:(\$4) with linespoints ls 3 title 'Baseline',\
 " > plot.plt
 gnuplot plot.plt
 epspdf $EPS

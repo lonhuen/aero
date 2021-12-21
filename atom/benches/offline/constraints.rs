@@ -337,17 +337,15 @@ impl ConstraintSynthesizer<ArkFr> for Benchmark {
         //        .expect("poseidon hashing failed");
         //}
         let data: Vec<AllocatedNum<Bls12>> = r_agg_val_vec
-                .iter()
-                .map(|x| {
-                    AllocatedNum::alloc(&cs, || Ok(neptune::bls381num::ark2bp(*x))).unwrap()
-                })
-                .collect::<Vec<_>>();
+            .iter()
+            .map(|x| AllocatedNum::alloc(&cs, || Ok(neptune::bls381num::ark2bp(*x))).unwrap())
+            .collect::<Vec<_>>();
         let _out = neptune::circuit::poseidon_hash(&cs, data, &constants)
             .expect("poseidon hashing failed");
-        //println!("# of constraints {}", cs.num_constraints());
-        //println!("# of instances {}", cs.num_instance_variables());
-        //println!("# of witness {}", cs.num_witness_variables());
-        //println!("# of lc{}", cs.borrow().unwrap().num_linear_combinations);
+        println!("# of constraints {}", cs.num_constraints());
+        println!("# of instances {}", cs.num_instance_variables());
+        println!("# of witness {}", cs.num_witness_variables());
+        println!("# of lc{}", cs.borrow().unwrap().num_linear_combinations);
         Ok(())
     }
 }

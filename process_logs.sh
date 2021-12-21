@@ -5,6 +5,7 @@ COMMITTEE=46
 #CLIENT=30
 
 CLIENT=$(grep -h -r "nr_real" ${LOG_DIR}/config.yaml | awk '{print $2}')
+ROUND=$(grep -h -r "nr_round" ${LOG_DIR}/config.yaml | awk '{print $2}')
 grep -h -r "nr_real" ${LOG_DIR}/config.yaml
 echo "Check that the total # of clients per instance is $CLIENT"
 echo "Check that the # of committees per instance is $COMMITTEE"
@@ -35,12 +36,12 @@ echo "($user + $sys)/$COMMITTEE" | bc -l
 echo "Prover Network (B)"
 #total_prover=$(grep -h -m 1 -r "sent bytes" ${LOG_DIR} --include "total.log"  | awk '{total += $3; count++} END {printf("%f\n",total/count)}')
 total_prover=$(find ${LOG_DIR} -type f -name "total.log" -print0 | xargs -0 grep -h -m 1 -r "sent bytes" | awk '{total += $3} END {printf("%f\n",total)}')
-echo "$total_prover/$CLIENT" | bc -l
+echo "$total_prover/$CLIENT/$ROUND" | bc -l
 #echo "Prover Latency (s)"
 
 echo "Verifier Network (B)"
 total_verifier=$(find ${LOG_DIR} -type f -name "total.log" -print0 | xargs -0 grep -h -m 1 -r "recv bytes" | awk '{total += $3} END {printf("%f\n",total)}')
-echo "$total_verifier/$CLIENT" | bc -l
+echo "$total_verifier/$CLIENT/$ROUND" | bc -l
 
 echo "Committee Offline Network (B)"
 total_offline=$(find ${LOG_DIR} -type f -name "committee_offline$((COMMITTEE-1)).log" -print0 | xargs -0 grep -h -m 1 -r "sent bytes" | awk '{total += $3} END {printf("%f\n",total)}')
@@ -51,6 +52,11 @@ echo "Committee Online Network (B)"
 #total_online=$(grep -h -m 1 -r "sent bytes" ${LOG_DIR} "committee_online${COMMITTEE}.log"  | awk '{printf("%f\n",$3)}')
 total_online=$(find ${LOG_DIR} -type f -name "committee_online$((COMMITTEE-1)).log" -print0 | xargs -0 grep -h -m 1 -r "sent bytes" | awk '{total += $3} END {printf("%f\n",total)}')
 echo "$total_online/$COMMITTEE" | bc -l
+
+# Proof generation time
+echo "Proof Generation Latency(s)"
+grep -h -r "End:     start proof generation" ${LOG_DIR} | sed 's|[^0-9]*\([0-9\.]*\)|\1 |g' | awk '{total += $1; count++} END {printf("%f\n",total/count)}'
+
 
 #echo "Committee Reshare Network (B)"
 #grep -h -m 1 -r "sent bytes" ${LOG_DIR} "committee_reshare${IID}.log"  | awk '{printf("%f\n",$3)}'
