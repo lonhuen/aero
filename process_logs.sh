@@ -1,6 +1,6 @@
 #! /bin/bash
 LOG_DIR=$1
-COMMITTEE=46
+COMMITTEE=45
 #CLIENT=32
 #CLIENT=30
 
@@ -44,14 +44,16 @@ total_verifier=$(find ${LOG_DIR} -type f -name "total.log" -print0 | xargs -0 gr
 echo "$total_verifier/$CLIENT/$ROUND" | bc -l
 
 echo "Committee Offline Network (B)"
-total_offline=$(find ${LOG_DIR} -type f -name "committee_offline$((COMMITTEE-1)).log" -print0 | xargs -0 grep -h -m 1 -r "sent bytes" | awk '{total += $3} END {printf("%f\n",total)}')
+total_offline_sent=$(find ${LOG_DIR} -type f -name "committee_offline$((COMMITTEE-1)).log" -print0 | xargs -0 grep -h -m 1 -r "sent bytes" | awk '{total += $3} END {printf("%f\n",total)}')
+total_offline_recv=$(find ${LOG_DIR} -type f -name "committee_offline$((COMMITTEE-1)).log" -print0 | xargs -0 grep -h -m 1 -r "recv bytes" | awk '{total += $3} END {printf("%f\n",total)}')
 #total_offline=$(grep -h -m 1 -r "sent bytes" ${LOG_DIR} "committee_offline${COMMITTEE}.log"  | awk '{printf("%f\n",$3)}')
-echo "$total_offline/$COMMITTEE" | bc -l
+echo "($total_offline_sent+$total_offline_recv)/$COMMITTEE" | bc -l
 
 echo "Committee Online Network (B)"
 #total_online=$(grep -h -m 1 -r "sent bytes" ${LOG_DIR} "committee_online${COMMITTEE}.log"  | awk '{printf("%f\n",$3)}')
-total_online=$(find ${LOG_DIR} -type f -name "committee_online$((COMMITTEE-1)).log" -print0 | xargs -0 grep -h -m 1 -r "sent bytes" | awk '{total += $3} END {printf("%f\n",total)}')
-echo "$total_online/$COMMITTEE" | bc -l
+total_online_sent=$(find ${LOG_DIR} -type f -name "committee_online$((COMMITTEE-1)).log" -print0 | xargs -0 grep -h -m 1 -r "sent bytes" | awk '{total += $3} END {printf("%f\n",total)}')
+total_online_recv=$(find ${LOG_DIR} -type f -name "committee_online$((COMMITTEE-1)).log" -print0 | xargs -0 grep -h -m 1 -r "recv bytes" | awk '{total += $3} END {printf("%f\n",total)}')
+echo "($total_online_sent+$total_online_recv)/$COMMITTEE" | bc -l
 
 # Proof generation time
 echo "Proof Generation Latency(s)"

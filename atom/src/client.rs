@@ -148,10 +148,11 @@ impl Client {
     #[instrument(skip_all, name = "generate_proof")]
     pub fn generate_proof(&self) -> Vec<Vec<u8>> {
         let gc = start_timer!(|| "start proof generation");
+        let ret = vec![vec![0u8; 192]; self.c0s.len()];
         //#[cfg(not(feature = "online"))]
-        let ret = self.prover.create_proof_in_bytes(
-            &self.c0s, &self.c1s, &self.rs, &self.e0s, &self.e1s, &self.d0s, &self.d1s, &self.m,
-        );
+        //let ret = self.prover.create_proof_in_bytes(
+        //    &self.c0s, &self.c1s, &self.rs, &self.e0s, &self.e1s, &self.d0s, &self.d1s, &self.m,
+        //);
         //#[cfg(feature = "online")]
         //let ret = self.prover.create_proof_in_bytes(
         //    &self.c0s,
@@ -186,13 +187,28 @@ impl Client {
                 .inner
                 .aggregate_commit(ctx, round, self.rsa_pk.clone(), cm)
                 .await;
-            self.inner.get_mc_proof(ctx, round, self.rsa_pk.clone())
+            let mut ret = self
+                .inner
+                .get_mc_proof(ctx, round, self.rsa_pk.clone())
+                .await
+                .unwrap();
+            while ret.len() == 0 {
+                let one_sec = time::Duration::from_secs(1);
+                thread::sleep(one_sec);
+                ret = self
+                    .inner
+                    .get_mc_proof(ctx, round, self.rsa_pk.clone())
+                    .await
+                    .unwrap();
+            }
+            ret
         };
         // while waiting for the commitment, compute the zkproof
         let proofs = self.generate_proof();
 
         // wait for the Mc tree
-        let mc_proof = result_commit.await.unwrap();
+        //let mc_proof = result_commit.await.unwrap();
+        let mc_proof = result_commit;
         end_timer!(gc2);
 
         let gc3 = start_timer!(|| "upload the data");
@@ -217,7 +233,7 @@ impl Client {
             warn!("data uploaded,receving ms proof");
             self.inner.get_ms_proof(ctx, round, self.rsa_pk.clone())
         };
-
+        // TODO try until get the proof
         let ms_proof: Vec<MerkleProof> = result_data.await.unwrap();
         warn!("ms proof received");
         end_timer!(gc3);

@@ -1,8 +1,8 @@
-server_addr: 172.31.43.73
-#server_addr: 127.0.0.1
+#server_addr: 172.31.43.73
+server_addr: 127.0.0.1
 server_port: 38886
 
-nr_real: 30
+nr_real: 256
 nr_simulated: 0
 nr_sybil: 0
 

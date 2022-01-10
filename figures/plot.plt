@@ -1,29 +1,31 @@
 
 set terminal postscript eps 'Times-Roman,30' color 
 set terminal postscript eps 'Times-Roman,30' color size 6.3,4
-set output 'graphs/committee_network_vs_model_size.eps'
-set xrange [ 1: 1000 ]
-set xtics nomirror font 'Times-Roman, 39' offset 0,-0.1
+set output 'graphs/committee_cpu_vs_failure_probability.eps'
+set xtics nomirror font 'Times-Roman, 45' offset 0,-0.1
 set nomxtics
-set logscale x 10
-set xlabel "# of CTs" font 'Times-Roman,39'
-set yrange [ 0.01 : 20637 ]
-set ylabel "Committee Network (GB)\n " font 'Times-Roman,39' offset -0.0,0.0
-set ytics nomirror font 'Times-Roman, 39'
+set xrange [0.00001 : 0.000000000001] reverse
+set logscale x 100
+set logscale y 10
+set format x '10^{%T}'
+set xlabel "Failure Probability" font 'Times-Roman,45'
+set ylabel "Committee CPU time (s)\n " font 'Times-Roman,39' offset -0.0,0.0
+set ytics nomirror font 'Times-Roman, 45'
 set nomytics
-set ytics 10
+#set ytics 60
 #set format y '2^{%T}'
 #set format y '%E'
-set logscale y 10
 set grid noxtics noytics
 set grid ytics lw -1
 set border 3 lw 4
-set key top left
-set bmargin 3.5
+set key at 0.00000000005,1000
+set bmargin 3.2
 set pointsize 2.0
 set style function linespoints
-set style line 1 lw 4 lc rgb '#888888' ps 2 pt 7 pi 4
-set style line 2 lt 7 pt 14 lc rgb '#000000'
-set style line 1 lc rgb 'orange' dt 1 lt 1 lw 9 pt 7 pi -1 ps 3.5
-set style line 2 lc rgb 'blue' dt 1 lt 1 lw 7 pt 9 pi -1 ps 3.5
-plot 'dat/committee_network_vs_model_size.dat' using 1:($2/1000000000) with linespoints ls 1 title 'Aero','dat/committee_network_vs_model_size.dat' using 1:($3/1000000000) with linespoints ls 2 title 'Baseline',
+#set style line 1 lw 4 lc rgb '#888888' ps 2 pt 7 pi 4
+#set style line 2 lt 7 pt 14 lc rgb '#000000'
+set style line 1 lc rgb 'blue' dt 1 lt 1 lw 9 pt 12 pi -1 ps 3.5
+set style line 2 lc rgb 'red' dt 1 lt 1 lw 7 pt 9 pi -1 ps 3.5
+set style line 3 lc rgb 'black' dt 1 lt 1 lw 7 pt 4 pi -1 ps 3.5
+set style line 4 lc rgb 'orange' dt 1 lt 1 lw 9 pt 7 pi -1 ps 3.5
+plot 'dat/committee_cpu_vs_failure_probability.dat' using 1:($2) with linespoints ls 1 title 'f=0.05, # of committees=  1','dat/committee_cpu_vs_failure_probability.dat' using 1:($3) with linespoints ls 2 title 'f=0.05, # of committees=10','dat/committee_cpu_vs_failure_probability.dat' using 1:($4) with linespoints ls 3 title 'f=0.03, # of committees=  1','dat/committee_cpu_vs_failure_probability.dat' using 1:($5) with linespoints ls 4 title 'f=0.03, # of committees=10',

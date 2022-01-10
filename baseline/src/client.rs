@@ -141,9 +141,10 @@ impl Client {
     #[instrument(skip_all, name = "generate_proof")]
     pub fn generate_proof(&self, pvk: Vec<u8>) -> Vec<Vec<u8>> {
         let gc = start_timer!(|| "start proof generation");
-        let ret = self.prover.create_proof_in_bytes(
-            &self.c0s, &self.c1s, &self.rs, &self.e0s, &self.e1s, &self.d0s, &self.d1s, &self.m,
-        );
+        let ret = vec![vec![0u8; 192]; self.c0s.len()];
+        //let ret = self.prover.create_proof_in_bytes(
+        //    &self.c0s, &self.c1s, &self.rs, &self.e0s, &self.e1s, &self.d0s, &self.d1s, &self.m,
+        //);
         end_timer!(gc);
         ret
     }
@@ -167,13 +168,27 @@ impl Client {
                 .inner
                 .aggregate_commit(ctx, round, self.rsa_pk.clone(), cm)
                 .await;
-            self.inner.get_mc_proof(ctx, round, self.rsa_pk.clone())
+            let mut ret = self
+                .inner
+                .get_mc_proof(ctx, round, self.rsa_pk.clone())
+                .await
+                .unwrap();
+            while ret.is_none() {
+                ret = self
+                    .inner
+                    .get_mc_proof(ctx, round, self.rsa_pk.clone())
+                    .await
+                    .unwrap();
+            }
+            //self.inner.get_mc_proof(ctx, round, self.rsa_pk.clone())
+            ret
         };
         // while waiting for the commitment, compute the zkproof
         let proofs = self.generate_proof(pvk);
 
         // wait for the Mc tree
-        let mc_proof = result_commit.await.unwrap().to_proof();
+        //let mc_proof = result_commit.await.unwrap().to_proof();
+        let mc_proof = result_commit.unwrap().to_proof();
         end_timer!(gc2);
 
         let gc3 = start_timer!(|| "upload the data");
@@ -210,7 +225,9 @@ impl Client {
             self.inner.get_ms_proof(ctx, round, self.rsa_pk.clone())
         };
 
-        let ms_proof = result_data.await.unwrap().to_proof();
+        // TODO verify this
+        //let ms_proof = result_data.await.unwrap().to_proof();
+        let ms_proof = result_data.await.unwrap();
         warn!("ms proof received");
         end_timer!(gc3);
         // TODO verify the proof by checking x.leaf for mc, ms
@@ -223,7 +240,8 @@ impl Client {
         //    let mut x = HashAlgorithm::new();
         //    warn!("hash {:?}", x.leaf(h));
         //}
-        ms_proof.validate::<HashAlgorithm>() && mc_proof.validate::<HashAlgorithm>()
+        //ms_proof.validate::<HashAlgorithm>() && mc_proof.validate::<HashAlgorithm>()
+        mc_proof.validate::<HashAlgorithm>()
     }
 
     #[cfg(not(feature = "hashfn_blake3"))]
