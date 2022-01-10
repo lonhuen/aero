@@ -9,7 +9,7 @@ if [ ! -d "${BASE_DIR}" ]; then
 	exit
 fi
 
-if [[ "$app" != "offline" ]] && [[ "$app" != "online" ]]; then
+if [[ "$app" != "offline" ]] && [[ "$app" != "online" ]] && [[ "$app" != "reshare" ]]; then
 	echo "./run_committee.sh online/offline"
 	exit
 fi
@@ -28,7 +28,9 @@ scp -i ${BASE_DIR}/data/aws01.pem ${BASE_DIR}/run_committee.sh ubuntu@${w}:${BAS
 
 # start running the aggregator
 cd ${BASE_DIR}
-./atom/target/release/aggregator_$app 2>&1 >/dev/null &
+if [[ "$app" == "online" ]] ; then
+	./atom/target/release/aggregator_$app 2>&1 >/dev/null &
+fi
 #ssh -i ${BASE_DIR}/data/aws01.pem ubuntu@${w} "cd ${BASE_DIR} && ./atom/target/release/aggregator_$app" 2>/dev/null >/dev/null &
 # update the config file and running scripts
 ssh -i ${BASE_DIR}/data/aws01.pem ubuntu@${w} "cd ${BASE_DIR} && ./run_committee.sh $app" 2>/dev/null >/dev/null
