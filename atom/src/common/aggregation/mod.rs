@@ -108,7 +108,7 @@ impl McTree {
 // since Vector is in heap, the sort won't move the actual data. just the pointer will be moved.
 pub struct MsTree {
     pub nr_real: u32,
-    //pub nr_sybil: u32,
+    pub nr_sybil: u32,
     pub nr_non_leaf: u32,
     pub random_pt: i128,
     pub summation_array: Vec<SummationEntry>,
@@ -120,7 +120,7 @@ impl MsTree {
         MsTree {
             nr_real,
             nr_non_leaf,
-            //nr_sybil,
+            nr_sybil,
             summation_array: Vec::with_capacity(nr_real as usize),
             ms: None,
             // TODO get this from the committee
@@ -220,7 +220,7 @@ impl MsTree {
                             [0u8; 32]
                         }
                     })
-                    // .chain((0..(2 * self.nr_sybil)).into_par_iter().map(|_| [0u8; 32]))
+                    .chain((0..(2 * self.nr_sybil)).into_par_iter().map(|_| [0u8; 32]))
                     .collect::<Vec<[u8; 32]>>(),
             ));
             end_timer!(gc);

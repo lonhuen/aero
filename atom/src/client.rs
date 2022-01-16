@@ -209,6 +209,7 @@ impl Client {
         // wait for the Mc tree
         //let mc_proof = result_commit.await.unwrap();
         let mc_proof = result_commit;
+        println!("{:?}", mc_proof);
         end_timer!(gc2);
 
         let gc3 = start_timer!(|| "upload the data");
