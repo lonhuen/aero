@@ -359,7 +359,8 @@ impl Server {
             .unwrap();
 
         let mut rng = rand::rngs::StdRng::from_entropy();
-        (0..self.nr_parameter).map(|_| rng.gen::<u8>()).collect()
+        //(0..self.nr_parameter).map(|_| rng.gen::<u8>()).collect()
+        (0..self.nr_parameter).map(|_| 0u8).collect()
     }
 
     //type RetrieveProvingKeyFut = Ready<Vec<u8>>;

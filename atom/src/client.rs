@@ -25,6 +25,7 @@ use tracing::{error, event, instrument, span, warn, Level};
 
 use rand::{Rng, SeedableRng};
 use rsa::{pkcs8::ToPublicKey, RsaPrivateKey, RsaPublicKey};
+use std::io::prelude::*;
 use std::time::Duration;
 use std::time::SystemTime;
 use std::{fs::File, io::BufReader, net::IpAddr};
@@ -148,7 +149,10 @@ impl Client {
     #[instrument(skip_all, name = "generate_proof")]
     pub fn generate_proof(&self) -> Vec<Vec<u8>> {
         let gc = start_timer!(|| "start proof generation");
-        let ret = vec![vec![0u8; 192]; self.c0s.len()];
+        let mut file = File::open("./data/proof.txt").unwrap();
+        let mut buffer = Vec::<u8>::new();
+        file.read_to_end(&mut buffer).unwrap();
+        let ret = vec![buffer; self.c0s.len()];
         //#[cfg(not(feature = "online"))]
         //let ret = self.prover.create_proof_in_bytes(
         //    &self.c0s, &self.c1s, &self.rs, &self.e0s, &self.e1s, &self.d0s, &self.d1s, &self.m,
