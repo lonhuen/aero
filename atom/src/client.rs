@@ -11,6 +11,7 @@ use crate::common::{i128vec_to_le_bytes, summation_array_size, ZKProof};
 use crate::util::{config::ConfigUtils, log::init_tracing};
 use crate::zksnark::Verifier;
 use ark_std::{end_timer, start_timer};
+use bincode::deserialize_from;
 use cpu_time::ProcessTime;
 //#[cfg(not(feature = "online"))]
 use quail::zksnark::Prover;
@@ -213,7 +214,7 @@ impl Client {
         // wait for the Mc tree
         //let mc_proof = result_commit.await.unwrap();
         let mc_proof = result_commit;
-        println!("{:?}", mc_proof);
+        //println!("{:?}", mc_proof);
         end_timer!(gc2);
 
         let gc3 = start_timer!(|| "upload the data");
@@ -377,6 +378,15 @@ impl Client {
         if ret.len() == 0 {
             return;
         }
+        let ct0: Vec<i128> = {
+            let mut f = BufReader::new(File::open("./data/ct0.txt").unwrap());
+            deserialize_from(&mut f).unwrap()
+        };
+        let ct1: Vec<i128> = {
+            let mut f = BufReader::new(File::open("./data/ct1.txt").unwrap());
+            deserialize_from(&mut f).unwrap()
+        };
+        let inputs: Vec<i128> = ct0.iter().cloned().chain(ct1.iter().cloned()).collect();
 
         // verify all the leafs
         let gc2 = start_timer!(|| "verify the proofs");
@@ -390,8 +400,8 @@ impl Client {
                     "wrong merkle proofs"
                 );
                 if let SummationEntry::Leaf(s) = &ms_node.0 {
-                    let inputs: Vec<i128> =
-                        s.c0.iter().cloned().chain(s.c1.iter().cloned()).collect();
+                    //let inputs: Vec<i128> =
+                    //    s.c0.iter().cloned().chain(s.c1.iter().cloned()).collect();
                     let _proof = self.verifier.verify_proof_from_bytes(&s.proof, &inputs);
                     //println!("verify the zkproof {:?}", _proof);
                     //assert!(_proof);

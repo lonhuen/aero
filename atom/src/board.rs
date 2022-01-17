@@ -101,6 +101,23 @@ fn main() {
         // Write a slice of bytes to the file
         file.write_all(&ret[0]).unwrap();
     }
+    {
+        let mut f = BufWriter::new(File::create("./data/ct0.txt").unwrap());
+        serialize_into(&mut f, &c0s[0]).unwrap();
+    }
+    {
+        let mut f = BufWriter::new(File::create("./data/ct1.txt").unwrap());
+        serialize_into(&mut f, &c1s[0]).unwrap();
+    }
+    let ct0: Vec<i128> = {
+        let mut f = BufReader::new(File::open("./data/ct0.txt").unwrap());
+        deserialize_from(&mut f).unwrap()
+    };
+    let ct1: Vec<i128> = {
+        let mut f = BufReader::new(File::open("./data/ct1.txt").unwrap());
+        deserialize_from(&mut f).unwrap()
+    };
+    let inputs: Vec<i128> = ct0.iter().cloned().chain(ct1.iter().cloned()).collect();
     let mut file = File::open("./data/proof.txt").unwrap();
     let mut buffer = Vec::<u8>::new();
     file.read_to_end(&mut buffer).unwrap();
