@@ -14,7 +14,7 @@ echo "
 set terminal postscript eps 'Times-Roman,30' color 
 set terminal postscript eps 'Times-Roman,30' color size 6.3,4
 set output 'graphs/$GRAPHNAME.eps'
-set xrange [ 1: 100 ]
+set xrange [ 0.1: 100 ]
 set xtics nomirror font 'Times-Roman, 35' offset 0,-0.1
 set nomxtics
 set logscale x 10

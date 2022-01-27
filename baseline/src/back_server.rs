@@ -206,66 +206,66 @@ impl Server {
     }
 
     //type GetMcProofFut = Ready<MerkleProof>;
-    pub fn get_mc_proof(&self, round: u32, rsa_pk: Vec<u8>) -> Option<MerkleProof> {
+    pub fn get_mc_proof(&self, round: u32, rsa_pk: Vec<u8>) -> MerkleProof {
         let (lock, cvar) = &*self.cond;
         let mut state = lock.lock().unwrap();
-        // // if never possible to get the lock, return
-        // if !Self::is_waitable(&*state, (STAGE::Data, round)) {
-        //     return MerkleProof {
-        //         lemma: Vec::new(),
-        //         path: Vec::new(),
-        //     };
-        // }
-        // // otherwise wait till the state
-        // state = cvar
-        //     .wait_while(state, |state| match state.0 {
-        //         STAGE::Data => false,
-        //         _ => true,
-        //     })
-        //     .unwrap();
-        // let mc = self.mc.as_ref().read().unwrap();
-        // drop(state);
-        //mc.get_proof(&rsa_pk)
-        let ret = match state.0 {
-            STAGE::Data => {
-                let mc = self.mc.as_ref().read().unwrap();
-                Some(mc.get_proof(&rsa_pk))
-            }
-            _ => None,
-        };
-        ret
+        // if never possible to get the lock, return
+        if !Self::is_waitable(&*state, (STAGE::Data, round)) {
+            return MerkleProof {
+                lemma: Vec::new(),
+                path: Vec::new(),
+            };
+        }
+        // otherwise wait till the state
+        state = cvar
+            .wait_while(state, |state| match state.0 {
+                STAGE::Data => false,
+                _ => true,
+            })
+            .unwrap();
+        let mc = self.mc.as_ref().read().unwrap();
+        drop(state);
+        mc.get_proof(&rsa_pk)
+        //let ret = match state.0 {
+        //    STAGE::Data => {
+        //        let mc = self.mc.as_ref().read().unwrap();
+        //        Some(mc.get_proof(&rsa_pk))
+        //    }
+        //    _ => None,
+        //};
+        //ret
     }
 
     //type GetMsProofFut = Ready<MerkleProof>;
-    pub fn get_ms_proof(&self, round: u32, rsa_pk: Vec<u8>) -> Option<MerkleProof> {
+    pub fn get_ms_proof(&self, round: u32, rsa_pk: Vec<u8>) -> MerkleProof {
         let (lock, cvar) = &*self.cond;
         let mut state = lock.lock().unwrap();
-        // // if never possible to get the lock, return
-        // if !Self::is_waitable(&*state, (STAGE::Verify, round)) {
-        //     return MerkleProof {
-        //         lemma: Vec::new(),
-        //         path: Vec::new(),
-        //     };
-        // }
-        // // otherwise wait till the state
-        // state = cvar
-        //     .wait_while(state, |state| match state.0 {
-        //         STAGE::Verify => false,
-        //         _ => true,
-        //     })
-        //     .unwrap();
-        // let ms = self.ms.as_ref().read().unwrap();
-        // drop(state);
-        // ms.get_proof(&rsa_pk)
-        let ret = match state.0 {
-            STAGE::Verify => {
-                let ms = self.ms.as_ref().read().unwrap();
-                drop(state);
-                Some(ms.get_proof(&rsa_pk))
-            }
-            _ => None,
-        };
-        ret
+        // if never possible to get the lock, return
+        if !Self::is_waitable(&*state, (STAGE::Verify, round)) {
+            return MerkleProof {
+                lemma: Vec::new(),
+                path: Vec::new(),
+            };
+        }
+        // otherwise wait till the state
+        state = cvar
+            .wait_while(state, |state| match state.0 {
+                STAGE::Verify => false,
+                _ => true,
+            })
+            .unwrap();
+        let ms = self.ms.as_ref().read().unwrap();
+        drop(state);
+        ms.get_proof(&rsa_pk)
+        //let ret = match state.0 {
+        //    STAGE::Verify => {
+        //        let ms = self.ms.as_ref().read().unwrap();
+        //        drop(state);
+        //        Some(ms.get_proof(&rsa_pk))
+        //    }
+        //    _ => None,
+        //};
+        //ret
     }
 
     //type VerifyFut = Ready<Vec<(SummationEntry, MerkleProof)>>;

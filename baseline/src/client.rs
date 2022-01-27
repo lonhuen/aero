@@ -19,6 +19,7 @@ use tracing::{error, event, instrument, span, warn, Level};
 
 use rand::{Rng, SeedableRng};
 use rsa::{pkcs8::ToPublicKey, RsaPrivateKey, RsaPublicKey};
+use std::io::prelude::*;
 use std::sync::Arc;
 use std::time::Duration;
 use std::time::SystemTime;
@@ -141,7 +142,11 @@ impl Client {
     #[instrument(skip_all, name = "generate_proof")]
     pub fn generate_proof(&self, pvk: Vec<u8>) -> Vec<Vec<u8>> {
         let gc = start_timer!(|| "start proof generation");
-        let ret = vec![vec![0u8; 192]; self.c0s.len()];
+        //let ret = vec![vec![0u8; 192]; self.c0s.len()];
+        let mut file = File::open("./data/proof.txt").unwrap();
+        let mut buffer = Vec::<u8>::new();
+        file.read_to_end(&mut buffer).unwrap();
+        let ret = vec![buffer; self.c0s.len()];
         //let ret = self.prover.create_proof_in_bytes(
         //    &self.c0s, &self.c1s, &self.rs, &self.e0s, &self.e1s, &self.d0s, &self.d1s, &self.m,
         //);
@@ -168,27 +173,28 @@ impl Client {
                 .inner
                 .aggregate_commit(ctx, round, self.rsa_pk.clone(), cm)
                 .await;
-            let mut ret = self
-                .inner
-                .get_mc_proof(ctx, round, self.rsa_pk.clone())
-                .await
-                .unwrap();
-            while ret.is_none() {
-                ret = self
-                    .inner
-                    .get_mc_proof(ctx, round, self.rsa_pk.clone())
-                    .await
-                    .unwrap();
-            }
-            //self.inner.get_mc_proof(ctx, round, self.rsa_pk.clone())
-            ret
+            // let mut ret = self
+            //     .inner
+            //     .get_mc_proof(ctx, round, self.rsa_pk.clone())
+            //     .await
+            //     .unwrap();
+            // while ret.is_none() {
+            //     ret = self
+            //         .inner
+            //         .get_mc_proof(ctx, round, self.rsa_pk.clone())
+            //         .await
+            //         .unwrap();
+            // }
+            // //self.inner.get_mc_proof(ctx, round, self.rsa_pk.clone())
+            // ret
+            self.inner.get_mc_proof(ctx, round, self.rsa_pk.clone())
         };
         // while waiting for the commitment, compute the zkproof
         let proofs = self.generate_proof(pvk);
 
         // wait for the Mc tree
-        //let mc_proof = result_commit.await.unwrap().to_proof();
-        let mc_proof = result_commit.unwrap().to_proof();
+        let mc_proof = result_commit.await.unwrap().to_proof();
+        //let mc_proof = result_commit.unwrap().to_proof();
         end_timer!(gc2);
 
         let gc3 = start_timer!(|| "upload the data");

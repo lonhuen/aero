@@ -119,12 +119,7 @@ impl ServerService for InnerServer {
 
     //type GetMcProofFut = Ready<MerkleProof>;
     // TODO for now assume only 1 round
-    async fn get_mc_proof(
-        self,
-        _: context::Context,
-        round: u32,
-        rsa_pk: Vec<u8>,
-    ) -> Option<MerkleProof> {
+    async fn get_mc_proof(self, _: context::Context, round: u32, rsa_pk: Vec<u8>) -> MerkleProof {
         std::thread::spawn(move || self.server.get_mc_proof(round, rsa_pk))
             .join()
             .unwrap()
@@ -134,12 +129,7 @@ impl ServerService for InnerServer {
     }
 
     //type GetMsProofFut = Ready<MerkleProof>;
-    async fn get_ms_proof(
-        self,
-        _: context::Context,
-        round: u32,
-        rsa_pk: Vec<u8>,
-    ) -> Option<MerkleProof> {
+    async fn get_ms_proof(self, _: context::Context, round: u32, rsa_pk: Vec<u8>) -> MerkleProof {
         //self.pool
         //    .as_ref()
         //    .install(|| self.server.get_ms_proof(round, rsa_pk))

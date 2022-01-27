@@ -192,28 +192,28 @@ impl Client {
                 .inner
                 .aggregate_commit(ctx, round, self.rsa_pk.clone(), cm)
                 .await;
-            let mut ret = self
-                .inner
-                .get_mc_proof(ctx, round, self.rsa_pk.clone())
-                .await
-                .unwrap();
-            while ret.len() == 0 {
-                let one_sec = time::Duration::from_secs(1);
-                thread::sleep(one_sec);
-                ret = self
-                    .inner
-                    .get_mc_proof(ctx, round, self.rsa_pk.clone())
-                    .await
-                    .unwrap();
-            }
-            ret
+            // let mut ret = self
+            //     .inner
+            //     .get_mc_proof(ctx, round, self.rsa_pk.clone())
+            //     .await
+            //     .unwrap();
+            // while ret.len() == 0 {
+            //     let one_sec = time::Duration::from_secs(1);
+            //     thread::sleep(one_sec);
+            //     ret = self
+            //         .inner
+            //         .get_mc_proof(ctx, round, self.rsa_pk.clone())
+            //         .await
+            //         .unwrap();
+            // }
+            self.inner.get_mc_proof(ctx, round, self.rsa_pk.clone())
         };
         // while waiting for the commitment, compute the zkproof
         let proofs = self.generate_proof();
 
         // wait for the Mc tree
-        //let mc_proof = result_commit.await.unwrap();
-        let mc_proof = result_commit;
+        let mc_proof = result_commit.await.unwrap();
+        //let mc_proof = result_commit;
         //println!("{:?}", mc_proof);
         end_timer!(gc2);
 
@@ -237,6 +237,21 @@ impl Client {
                 )
                 .await;
             warn!("data uploaded,receving ms proof");
+            // let mut ret = self
+            //     .inner
+            //     .get_ms_proof(ctx, round, self.rsa_pk.clone())
+            //     .await
+            //     .unwrap();
+            // while ret.len() == 0 {
+            //     let one_sec = time::Duration::from_secs(1);
+            //     thread::sleep(one_sec);
+            //     ret = self
+            //         .inner
+            //         .get_ms_proof(ctx, round, self.rsa_pk.clone())
+            //         .await
+            //         .unwrap();
+            // }
+            // ret
             self.inner.get_ms_proof(ctx, round, self.rsa_pk.clone())
         };
         // TODO try until get the proof
