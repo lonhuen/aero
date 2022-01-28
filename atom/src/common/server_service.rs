@@ -15,9 +15,11 @@ pub trait ServerService {
         proofs: Vec<Vec<u8>>,
     );
     /// Get the inclusion proof of a node inside the commitment merkle tree
-    async fn get_mc_proof(round: u32, rsa_pk: Vec<u8>) -> Vec<MerkleProof>;
+    //async fn get_mc_proof(round: u32, rsa_pk: Vec<u8>) -> Vec<MerkleProof>;
+    async fn get_mc_proof(round: u32, rsa_pk: Vec<u8>);
     /// Get the inclusion proof of a node inside the summation merkle tree
-    async fn get_ms_proof(round: u32, rsa_pk: Vec<u8>) -> Vec<MerkleProof>;
+    async fn get_ms_proof(round: u32, rsa_pk: Vec<u8>);
+    //async fn get_ms_proof(round: u32, rsa_pk: Vec<u8>) -> Vec<MerkleProof>;
 
     async fn verify(
         round: u32,

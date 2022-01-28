@@ -234,15 +234,17 @@ impl Server {
     }
 
     //type GetMcProofFut = Ready<MerkleProof>;
-    pub fn get_mc_proof(&self, round: u32, rsa_pk: Vec<u8>) -> Vec<MerkleProof> {
+    pub fn get_mc_proof(&self, round: u32, rsa_pk: Vec<u8>) {
+        //pub fn get_mc_proof(&self, round: u32, rsa_pk: Vec<u8>) -> Vec<MerkleProof> {
         let (lock, cvar) = &*self.cond;
         let mut state = lock.lock().unwrap();
         // if never possible to get the lock, return
         if !Self::is_waitable(&*state, (STAGE::Data, round)) {
-            return vec![MerkleProof {
-                lemma: Vec::new(),
-                path: Vec::new(),
-            }];
+            return;
+            //return vec![MerkleProof {
+            //    lemma: Vec::new(),
+            //    path: Vec::new(),
+            //}];
         }
         // otherwise wait till the state
         state = cvar
@@ -261,19 +263,20 @@ impl Server {
         //    _ => Vec::new(),
         //};
         //ret
-        mc.iter().map(|x| x.get_proof(&rsa_pk)).collect()
+        //mc.iter().map(|x| x.get_proof(&rsa_pk)).collect()
     }
 
     //type GetMsProofFut = Ready<MerkleProof>;
-    pub fn get_ms_proof(&self, round: u32, rsa_pk: Vec<u8>) -> Vec<MerkleProof> {
+    pub fn get_ms_proof(&self, round: u32, rsa_pk: Vec<u8>) {
+        //pub fn get_ms_proof(&self, round: u32, rsa_pk: Vec<u8>) -> Vec<MerkleProof> {
         let (lock, cvar) = &*self.cond;
         let mut state = lock.lock().unwrap();
         //if never possible to get the lock, return
         if !Self::is_waitable(&*state, (STAGE::Verify, round)) {
-            return vec![MerkleProof {
-                lemma: Vec::new(),
-                path: Vec::new(),
-            }];
+            //return vec![MerkleProof {
+            //    lemma: Vec::new(),
+            //    path: Vec::new(),
+            //}];
         }
         // otherwise wait till the state
         state = cvar
@@ -284,7 +287,7 @@ impl Server {
             .unwrap();
         let ms = self.ms.as_ref().read().unwrap();
         drop(state);
-        ms.iter().map(|x| x.get_proof(&rsa_pk)).collect()
+        //ms.iter().map(|x| x.get_proof(&rsa_pk)).collect()
         //let ret = match state.0 {
         //    STAGE::Verify => {
         //        let ms = self.ms.as_ref().read().unwrap();

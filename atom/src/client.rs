@@ -221,7 +221,8 @@ impl Client {
         let proofs = self.generate_proof();
 
         // wait for the Mc tree
-        let mc_proof = result_commit.await.unwrap();
+        //let mc_proof = result_commit.await.unwrap();
+        let _mc_proof = result_commit.await;
         //let mc_proof = result_commit;
         //println!("{:?}", mc_proof);
         end_timer!(gc2);
@@ -264,7 +265,8 @@ impl Client {
             self.inner.get_ms_proof(ctx, round, self.rsa_pk.clone())
         };
         // TODO try until get the proof
-        let ms_proof: Vec<MerkleProof> = result_data.await.unwrap();
+        //let ms_proof: Vec<MerkleProof> = result_data.await.unwrap();
+        let _ms_proof = result_data.await;
         warn!("ms proof received");
         end_timer!(gc3);
         // TODO verify the proof by checking x.leaf for mc, ms maybe
@@ -278,12 +280,12 @@ impl Client {
         //    warn!("hash {:?}", x.leaf(h));
         //}
         let mut flag = true;
-        for p in ms_proof {
-            flag = flag & p.clone().to_proof().validate::<HashAlgorithm>();
-        }
-        for p in mc_proof {
-            flag = flag & p.clone().to_proof().validate::<HashAlgorithm>();
-        }
+        //for p in ms_proof {
+        //    flag = flag & p.clone().to_proof().validate::<HashAlgorithm>();
+        //}
+        //for p in mc_proof {
+        //    flag = flag & p.clone().to_proof().validate::<HashAlgorithm>();
+        //}
         flag
     }
 
@@ -573,7 +575,7 @@ async fn main() -> anyhow::Result<()> {
         let sr = start_timer!(|| "one round");
         let train = start_timer!(|| "train model");
         //let data = client.train_model(i).await;
-        let data = vec![0u8;nr_parameter as usize];
+        let data = vec![0u8; nr_parameter as usize];
         end_timer!(train);
 
         let rs = start_timer!(|| "upload data");
