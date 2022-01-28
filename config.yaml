@@ -2,34 +2,58 @@ server_addr: 172.31.43.73
 #server_addr: 127.0.0.1
 server_port: 38886
 
-nr_real: 256
+nr_real: 64
 nr_simulated: 0
 nr_sybil: 10000
 
 # 1 CT
 #nr_parameter: 4096
 #nr_parameter_committee: 4096
+## 1E-5
+#ct_probability: 0.00001
+#nr_round: 30
 # 10 CT
 #nr_parameter: 40960
 #nr_parameter_committee: 4096
+## 1E-5
+#ct_probability: 0.00001
+#nr_round: 30
 # 100 CT
 #nr_parameter: 409600
 #nr_parameter_committee: 40960
-# 342 CT
-nr_parameter: 1400832
-nr_parameter_committee: 1400832
+## 1E-5
+#ct_probability: 0.00001
+#nr_round: 3
 # 1000 CT
 #nr_parameter: 4096000
 #nr_parameter_committee: 409600
+# 1E-5
+#ct_probability: 0.00001
+#nr_round: 1
 
-nr_round: 1
+#nr_round: 100
+# 342 CT
+nr_parameter: 1400832
+nr_parameter_committee: 1400832
 # t * k * s = 5
 # 100 * 1% * 5 = 5
 # 100 * 5% * 1 = 5
-ct_probability: 0.001
+ct_probability: 0
+nr_round: 1
 #ct_probability: 0.002
-#ct_probability: 0.005
+#ct_probability: 0.004
+# 1E-6
+#ct_probability: 0.000001
+#nr_round: 10
+## 1E-4
+#ct_probability: 0.0001
+#nr_round: 1
+## 1E-2
 #ct_probability: 0.01
+#nr_round: 1
+## 1
+#ct_probability: 1.01
+#nr_round: 1
 #ct_probability: 0.02
 #ct_probability: 0.03
 #ct_probability: 0.04

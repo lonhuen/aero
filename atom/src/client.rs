@@ -131,6 +131,13 @@ impl Client {
             let (r, e0, e1, d0, d1, ct) = self
                 .enc_pk
                 .encrypt(&xs[i * NUM_DIMENSION as usize..(i + 1) * NUM_DIMENSION as usize]);
+            //let r = vec![0i128;4096];
+            //let e0 = vec![0i128;4096];
+            //let e1 = vec![0i128;4096];
+            //let d0 = vec![0i128;4096];
+            //let d1 = vec![0i128;4096];
+            //let c0 = vec![0i128;4096];
+            //let c1 = vec![0i128;4096];
             self.rs.push(r);
             self.e0s.push(e0);
             self.e1s.push(e1);
@@ -138,6 +145,8 @@ impl Client {
             self.d1s.push(d1);
             self.c0s.push(ct.c_0);
             self.c1s.push(ct.c_1);
+            //self.c0s.push(c0);
+            //self.c1s.push(c1);
             let m = xs[i * NUM_DIMENSION as usize..(i + 1) * NUM_DIMENSION as usize]
                 .iter()
                 .map(|x| *x as i128)
@@ -368,7 +377,8 @@ impl Client {
         //let vinit: u32 = rng.gen::<u32>() % N;
         let vinit: u32 = 0;
 
-        let non_leafs: Vec<u32> = Self::get_random_non_leafs(n, s, vinit);
+        //let non_leafs: Vec<u32> = Self::get_random_non_leafs(n, s, vinit);
+        let non_leafs: Vec<u32> = vec![0u32];
 
         let gc1 = start_timer!(|| "receive verify");
         let ct_id: Vec<usize> = {
@@ -537,6 +547,7 @@ async fn main() -> anyhow::Result<()> {
     let nr_real = config.get_int("nr_real") as u32;
     let nr_sim = config.get_int("nr_simulated") as u32;
     let nr_round = config.get_int("nr_round") as u32;
+    let nr_parameter = config.get_int("nr_parameter") as u32;
     let pr: f64 = config.get_f64("ct_probability") as f64;
 
     let server_addr = (
@@ -561,7 +572,8 @@ async fn main() -> anyhow::Result<()> {
         // begin uploading
         let sr = start_timer!(|| "one round");
         let train = start_timer!(|| "train model");
-        let data = client.train_model(i).await;
+        //let data = client.train_model(i).await;
+        let data = vec![0u8;nr_parameter as usize];
         end_timer!(train);
 
         let rs = start_timer!(|| "upload data");
