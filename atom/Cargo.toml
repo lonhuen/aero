@@ -111,6 +111,10 @@ path = "benches/online/groth16.rs"
 name = "offline"
 path = "benches/offline/groth16.rs"
 
+[[bin]]
+name = "verifier"
+path = "src/verifier.rs"
+
 [features]
 #default = [ "hashfn_blake3","parallel","online"]
 default = [ "hashfn_blake3","parallel","ark-groth16/std","print-trace"]

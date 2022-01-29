@@ -198,7 +198,7 @@ impl Server {
             let mc = self.mc.clone();
             let ms = self.ms.clone();
             let child_ref = self.child.clone();
-            let canceller = Timer::after(Duration::from_secs(20), move |_| {
+            let canceller = Timer::after(Duration::from_secs(3600), move |_| {
                 let (lock, cvar) = &*cond.clone();
                 let mut state = lock.lock().unwrap();
                 if let STAGE::Verify = state.0 {

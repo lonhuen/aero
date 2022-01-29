@@ -569,34 +569,35 @@ async fn main() -> anyhow::Result<()> {
     let start = start_timer!(|| "clients");
 
     //for i in 0..nr_round {
-    let i = 0;
-    let prover_cpu = ProcessTime::now();
+    //let prover_cpu = ProcessTime::now();
 
-    // begin uploading
-    let sr = start_timer!(|| "one round");
-    let train = start_timer!(|| "train model");
-    //let data = client.train_model(i).await;
-    let data = vec![0u8; nr_parameter as usize];
-    end_timer!(train);
+    //// begin uploading
+    //let sr = start_timer!(|| "one round");
+    //let train = start_timer!(|| "train model");
+    ////let data = client.train_model(i).await;
+    //let data = vec![0u8; nr_parameter as usize];
+    //end_timer!(train);
 
-    let rs = start_timer!(|| "upload data");
-    //let result = client.upload(i, data, pvk.await.unwrap()).await;
-    let _result = client.upload(i, data, vec![0u8; 1]).await;
-    end_timer!(rs);
+    //let rs = start_timer!(|| "upload data");
+    ////let result = client.upload(i, data, pvk.await.unwrap()).await;
+    //let _result = client.upload(i, data, vec![0u8; 1]).await;
+    //end_timer!(rs);
 
-    let prover_cpu_time: Duration = prover_cpu.elapsed();
-    println!("Prover CPU Time {} s", duration_to_sec(&prover_cpu_time));
+    //let prover_cpu_time: Duration = prover_cpu.elapsed();
+    //println!("Prover CPU Time {} s", duration_to_sec(&prover_cpu_time));
 
     //let vr = start_timer!(|| "verify the data");
-    //let verifier_cpu = ProcessTime::now();
-    //client.verify(i, nr_real + nr_sim, 5, pr).await;
-    //let verifier_cpu_time = verifier_cpu.elapsed();
-    //println!(
-    //    "Verifier CPU Time {} s",
-    //    duration_to_sec(&verifier_cpu_time)
-    //);
+    let verifier_cpu = ProcessTime::now();
+    for _ in 0..nr_round {
+        client.verify(0, nr_real + nr_sim, 5, pr).await;
+    }
+    let verifier_cpu_time = verifier_cpu.elapsed();
+    println!(
+        "Verifier CPU Time {} s",
+        duration_to_sec(&verifier_cpu_time)
+    );
     //end_timer!(vr);
-    end_timer!(sr);
+    //end_timer!(sr);
     //}
     end_timer!(start);
 
