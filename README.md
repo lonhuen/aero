@@ -1,8 +1,6 @@
-# quail
+# Aero
 
-# TODO
-- [x] The implementation of Merkletree for now can only prove inclusion of a block, but not a block with id=i; Maybe this needs to be implemented. In that case, the client should know the # of devices and thus knows the structure of the tree.
-- [x] Merkletree for now can only prove inclusion of a leaf node.
+This repo contains the impl and eval of Aero, described in Federated Learning with Differential Privacy and an Untrusted Aggregator, published in ICISSP 2024.
 
-# Third-party Library
-1. merkle_light: Modified to expose the MerkleProof for serialization
+The integration of Aero w/ FedScale can be found https://github.com/lonhuen/fedscale
+
